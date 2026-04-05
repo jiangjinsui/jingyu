@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>静语</title>
+
+    <!-- PWA 配置 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="静语">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f9f9f9" id="theme-color-meta">
+    <link rel="manifest" id="pwa-manifest">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f9f9f9'/><text y='.9em' font-size='80' x='10'>🪶</text></svg>">
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/localforage@1.10.0/dist/localforage.min.js"></script>
+    <script src="https://unpkg.com/@formkit/auto-animate@0.8.0/index.iife.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        bg: 'var(--color-bg)',
+                        surface: 'var(--color-surface)',
+                        text: 'var(--color-text)',
+                        muted: 'var(--color-muted)',
+                        border: 'var(--color-border)',
+                        bubbleSend: 'var(--color-bubble-send)',
+                        bubbleReceive: 'var(--color-bubble-receive)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-bg: #f9f9f9;
+            --color-surface: #ffffff;
+            --color-text: #2a2a2a;
+            --color-muted: #9e9e9e;
+            --color-border: #f0f0f0;
+            --color-bubble-send: #f4f4f4;
+            --color-bubble-receive: #ffffff;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .dark {
+            --color-bg: #111111;
+            --color-surface: #181818;
+            --color-text: #eaeaea;
+            --color-muted: #737373;
+            --color-border: #2a2a2a;
+            --color-bubble-send: #242424;
+            --color-bubble-receive: #181818;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            margin: 0;
+            overflow: hidden;
+            overscroll-behavior-y: none;
+        }
+
+        ::-webkit-scrollbar { width: 3px; background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+
+        .typing-dot {
+            display: inline-block; width: 4px; height: 4px;
+            border-radius: 50%; background-color: var(--color-muted);
+            animation: typing 1.4s infinite ease-in-out both; margin: 0 2px;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+        input, textarea, button { outline: none !important; box-shadow: none !important; }
+        .msg-bubble { line-height: 1.8; letter-spacing: 0.5px; word-break: break-word; }
+
+        /* ─── 开场动画 ─── */
+        #splash-screen {
+            position: fixed; inset: 0; z-index: 200;
+            background: var(--color-surface);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 1.2s ease, transform 1.2s ease;
+        }
+        #splash-screen.hide {
+            opacity: 0; transform: scale(1.04); pointer-events: none;
+        }
+
+        /* 粒子画布 */
+        #splash-canvas {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            opacity: 0.18;
+        }
+
+        .splash-title {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            letter-spacing: 1.2em;
+            font-weight: 300;
+            color: var(--color-text);
+            opacity: 0;
+            transform: translateY(12px);
+            animation: splashFadeUp 1.2s ease 0.4s forwards;
+            margin-left: 1.2em;
+        }
+        .splash-sub {
+            font-size: 0.65rem;
+            letter-spacing: 0.5em;
+            color: var(--color-muted);
+            opacity: 0;
+            transform: translateY(8px);
+            animation: splashFadeUp 1s ease 1s forwards;
+            margin-top: 1.5rem;
+        }
+        .splash-line {
+            width: 0; height: 1px;
+            background: var(--color-muted);
+            opacity: 0.3;
+            animation: splashLine 1.4s ease 0.2s forwards;
+            margin-bottom: 2.5rem;
+        }
+        @keyframes splashFadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes splashLine {
+            to { width: 60px; }
+        }
+
+        /* ─── 随机表情包弹出 ─── */
+        .emoji-popup {
+            position: fixed;
+            z-index: 150;
+            pointer-events: none;
+            font-size: 2.5rem;
+            animation: emojiFloat 2.8s ease forwards;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
+        }
+        .emoji-popup.is-img {
+            width: 80px; height: 80px;
+            border-radius: 12px;
+            overflow: hidden;
+            animation: emojiFloat 3s ease forwards;
+        }
+        .emoji-popup.is-img img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        @keyframes emojiFloat {
+            0%   { opacity: 0; transform: translateY(0) scale(0.4) rotate(-8deg); }
+            15%  { opacity: 1; transform: translateY(-20px) scale(1.1) rotate(4deg); }
+            60%  { opacity: 1; transform: translateY(-50px) scale(1) rotate(-2deg); }
+            100% { opacity: 0; transform: translateY(-110px) scale(0.85) rotate(3deg); }
+        }
+
+        /* ─── 通知横幅 (应用内) ─── */
+        .inapp-toast {
+            position: fixed; top: env(safe-area-inset-top, 0);
+            left: 50%; transform: translateX(-50%) translateY(-120%);
+            z-index: 180; min-width: 240px; max-width: 340px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            backdrop-filter: blur(12px);
+        }
+        .inapp-toast.show {
+            transform: translateX(-50%) translateY(12px);
+        }
+        .inapp-toast-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--color-bg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+            overflow: hidden;
+        }
+        .inapp-toast-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .inapp-toast-body { flex: 1; min-width: 0; }
+        .inapp-toast-name { font-size: 11px; color: var(--color-muted); tracking: widest; margin-bottom: 2px; }
+        .inapp-toast-text { font-size: 13px; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ─── PWA 安装提示 ─── */
+        .install-banner {
+            position: fixed; bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+            left: 50%; transform: translateX(-50%);
+            z-index: 160;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 14px;
+            padding: 10px 16px;
+            display: flex; align-items: center; gap-10px;
+            gap: 10px;
+            font-size: 12px; letter-spacing: 0.05em;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+        .install-banner button {
+            background: var(--color-text); color: var(--color-bg);
+            border: none; border-radius: 8px;
+            padding: 5px 12px; font-size: 11px;
+            cursor: pointer; letter-spacing: 0.05em;
+            font-family: inherit;
+        }
+        .install-banner .dismiss { background: transparent; color: var(--color-muted); padding: 5px 6px; }
+
+        /* ─── 通知权限提示 ─── */
+        .notif-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 10px; letter-spacing: 0.1em;
+            color: var(--color-muted);
+            border: 1px solid var(--color-border);
+            border-radius: 20px; padding: 3px 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notif-badge:hover { color: var(--color-text); border-color: var(--color-muted); }
+        .notif-badge.granted { color: #6b9e6b; border-color: #6b9e6b33; }
+
+        /* ─── 聊天气泡进场动画 ─── */
+        .msg-in { animation: msgSlideIn 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+        .msg-in-right { animation: msgSlideInRight 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes msgSlideIn {
+            from { opacity: 0; transform: translateX(-12px) scale(0.95); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes msgSlideInRight {
+            from { opacity: 0; transform: translateX(12px) scale(0.95); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+    </style>
+    <style id="custom-bubble-css"></style>
+</head>
+<body>
+
+<!-- ─── 开场动画 ─── -->
+<div id="splash-screen">
+    <canvas id="splash-canvas"></canvas>
+    <div class="splash-line"></div>
+    <div class="splash-title">静 语</div>
+    <div class="splash-sub">JING YU · 字语传心</div>
+</div>
+
+<!-- ─── 应用内通知横幅 ─── -->
+<div id="inapp-toast" class="inapp-toast">
+    <div class="inapp-toast-avatar" id="toast-avatar">
+        <span id="toast-avatar-char">？</span>
+    </div>
+    <div class="inapp-toast-body">
+        <div class="inapp-toast-name" id="toast-name">对方</div>
+        <div class="inapp-toast-text" id="toast-text">发来了新消息</div>
+    </div>
+</div>
+
+<!-- ─── PWA 安装横幅 ─── -->
+<div id="install-banner" class="install-banner" style="display:none;">
+    <span style="color:var(--color-muted);">🪶</span>
+    <span style="color:var(--color-text);">安装到桌面，随时使用</span>
+    <button id="install-btn">安 装</button>
+    <button class="dismiss" id="dismiss-install">✕</button>
+</div>
+
+<div id="app" class="h-[100dvh] w-full flex justify-center items-center bg-bg selection:bg-text selection:text-bg relative"
+     :style="settings.bgImage ? { backgroundImage: `url(${settings.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
+
+    <div class="w-full md:max-w-3xl h-full flex flex-col bg-surface/90 backdrop-blur-lg relative md:shadow-2xl md:border-x border-border/50 transition-all duration-500">
+
+        <header class="h-16 md:h-20 flex items-center justify-between px-6 md:px-8 z-10 shrink-0 relative">
+            <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
+
+            <div class="flex items-center gap-4 group cursor-pointer" @click="editProfile('them')">
+                <div v-if="settings.showAvatar" class="w-9 h-9 md:w-10 md:h-10 overflow-hidden bg-bg flex items-center justify-center text-muted transition-transform group-hover:scale-105 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                    <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+                    <span v-else class="text-sm font-light">{{ profiles.them.name.charAt(0) }}</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-base md:text-lg tracking-widest font-medium">{{ profiles.them.name }}</span>
+                    <span class="text-[10px] md:text-[11px] text-muted tracking-widest mt-0.5 opacity-0 transition-opacity" :class="{'opacity-100': isTyping}">正在输入...</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3 md:gap-5 text-muted items-center">
+                <!-- 通知权限按钮 -->
+                <button @click="requestNotifPermission" :class="['notif-badge', notifGranted ? 'granted' : '']" title="后台通知">
+                    <i :data-lucide="notifGranted ? 'bell' : 'bell-off'" class="w-3 h-3 stroke-[1.5]"></i>
+                    <span>{{ notifGranted ? '通知开' : '开通知' }}</span>
+                </button>
+                <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 md:w-4.5 md:h-4.5 stroke-[1.5]"></i></button>
+                <button @click="exportScreenshot" class="hover:text-text transition-colors" title="截图导出"><i data-lucide="camera" class="w-4 h-4 md:w-4.5 md:h-4.5 stroke-[1.5]"></i></button>
+                <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 md:w-4.5 md:h-4.5 stroke-[1.5]"></i></button>
+                <button @click="modals.settings = true" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 md:w-4.5 md:h-4.5 stroke-[1.5]"></i></button>
+            </div>
+        </header>
+
+        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col gap-6 md:gap-8 scroll-smooth pb-20">
+
+            <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-muted/40 tracking-widest text-sm space-y-4">
+                <i data-lucide="wind" class="w-6 h-6 stroke-[1]"></i>
+                <span>留 白</span>
+            </div>
+
+            <div ref="chatList" class="flex flex-col gap-6 md:gap-8">
+                <div v-for="(msg, index) in messages" :key="msg.id">
+
+                    <div v-if="shouldShowDate(index)" class="flex justify-center my-6 md:my-8">
+                        <span class="text-[10px] md:text-[11px] text-muted/50 tracking-[0.3em] uppercase">{{ formatDateSeparator(msg.timestamp) }}</span>
+                    </div>
+
+                    <div class="flex group" :class="msg.sender === 'me' ? 'justify-end' : 'justify-start'">
+                        <div class="flex max-w-[85%] md:max-w-[75%] gap-3" :class="msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'">
+
+                            <div v-if="settings.showAvatar" class="shrink-0 w-8 h-8 mt-1 md:mt-2 cursor-pointer" :class="{'opacity-0 pointer-events-none': !shouldShowAvatar(index)}" @click="editProfile(msg.sender)">
+                                <div class="w-full h-full overflow-hidden bg-bg flex items-center justify-center transition-transform hover:scale-105 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                                    <img v-if="profiles[msg.sender].avatar" :src="profiles[msg.sender].avatar" class="w-full h-full object-cover">
+                                    <span v-else class="text-xs text-muted">{{ profiles[msg.sender].name.charAt(0) }}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col relative" :class="[msg.sender === 'me' ? 'items-end msg-in-right' : 'items-start msg-in']">
+                                <span v-if="settings.showNickname && shouldShowAvatar(index)" class="text-[10px] text-muted/60 mb-1 px-1 tracking-widest">
+                                    {{ profiles[msg.sender].name }}
+                                </span>
+
+                                <div class="msg-bubble px-4 md:px-5 py-2.5 md:py-3 rounded-2xl text-[14px] md:text-[15px] transition-all"
+                                     :class="[
+                                        msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text',
+                                        'bubble-custom-class'
+                                     ]">
+                                    <template v-if="msg.type === 'text'">{{ msg.content }}</template>
+                                    <template v-else-if="msg.type === 'image'">
+                                        <img :src="msg.content" class="max-w-[200px] md:max-w-[250px] rounded-lg cursor-pointer" @click="previewImg = msg.content">
+                                    </template>
+                                </div>
+
+                                <div class="text-[9px] md:text-[10px] text-muted/40 mt-1.5 flex items-center gap-1.5 tracking-wider px-1 font-sans">
+                                    <span>{{ formatTime(msg.timestamp) }}</span>
+                                    <template v-if="msg.sender === 'me'">
+                                        <i v-if="msg.status === 'read'" data-lucide="check-circle-2" class="w-3 h-3 text-text/40 stroke-[1.5]"></i>
+                                        <i v-else data-lucide="circle" class="w-3 h-3 stroke-[1.5]"></i>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center" :class="msg.sender === 'me' ? 'mr-2' : 'ml-2'">
+                                <button @click="deleteMsg(msg.id)" class="text-muted/30 hover:text-red-900/60"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="isTyping" class="flex justify-start">
+                    <div class="flex gap-3">
+                        <div v-if="settings.showAvatar" class="w-8 h-8 overflow-hidden bg-bg flex items-center justify-center opacity-50 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                            <span class="text-xs text-muted">{{ profiles.them.name.charAt(0) }}</span>
+                        </div>
+                        <div class="px-5 py-3 bg-surface border border-border rounded-2xl flex items-center gap-1 h-[42px]">
+                            <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-surface/90 backdrop-blur-md shrink-0 px-4 md:px-8 py-4 relative z-10 pb-6 md:pb-4">
+            <div class="absolute top-0 left-4 md:left-8 right-4 md:right-8 h-[1px] bg-border/80"></div>
+
+            <div class="flex gap-4 px-2 pb-2 text-muted/60 items-center">
+                <label class="cursor-pointer hover:text-text transition-colors" title="发送图片">
+                    <i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i>
+                    <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
+                </label>
+                <!-- 随机表情包按钮 -->
+                <button @click="popRandomEmoji" class="cursor-pointer hover:text-text transition-colors" title="随机表情包">
+                    <i data-lucide="sparkles" class="w-4 h-4 stroke-[1.5]"></i>
+                </button>
+            </div>
+
+            <div class="flex items-end gap-3">
+                <textarea v-model="inputText" @keydown.enter.prevent="sendMsg('me', 'text')" rows="1"
+                          class="flex-1 bg-bg/50 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[14px] md:text-[15px] resize-none max-h-32 placeholder-muted/50 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border"
+                          placeholder="书写..."></textarea>
+
+                <div class="flex gap-2 md:gap-3 shrink-0 pb-1 text-muted/80">
+                    <button @click="triggerReply" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" title="让对方说话">
+                        <i data-lucide="pen-tool" class="w-5 h-5 md:w-5.5 md:h-5.5 stroke-[1.5]"></i>
+                    </button>
+                    <button @click="sendMsg('me', 'text')" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" :class="{'text-text': inputText.trim()}" title="发送">
+                        <i data-lucide="send" class="w-5 h-5 md:w-5.5 md:h-5.5 stroke-[1.5]"></i>
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <transition name="fade">
+        <div v-if="modals.settings" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4 md:p-0">
+            <div class="bg-surface w-full max-w-md shadow-2xl md:border border-border/50 flex flex-col max-h-[85vh] rounded-2xl md:rounded-none overflow-hidden">
+                <div class="px-6 py-5 flex justify-between items-center relative bg-surface">
+                    <h2 class="text-[14px] tracking-[0.3em] font-medium">偏好</h2>
+                    <button @click="modals.settings = false" class="text-muted hover:text-text"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
+                </div>
+                <div class="px-6 py-6 overflow-y-auto flex flex-col gap-8 text-[13px] md:text-[14px]">
+
+                    <div class="space-y-3">
+                        <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">身份与显示</span>
+                        <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('me')">
+                            <span class="tracking-widest">我的资料</span>
+                            <span class="text-muted text-xs flex items-center gap-1">{{ profiles.me.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('them')">
+                            <span class="tracking-widest">对方资料</span>
+                            <span class="text-muted text-xs flex items-center gap-1">{{ profiles.them.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
+                        </div>
+                        <div class="flex gap-4 pt-2">
+                            <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
+                                <span class="tracking-widest text-xs">头像</span>
+                                <input type="checkbox" v-model="settings.showAvatar" class="accent-text">
+                            </label>
+                            <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
+                                <span class="tracking-widest text-xs">昵称</span>
+                                <input type="checkbox" v-model="settings.showNickname" class="accent-text">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">交互与行为</span>
+                        <label class="flex justify-between items-center cursor-pointer group">
+                            <span class="tracking-widest">消息音效</span>
+                            <input type="checkbox" v-model="settings.sound" class="accent-text w-4 h-4">
+                        </label>
+                        <div class="flex justify-between items-center">
+                            <span class="tracking-widest">自动回复延迟 (秒)</span>
+                            <div class="flex items-center gap-2 text-xs">
+                                <input type="number" v-model.number="settings.delayMin" min="0" class="w-12 bg-bg text-center py-1 outline-none border border-border">
+                                <span class="text-muted">-</span>
+                                <input type="number" v-model.number="settings.delayMax" min="1" class="w-12 bg-bg text-center py-1 outline-none border border-border">
+                            </div>
+                        </div>
+                        <label class="flex justify-between items-center cursor-pointer group pt-2">
+                            <span class="tracking-widest">允许对方主动发消息</span>
+                            <input type="checkbox" v-model="settings.activeMsg" class="accent-text w-4 h-4">
+                        </label>
+                        <div v-if="settings.activeMsg" class="flex justify-between items-center pl-4 border-l-2 border-border/50">
+                            <span class="tracking-widest text-xs text-muted">主动触发间隔 (秒)</span>
+                            <input type="number" v-model.number="settings.activeInterval" min="5" class="w-16 bg-bg text-center py-1 text-xs outline-none border border-border">
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">外观定制</span>
+                        <div>
+                            <div class="flex justify-between text-xs mb-2">
+                                <span class="tracking-widest">头像圆角</span>
+                                <span class="text-muted">{{settings.avatarRadius}}%</span>
+                            </div>
+                            <input type="range" v-model="settings.avatarRadius" min="0" max="50" class="w-full accent-text h-1 bg-border appearance-none">
+                        </div>
+                        <div class="pt-2 flex flex-col gap-2">
+                            <span class="tracking-widest text-xs">背景图片</span>
+                            <input type="file" accept="image/*" @change="uploadBg" class="text-[10px] text-muted file:bg-bg file:border-none file:px-3 file:py-1 file:mr-2 cursor-pointer">
+                            <button v-if="settings.bgImage" @click="settings.bgImage=''" class="text-[10px] text-red-900/50 self-start">清除背景</button>
+                        </div>
+                        <div class="pt-2">
+                            <span class="tracking-widest text-xs block mb-2">自定义气泡 CSS</span>
+                            <textarea v-model="settings.customCSS" rows="2" class="w-full bg-bg border border-border px-3 py-2 text-[10px] font-mono resize-none" placeholder=".bubble-custom-class { }"></textarea>
+                            <button @click="applyCSS" class="text-[10px] tracking-widest text-text border border-border px-3 py-1 mt-2 hover:bg-border">应用</button>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 pb-2 flex justify-between border-t border-border/50">
+                        <button @click="exportChat" class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border">导出记录</button>
+                        <button @click="clearChat" class="text-[11px] tracking-widest text-red-700/80 border border-red-900/10 px-4 py-1.5 hover:bg-red-900/5">清空所有</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- 逻辑库弹窗 -->
+    <transition name="fade">
+        <div v-if="modals.replyManager" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4 md:p-0">
+            <div class="bg-surface w-full max-w-3xl shadow-2xl md:border border-border/50 flex flex-col h-[85vh] rounded-2xl md:rounded-none overflow-hidden">
+                <div class="px-6 py-5 flex justify-between items-center relative shrink-0">
+                    <h2 class="text-[14px] tracking-[0.3em] font-medium">逻辑库</h2>
+                    <div class="flex gap-4 items-center">
+                        <button @click="exportReplies" class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border">导出</button>
+                        <label class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border cursor-pointer">
+                            导入 <input type="file" accept=".json" class="hidden" @change="importReplies">
+                        </label>
+                        <button @click="modals.replyManager = false" class="text-muted hover:text-text ml-2"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
+                </div>
+
+                <div class="flex flex-1 overflow-hidden flex-col md:flex-row">
+                    <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-border/50 p-4 flex flex-col gap-2 overflow-y-auto shrink-0 md:shrink h-1/3 md:h-full">
+                        <div v-for="group in replyGroups" :key="group.id"
+                             @click="currentGroupId = group.id"
+                             class="px-4 py-2.5 rounded cursor-pointer transition-all text-xs tracking-wider flex justify-between group/item"
+                             :class="currentGroupId === group.id ? 'bg-bg text-text font-medium' : 'text-muted hover:bg-bg/50'">
+                            <span>{{ group.name }} ({{ group.replies.length }})</span>
+                            <button @click.stop="deleteGroup(group.id)" v-if="replyGroups.length>1" class="opacity-0 group-hover/item:opacity-100 text-red-900/50 hover:text-red-900"><i data-lucide="trash" class="w-3 h-3"></i></button>
+                        </div>
+                        <button @click="addGroup" class="text-[11px] text-muted tracking-widest mt-2 border border-dashed border-border py-2 text-center hover:bg-bg transition-colors">+ 新建分组</button>
+                    </div>
+
+                    <div class="flex-1 p-4 flex flex-col overflow-hidden bg-surface relative">
+                        <div class="flex gap-2 mb-4 shrink-0">
+                            <i data-lucide="search" class="w-4 h-4 text-muted absolute left-7 top-6 stroke-[1.5]"></i>
+                            <input type="text" v-model="searchQuery" placeholder="搜索此组内容..." class="w-full bg-bg/50 border border-transparent focus:border-border rounded px-9 py-2 text-[13px] outline-none transition-colors">
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto space-y-1 pb-4 px-2" ref="replyList">
+                            <div v-for="(reply, idx) in filteredReplies" :key="idx" class="flex items-center group py-1.5 border-b border-border/30 gap-2">
+                                <span class="text-[9px] text-muted/30 w-5 font-mono shrink-0">{{ idx + 1 }}</span>
+                                <template v-if="reply.type === 'image'">
+                                    <div class="flex items-center gap-2 flex-1 px-2">
+                                        <img :src="reply.img" class="w-12 h-12 object-cover rounded cursor-pointer" @click="previewImg = reply.img">
+                                        <span class="text-[11px] text-muted/60 tracking-wide">表情包</span>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <input type="text" v-model="reply.text" @change="saveData" class="flex-1 bg-transparent px-2 text-[13px] text-text outline-none border border-transparent focus:border-border/50 rounded transition-colors">
+                                </template>
+                                <button @click="removeReply(reply)" class="text-muted/30 hover:text-red-900/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><i data-lucide="minus" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                            <div v-if="filteredReplies.length === 0" class="text-[11px] text-muted tracking-widest pt-8 text-center">空无一物</div>
+                        </div>
+
+                        <div class="pt-3 border-t border-border/50 flex flex-col gap-2 shrink-0">
+                            <div class="flex gap-2">
+                                <input type="text" v-model="newReplyText" @keydown.enter="addReply" placeholder="增加新文字回复..." class="flex-1 bg-bg border border-border rounded px-4 py-2 text-[13px] outline-none">
+                                <button @click="addReply" class="px-4 bg-text text-bg text-[11px] tracking-widest rounded hover:opacity-80 transition-opacity shrink-0">添加</button>
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer border border-dashed border-border/60 rounded px-4 py-2 hover:bg-bg/50 transition-colors">
+                                <i data-lucide="image-plus" class="w-3.5 h-3.5 text-muted stroke-[1.5] shrink-0"></i>
+                                <span class="text-[11px] text-muted tracking-wider">上传表情包图片（可多选）</span>
+                                <input type="file" accept="image/*" multiple class="hidden" @change="addImageReplies">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- 图片预览 -->
+    <transition name="fade">
+        <div v-if="previewImg" @click="previewImg=''" class="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out">
+            <img :src="previewImg" class="max-w-full max-h-full object-contain">
+        </div>
+    </transition>
+
+</div>
+
+<!-- Service Worker 注册脚本 -->
+<script>
+// ─── PWA Manifest 动态生成 ───
+(function() {
+    const manifest = {
+        name: "静语",
+        short_name: "静语",
+        description: "字语传心",
+        start_url: "./",
+        display: "standalone",
+        orientation: "portrait",
+        background_color: "#f9f9f9",
+        theme_color: "#f9f9f9",
+        icons: [
+            {
+                src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23f9f9f9'/><text y='145' x='24' font-size='140'>🪶</text></svg>",
+                sizes: "192x192",
+                type: "image/svg+xml"
+            }
+        ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+})();
+
+// ─── Service Worker ───
+if ('serviceWorker' in navigator) {
+    const swCode = `
+const CACHE = 'jingyu-v1';
+const ASSETS = [location.href];
+
+self.addEventListener('install', e => {
+    self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+    e.waitUntil(clients.claim());
+});
+self.addEventListener('fetch', e => {
+    e.respondWith(
+        caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+            return res;
+        }).catch(() => r))
+    );
+});
+
+// 后台推送通知监听
+self.addEventListener('push', e => {
+    const data = e.data ? e.data.json() : { title: '静语', body: '你有新消息' };
+    e.waitUntil(
+        self.registration.showNotification(data.title || '静语', {
+            body: data.body || '你有新消息',
+            icon: data.icon || '',
+            badge: data.icon || '',
+            vibrate: [200, 100, 200],
+            tag: 'jingyu-msg',
+            renotify: true
+        })
+    );
+});
+
+self.addEventListener('notificationclick', e => {
+    e.notification.close();
+    e.waitUntil(clients.matchAll({type:'window'}).then(cs => {
+        if(cs.length) return cs[0].focus();
+        return clients.openWindow('/');
+    }));
+});
+    `;
+    const swBlob = new Blob([swCode], {type: 'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+</script>
+
+<script>
+const { createApp, ref, reactive, computed, watch, nextTick, onMounted } = Vue;
+
+localforage.config({ name: 'JingYuApp', storeName: 'data_store' });
+
+createApp({
+    setup() {
+        const chatList = ref(null);
+
+        const messages = ref([]);
+        const inputText = ref('');
+        const isTyping = ref(false);
+        const previewImg = ref('');
+        const activeTimer = ref(null);
+        const notifGranted = ref(false);
+
+        const profiles = reactive({
+            me: { name: '我', avatar: '' },
+            them: { name: '对方', avatar: '' }
+        });
+
+        const settings = reactive({
+            isDark: false, showAvatar: true, showNickname: false,
+            sound: true, delayMin: 1, delayMax: 3,
+            activeMsg: false, activeInterval: 30,
+            avatarRadius: 50, bgImage: '', customCSS: ''
+        });
+
+        const modals = reactive({ settings: false, replyManager: false });
+
+        const generateEmojis = () => {
+            const emojis = "😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😋 😎 😍 😘 😗 😙 😚 ☺️ 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩 👻 💀 👽 👾 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊 💋 💌 💘 💝 💖 💗 💓 💞 💕 💟 ❣️ 💔 ❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 💯 💢 💥 💫 💦 💨 🕳️ 💣 💬 💤 👋 🤚 🖐️ ✋ 🖖 👌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪".split(" ").filter(e=>e.trim());
+            return emojis.map(e => ({ text: e }));
+        };
+
+        const replyGroups = ref([
+            { id: 'g_custom', name: '我的回复', replies: [] },
+            { id: 'g_emoji', name: '表情库', replies: generateEmojis() }
+        ]);
+        const currentGroupId = ref('g_custom');
+        const searchQuery = ref('');
+        const newReplyText = ref('');
+
+        // ─── 通知权限 ───
+        const checkNotifPermission = () => {
+            if ('Notification' in window) {
+                notifGranted.value = Notification.permission === 'granted';
+            }
+        };
+
+        const requestNotifPermission = async () => {
+            if (!('Notification' in window)) {
+                alert('您的浏览器不支持通知功能');
+                return;
+            }
+            if (Notification.permission === 'granted') {
+                notifGranted.value = true;
+                // 测试通知
+                new Notification('静语', { body: '🔔 通知已开启，后台收到消息会提醒你' });
+                return;
+            }
+            const perm = await Notification.requestPermission();
+            notifGranted.value = perm === 'granted';
+            if (perm === 'granted') {
+                new Notification('静语', { body: '🔔 通知已开启！' });
+            }
+        };
+
+        // 应用内 toast 通知
+        const showInAppToast = (name, text, avatar) => {
+            const toast = document.getElementById('inapp-toast');
+            const toastName = document.getElementById('toast-name');
+            const toastText = document.getElementById('toast-text');
+            const toastAvatar = document.getElementById('toast-avatar');
+            const toastAvatarChar = document.getElementById('toast-avatar-char');
+
+            if (!toast) return;
+            toastName.textContent = name;
+            toastText.textContent = text;
+
+            if (avatar) {
+                toastAvatar.innerHTML = `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+            } else {
+                toastAvatar.innerHTML = `<span id="toast-avatar-char">${name.charAt(0)}</span>`;
+            }
+
+            toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
+        };
+
+        // 系统通知（后台）
+        const sendSystemNotif = (name, text) => {
+            if (Notification.permission === 'granted' && document.visibilityState === 'hidden') {
+                new Notification(`静语 · ${name}`, {
+                    body: text.length > 50 ? text.slice(0, 50) + '...' : text,
+                    tag: 'jingyu-msg',
+                    renotify: true,
+                    silent: false
+                });
+            }
+        };
+
+        // ─── 音效 ───
+        let audioCtx;
+        const playSound = (type) => {
+            if (!settings.sound) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                if (type === 'send') {
+                    osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+                } else {
+                    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + 0.1);
+                }
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {}
+        };
+
+        let saveTimeout;
+        const saveData = () => {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                const data = {
+                    messages: JSON.parse(JSON.stringify(messages.value)),
+                    profiles: JSON.parse(JSON.stringify(profiles)),
+                    settings: JSON.parse(JSON.stringify(settings)),
+                    replyGroups: JSON.parse(JSON.stringify(replyGroups.value))
+                };
+                await localforage.setItem('jingyu_data', data);
+            }, 500);
+        };
+
+        watch([messages, profiles, settings, replyGroups], saveData, { deep: true });
+
+        const scrollToBottom = async () => {
+            await nextTick();
+            const container = document.getElementById('chat-container');
+            if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        };
+
+        const sendMsg = async (sender, type, content = null) => {
+            let txt = content;
+            if(type === 'text' && sender === 'me') {
+                if(!inputText.value.trim()) return;
+                txt = inputText.value.trim();
+                inputText.value = '';
+                const ta = document.querySelector('textarea');
+                if(ta) ta.style.height = 'auto';
+            }
+            if(!txt) return;
+
+            const msgId = Date.now().toString();
+            messages.value.push({
+                id: msgId, sender, type, content: txt, timestamp: Date.now(), status: 'sent'
+            });
+            playSound(sender);
+            scrollToBottom();
+
+            // 对方消息触发通知
+            if (sender === 'them') {
+                const displayText = type === 'image' ? '[图片]' : txt;
+                showInAppToast(profiles.them.name, displayText, profiles.them.avatar);
+                sendSystemNotif(profiles.them.name, displayText);
+            }
+
+            if (sender === 'me') {
+                setTimeout(() => {
+                    const m = messages.value.find(x => x.id === msgId);
+                    if(m) m.status = 'read';
+                }, Math.random() * 1500 + 1000);
+                triggerAutoReply();
+            }
+        };
+
+        const triggerAutoReply = () => {
+            if (isTyping.value) return;
+            isTyping.value = true;
+            scrollToBottom();
+
+            const delay = (Math.random() * (settings.delayMax - settings.delayMin) + settings.delayMin) * 1000;
+
+            setTimeout(() => {
+                isTyping.value = false;
+                const all = replyGroups.value.flatMap(g => g.replies);
+                if(all.length > 0) {
+                    const pick = all[Math.floor(Math.random() * all.length)];
+                    if(pick.type === 'image') {
+                        sendMsg('them', 'image', pick.img);
+                    } else {
+                        sendMsg('them', 'text', pick.text);
+                    }
+                } else {
+                    sendMsg('them', 'text', "......");
+                }
+            }, delay);
+        };
+
+        const triggerReply = () => {
+            if(inputText.value.trim()) {
+                sendMsg('me', 'text');
+            } else {
+                triggerAutoReply();
+            }
+        };
+
+        const handleImageUpload = (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    const MAX = 800;
+                    if(w>MAX) { h*=MAX/w; w=MAX; }
+                    canvas.width=w; canvas.height=h;
+                    canvas.getContext('2d').drawImage(img,0,0,w,h);
+                    sendMsg('me', 'image', canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        };
+
+        const deleteMsg = id => messages.value = messages.value.filter(m => m.id !== id);
+
+        const setupActiveMsg = () => {
+            clearInterval(activeTimer.value);
+            if(settings.activeMsg) {
+                activeTimer.value = setInterval(() => {
+                    triggerAutoReply();
+                }, (settings.activeInterval || 30) * 1000);
+            }
+        };
+        watch(() => settings.activeMsg, setupActiveMsg);
+        watch(() => settings.activeInterval, setupActiveMsg);
+
+        // ─── 随机表情包弹出 ───
+        const popRandomEmoji = () => {
+            const all = replyGroups.value.flatMap(g => g.replies);
+            if(all.length === 0) return;
+
+            // 优先图片表情包，次选 emoji 文字
+            const imgReplies = all.filter(r => r.type === 'image');
+            const pick = imgReplies.length > 0 && Math.random() > 0.5
+                ? imgReplies[Math.floor(Math.random() * imgReplies.length)]
+                : all[Math.floor(Math.random() * all.length)];
+
+            const el = document.createElement('div');
+            el.className = pick.type === 'image' ? 'emoji-popup is-img' : 'emoji-popup';
+
+            // 随机位置（底部附近）
+            const x = 20 + Math.random() * (window.innerWidth - 120);
+            const y = window.innerHeight - 160 - Math.random() * 80;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+
+            if(pick.type === 'image') {
+                el.innerHTML = `<img src="${pick.img}" alt="表情包">`;
+            } else {
+                el.textContent = pick.text;
+            }
+
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3200);
+        };
+
+        const shouldShowDate = i => {
+            if(i===0) return true;
+            const c = new Date(messages.value[i].timestamp);
+            const p = new Date(messages.value[i-1].timestamp);
+            return c.toDateString() !== p.toDateString();
+        };
+        const formatDateSeparator = ts => {
+            const d = new Date(ts), today = new Date();
+            const yest = new Date(today); yest.setDate(yest.getDate()-1);
+            if(d.toDateString() === today.toDateString()) return '今 日';
+            if(d.toDateString() === yest.toDateString()) return '昨 日';
+            return `${(d.getMonth()+1).toString().padStart(2,'0')} / ${d.getDate().toString().padStart(2,'0')}`;
+        };
+        const formatTime = ts => {
+            const d = new Date(ts);
+            return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+        };
+        const shouldShowAvatar = i => {
+            if(i===0) return true;
+            const c = messages.value[i], p = messages.value[i-1];
+            if(c.sender !== p.sender) return true;
+            if(c.timestamp - p.timestamp > 60000) return true;
+            return false;
+        };
+
+        const toggleTheme = () => {
+            settings.isDark = !settings.isDark;
+            if(settings.isDark) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-color-meta').content = '#111111';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-color-meta').content = '#f9f9f9';
+            }
+        };
+        const applyCSS = () => {
+            const el = document.getElementById('custom-bubble-css');
+            if(el) el.innerHTML = settings.customCSS;
+        };
+
+        const editProfile = role => {
+            const n = prompt(`修改${role==='me'?'我的':'对方'}昵称：`, profiles[role].name);
+            if(n && n.trim()) profiles[role].name = n.trim().substring(0,12);
+
+            if(confirm('是否上传新头像图片？\n(取消保留原样，确认后不选文件则重置为文字)')) {
+                const input = document.createElement('input');
+                input.type = 'file'; input.accept = 'image/*';
+                input.onchange = e => {
+                    const f = e.target.files[0];
+                    if(f) {
+                        const r = new FileReader();
+                        r.onload = ev => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const c = document.createElement('canvas');
+                                let w=img.width, h=img.height, MAX=200;
+                                if(w>MAX){h*=MAX/w; w=MAX;}
+                                c.width=w; c.height=h;
+                                c.getContext('2d').drawImage(img,0,0,w,h);
+                                profiles[role].avatar = c.toDataURL('image/jpeg', 0.8);
+                            };
+                            img.src = ev.target.result;
+                        };
+                        r.readAsDataURL(f);
+                    } else { profiles[role].avatar = ''; }
+                };
+                input.click();
+            }
+        };
+
+        const uploadBg = e => {
+            const f = e.target.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = ev => settings.bgImage = ev.target.result;
+            r.readAsDataURL(f);
+        };
+
+        const clearChat = () => {
+            if(confirm('将彻底清空聊天记录，确认吗？')) {
+                messages.value = []; modals.settings = false;
+            }
+        };
+        const exportChat = () => {
+            let str = "--- 聊天记录导出 ---\n\n";
+            messages.value.forEach(m => {
+                str += `[${new Date(m.timestamp).toLocaleString()}] ${profiles[m.sender].name}: ${m.type==='text'?m.content:'[图片]'}\n`;
+            });
+            const b = new Blob([str], {type:"text/plain;charset=utf-8"});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+            a.download = `Chat_${Date.now()}.txt`; a.click();
+        };
+
+        const currentGroup = computed(() => replyGroups.value.find(g => g.id === currentGroupId.value) || replyGroups.value[0]);
+        const filteredReplies = computed(() => {
+            if(!searchQuery.value) return currentGroup.value.replies;
+            return currentGroup.value.replies.filter(r => r.type === 'image' || (r.text && r.text.includes(searchQuery.value)));
+        });
+
+        const addGroup = () => {
+            const n = prompt("输入新分组名称：");
+            if(n && n.trim()) {
+                const id = 'g_' + Date.now();
+                replyGroups.value.push({id, name: n.trim(), replies: []});
+                currentGroupId.value = id;
+            }
+        };
+        const deleteGroup = id => {
+            if(confirm('删除此组及其所有内容？')) {
+                replyGroups.value = replyGroups.value.filter(g => g.id !== id);
+                if(currentGroupId.value === id) currentGroupId.value = replyGroups.value[0].id;
+            }
+        };
+        const addReply = () => {
+            if(newReplyText.value.trim()) {
+                currentGroup.value.replies.push({ text: newReplyText.value.trim() });
+                newReplyText.value = '';
+            }
+        };
+        const removeReply = reply => {
+            const idx = currentGroup.value.replies.indexOf(reply);
+            if(idx > -1) currentGroup.value.replies.splice(idx, 1);
+        };
+
+        const addImageReplies = (e) => {
+            const files = Array.from(e.target.files);
+            if(!files.length) return;
+            let loaded = 0;
+            files.forEach(file => {
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const c = document.createElement('canvas');
+                        let w = img.width, h = img.height, MAX = 400;
+                        if(w > MAX) { h *= MAX/w; w = MAX; }
+                        c.width = w; c.height = h;
+                        c.getContext('2d').drawImage(img, 0, 0, w, h);
+                        currentGroup.value.replies.push({ type: 'image', img: c.toDataURL('image/jpeg', 0.85), text: '' });
+                        loaded++;
+                        if(loaded === files.length) saveData();
+                    };
+                    img.src = ev.target.result;
+                };
+                r.readAsDataURL(file);
+            });
+            e.target.value = '';
+        };
+
+        const exportReplies = () => {
+            const b = new Blob([JSON.stringify(replyGroups.value)], {type:"application/json"});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+            a.download = "Replies.json"; a.click();
+        };
+        const importReplies = e => {
+            const f = e.target.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                try {
+                    const parsed = JSON.parse(ev.target.result);
+                    if(Array.isArray(parsed)) {
+                        if(confirm('点击[确定]覆盖现有库，点击[取消]追加到现有库')) replyGroups.value = parsed;
+                        else replyGroups.value.push(...parsed);
+                        currentGroupId.value = replyGroups.value[0].id;
+                    }
+                } catch(err) { alert('文件格式有误'); }
+            };
+            r.readAsText(f); e.target.value='';
+        };
+
+        const exportScreenshot = async () => {
+            const chatEl = document.getElementById('chat-container');
+            if(!chatEl) return;
+            const origOverflow = chatEl.style.overflow;
+            const origHeight = chatEl.style.height;
+            chatEl.style.overflow = 'visible';
+            chatEl.style.height = 'auto';
+            try {
+                const canvas = await html2canvas(chatEl, {
+                    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim() || '#ffffff',
+                    scale: 2, useCORS: true, logging: false, scrollY: 0,
+                });
+                const link = document.createElement('a');
+                link.download = `静语_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch(err) {
+                alert('截图失败，请稍后重试');
+            } finally {
+                chatEl.style.overflow = origOverflow;
+                chatEl.style.height = origHeight;
+            }
+        };
+
+        onMounted(async () => {
+            try {
+                const data = await localforage.getItem('jingyu_data');
+                if(data) {
+                    if(data.messages) messages.value = data.messages;
+                    if(data.profiles) Object.assign(profiles, data.profiles);
+                    if(data.settings) Object.assign(settings, data.settings);
+                    if(data.replyGroups) replyGroups.value = data.replyGroups;
+                }
+            } catch(e) {}
+
+            if(settings.isDark) document.documentElement.classList.add('dark');
+            applyCSS(); setupActiveMsg();
+            checkNotifPermission();
+
+            const ta = document.querySelector('textarea');
+            if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
+
+            // 开场动画结束后隐藏
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if(splash) splash.classList.add('hide');
+                setTimeout(() => { if(splash) splash.remove(); }, 1300);
+
+                nextTick(() => {
+                    scrollToBottom();
+                    if(window.formkit && chatList.value) formkit.autoAnimate(chatList.value, {duration: 300});
+                });
+            }, 2800);
+        });
+
+        watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
+        onMounted(() => setTimeout(() => lucide.createIcons(), 100));
+
+        return {
+            chatList, messages, inputText, isTyping, previewImg, notifGranted,
+            profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
+            sendMsg, triggerReply, handleImageUpload, deleteMsg,
+            shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
+            toggleTheme, applyCSS, editProfile, uploadBg, clearChat, exportChat,
+            addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
+            addImageReplies, exportScreenshot, requestNotifPermission, popRandomEmoji
+        };
+    }
+}).mount('#app');
+
+// ─── 开场动画粒子效果 ───
+(function() {
+    const canvas = document.getElementById('splash-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [], animId;
+
+    const resize = () => {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * W;
+            this.y = Math.random() * H;
+            this.r = Math.random() * 1.5 + 0.3;
+            this.vx = (Math.random() - 0.5) * 0.3;
+            this.vy = -Math.random() * 0.5 - 0.1;
+            this.alpha = Math.random() * 0.6 + 0.1;
+            this.life = 1;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            this.life -= 0.003;
+            if(this.life <= 0 || this.y < -5) this.reset();
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(120,120,120,${this.alpha * this.life})`;
+            ctx.fill();
+        }
+    }
+
+    for(let i=0; i<80; i++) particles.push(new Particle());
+
+    const loop = () => {
+        ctx.clearRect(0,0,W,H);
+        particles.forEach(p => { p.update(); p.draw(); });
+        animId = requestAnimationFrame(loop);
+    };
+    loop();
+
+    // 开场完成后停止粒子
+    setTimeout(() => {
+        cancelAnimationFrame(animId);
+    }, 4200);
+})();
+
+// ─── PWA 安装提示 ───
+(function() {
+    let deferredPrompt;
+    const banner = document.getElementById('install-banner');
+    const installBtn = document.getElementById('install-btn');
+    const dismissBtn = document.getElementById('dismiss-install');
+
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if(banner) banner.style.display = 'flex';
+    });
+
+    if(installBtn) installBtn.addEventListener('click', async () => {
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        if(banner) banner.style.display = 'none';
+    });
+
+    if(dismissBtn) dismissBtn.addEventListener('click', () => {
+        if(banner) banner.style.display = 'none';
+    });
+
+    // iOS 提示（Safari 不支持 beforeinstallprompt）
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isInStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if(isIos && !isInStandalone && banner) {
+        banner.querySelector('span:nth-child(2)').textContent = '点击分享按钮 → 添加到主屏幕';
+        banner.style.display = 'flex';
+        if(installBtn) installBtn.style.display = 'none';
+    }
+})();
+</script>
+</body>
+</html>

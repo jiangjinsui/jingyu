@@ -5,618 +5,596 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>静语</title>
 
+    <!-- PWA 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="静语">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#faf9f7" id="theme-color-meta">
+    <meta name="theme-color" content="#f9f9f9" id="theme-color-meta">
     <link rel="manifest" id="pwa-manifest">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f9f9f9'/><text y='.9em' font-size='80' x='10'>🪶</text></svg>">
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/localforage@1.10.0/dist/localforage.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@formkit/auto-animate@0.8.0/index.iife.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { colors: {
-                bg: 'var(--color-bg)', surface: 'var(--color-surface)',
-                text: 'var(--color-text)', muted: 'var(--color-muted)',
-                border: 'var(--color-border)', accent: 'var(--color-accent)',
-                bubbleSend: 'var(--color-bubble-send)',
-            }}}
+            theme: {
+                extend: {
+                    colors: {
+                        bg: 'var(--color-bg)',
+                        surface: 'var(--color-surface)',
+                        text: 'var(--color-text)',
+                        muted: 'var(--color-muted)',
+                        border: 'var(--color-border)',
+                        bubbleSend: 'var(--color-bubble-send)',
+                        bubbleReceive: 'var(--color-bubble-receive)',
+                    }
+                }
+            }
         }
     </script>
 
     <style>
         :root {
-            --color-bg: #faf9f7;
+            --color-bg: #f9f9f9;
             --color-surface: #ffffff;
-            --color-text: #1e1e1e;
-            --color-muted: #a8a39d;
-            --color-border: #ede9e4;
-            --color-accent: #c9a882;
-            --color-bubble-send: #f2ede8;
+            --color-text: #2a2a2a;
+            --color-muted: #9e9e9e;
+            --color-border: #f0f0f0;
+            --color-bubble-send: #f4f4f4;
+            --color-bubble-receive: #ffffff;
             font-family: 'Noto Serif SC', 'SimSun', serif;
             -webkit-tap-highlight-color: transparent;
         }
+
         .dark {
-            --color-bg: #0f0f0f;
-            --color-surface: #161614;
-            --color-text: #e8e4df;
-            --color-muted: #6b6660;
-            --color-border: #252320;
-            --color-accent: #c9a882;
-            --color-bubble-send: #1e1c19;
+            --color-bg: #111111;
+            --color-surface: #181818;
+            --color-text: #eaeaea;
+            --color-muted: #737373;
+            --color-border: #2a2a2a;
+            --color-bubble-send: #242424;
+            --color-bubble-receive: #181818;
         }
 
-        * { box-sizing: border-box; }
-        body { background: var(--color-bg); color: var(--color-text); margin: 0; overflow: hidden; overscroll-behavior: none; }
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            margin: 0;
+            overflow: hidden;
+            overscroll-behavior-y: none;
+        }
 
-        ::-webkit-scrollbar { width: 2px; background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+        ::-webkit-scrollbar { width: 3px; background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
-        input, textarea, button { outline: none !important; box-shadow: none !important; }
-
-        /* ── 消息气泡 ── */
-        .msg-bubble { line-height: 1.85; letter-spacing: 0.4px; word-break: break-word; font-size: 14px; }
-
-        /* ── 打字指示点 ── */
         .typing-dot {
-            display: inline-block; width: 3.5px; height: 3.5px;
-            border-radius: 50%; background: var(--color-muted);
-            animation: tdot 1.4s infinite ease-in-out both; margin: 0 1.5px;
+            display: inline-block; width: 4px; height: 4px;
+            border-radius: 50%; background-color: var(--color-muted);
+            animation: typing 1.4s infinite ease-in-out both; margin: 0 2px;
         }
         .typing-dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes tdot { 0%,80%,100%{transform:scale(0);opacity:.3} 40%{transform:scale(1);opacity:1} }
-
-        /* ── 打字机光标 ── */
-        .typewriter-cursor {
-            display: inline-block; width: 1px; height: 1em;
-            background: var(--color-muted); margin-left: 1px;
-            animation: blink 0.9s step-end infinite;
-            vertical-align: text-bottom;
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
         }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-        /* ── Vue 过渡 ── */
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.35s ease; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-        /* ── 气泡进场 ── */
-        .msg-in  { animation: msgL .28s cubic-bezier(.34,1.56,.64,1); }
-        .msg-out { animation: msgR .28s cubic-bezier(.34,1.56,.64,1); }
-        @keyframes msgL { from{opacity:0;transform:translateX(-10px) scale(.96)} to{opacity:1;transform:none} }
-        @keyframes msgR { from{opacity:0;transform:translateX(10px)  scale(.96)} to{opacity:1;transform:none} }
+        input, textarea, button { outline: none !important; box-shadow: none !important; }
+        .msg-bubble { line-height: 1.8; letter-spacing: 0.5px; word-break: break-word; }
 
-        /* ── 表情包弹出 ── */
-        .emoji-pop { position:fixed; z-index:150; pointer-events:none; font-size:2.2rem; animation:epop 3s ease forwards; filter:drop-shadow(0 2px 8px rgba(0,0,0,.12)); }
-        .emoji-pop.img { width:76px;height:76px;border-radius:10px;overflow:hidden; }
-        .emoji-pop.img img { width:100%;height:100%;object-fit:cover; }
-        @keyframes epop {
-            0%  { opacity:0; transform:translateY(0) scale(.3) rotate(-10deg); }
-            12% { opacity:1; transform:translateY(-18px) scale(1.08) rotate(5deg); }
-            55% { opacity:1; transform:translateY(-48px) scale(1) rotate(-1deg); }
-            100%{ opacity:0; transform:translateY(-105px) scale(.88) rotate(3deg); }
+        /* ─── 开场动画 ─── */
+        #splash-screen {
+            position: fixed; inset: 0; z-index: 200;
+            background: var(--color-surface);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 1.2s ease, transform 1.2s ease;
+        }
+        #splash-screen.hide {
+            opacity: 0; transform: scale(1.04); pointer-events: none;
         }
 
-        /* ── 应用内 Toast ── */
-        #inapp-toast {
-            position:fixed; top:env(safe-area-inset-top,0);
-            left:50%; transform:translateX(-50%) translateY(-130%);
-            z-index:180; min-width:230px; max-width:320px;
-            background:var(--color-surface); border:1px solid var(--color-border);
-            border-radius:18px; padding:11px 15px;
-            display:flex; align-items:center; gap:11px;
-            box-shadow:0 12px 40px rgba(0,0,0,.08);
-            transition:transform .38s cubic-bezier(.34,1.56,.64,1);
-            backdrop-filter:blur(16px);
-        }
-        #inapp-toast.show { transform:translateX(-50%) translateY(14px); }
-        .toast-av { width:34px;height:34px;border-radius:50%;background:var(--color-bg);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;overflow:hidden; }
-        .toast-av img{width:100%;height:100%;object-fit:cover;}
-        .toast-name{font-size:10px;color:var(--color-muted);letter-spacing:.1em;margin-bottom:2px;}
-        .toast-text{font-size:13px;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-        /* ── PWA 安装条 ── */
-        #install-banner {
-            position:fixed; bottom:max(env(safe-area-inset-bottom,0px),14px);
-            left:50%; transform:translateX(-50%);
-            z-index:160; background:var(--color-surface);
-            border:1px solid var(--color-border); border-radius:14px;
-            padding:9px 14px; display:flex; align-items:center; gap:9px;
-            font-size:12px; letter-spacing:.04em;
-            box-shadow:0 4px 18px rgba(0,0,0,.08); white-space:nowrap;
-        }
-        #install-banner button { background:var(--color-text);color:var(--color-bg);border:none;border-radius:8px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:inherit; }
-        #install-banner .dis { background:transparent;color:var(--color-muted);padding:4px 5px; }
-
-        /* ══════════════════════════════
-           开场动画  —  全新版
-        ══════════════════════════════ */
-        #splash {
-            position:fixed; inset:0; z-index:200;
-            background:var(--color-bg);
-            display:flex; flex-direction:column;
-            align-items:center; justify-content:center;
-            transition:opacity 1.6s ease, transform 1.6s ease;
-        }
-        #splash.hide { opacity:0; transform:scale(1.03); pointer-events:none; }
-        #splash-canvas { position:absolute;inset:0;width:100%;height:100%; }
-
-        /* 羽毛图标 */
-        .sp-feather {
-            font-size:2rem; opacity:0;
-            animation: spFadeUp 1s ease .3s forwards;
-            filter: drop-shadow(0 4px 16px rgba(201,168,130,.3));
-        }
-        /* 横线 */
-        .sp-line {
-            width:0; height:1px;
-            background:linear-gradient(90deg, transparent, var(--color-accent), transparent);
-            animation:spLine 1.8s ease .8s forwards;
-            margin:20px 0 24px;
-        }
-        @keyframes spLine { to { width: 80px; } }
-        /* 大标题 */
-        .sp-title {
-            font-family:'DM Serif Display', 'Noto Serif SC', serif;
-            font-size: clamp(2.6rem, 9vw, 4.2rem);
-            letter-spacing: .25em;
-            font-weight:400;
-            color:var(--color-text);
-            opacity:0; transform:translateY(14px);
-            animation:spFadeUp 1.2s ease 1s forwards;
-            margin-left:.25em;
-        }
-        /* 中文副标 */
-        .sp-cn {
-            font-size:.72rem; letter-spacing:.55em;
-            color:var(--color-muted);
-            opacity:0; transform:translateY(8px);
-            animation:spFadeUp 1s ease 1.7s forwards;
-            margin-top:14px; margin-left:.55em;
-        }
-        /* 小装饰字 */
-        .sp-en {
-            font-size:.55rem; letter-spacing:.4em;
-            color:var(--color-accent);
-            opacity:0;
-            animation:spFadeUp .8s ease 2.4s forwards;
-            margin-top:28px; margin-left:.4em;
-            text-transform:uppercase;
-        }
-        /* 底部进度细线 */
-        .sp-progress {
-            position:absolute; bottom:0; left:0;
-            height:1px; width:0;
-            background:linear-gradient(90deg, transparent, var(--color-accent), transparent);
-            animation:spProgress 4s ease .5s forwards;
-        }
-        @keyframes spFadeUp { to{opacity:1;transform:translateY(0)} }
-        @keyframes spProgress { to{width:100%} }
-
-        /* ── 标签胶囊 ── */
-        .tag-pill {
-            display:inline-flex; align-items:center;
-            font-size:10px; letter-spacing:.08em;
-            padding:3px 9px; border-radius:20px;
-            border:1px solid var(--color-border);
-            color:var(--color-muted); cursor:pointer;
-            transition:all .18s; white-space:nowrap;
-            background:var(--color-bg);
-        }
-        .tag-pill:hover, .tag-pill.active {
-            border-color:var(--color-accent);
-            color:var(--color-accent);
-            background:color-mix(in srgb, var(--color-accent) 8%, transparent);
+        /* 粒子画布 */
+        #splash-canvas {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            opacity: 0.18;
         }
 
-        /* ── 日期分隔 ── */
-        .date-sep {
-            display:flex; align-items:center; gap:12px;
-            color:var(--color-muted); font-size:10px; letter-spacing:.3em;
-            margin:8px 0;
+        .splash-title {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            letter-spacing: 1.2em;
+            font-weight: 300;
+            color: var(--color-text);
+            opacity: 0;
+            transform: translateY(12px);
+            animation: splashFadeUp 1.2s ease 0.4s forwards;
+            margin-left: 1.2em;
         }
-        .date-sep::before, .date-sep::after {
-            content:''; flex:1; height:1px;
-            background:linear-gradient(90deg, transparent, var(--color-border));
+        .splash-sub {
+            font-size: 0.65rem;
+            letter-spacing: 0.5em;
+            color: var(--color-muted);
+            opacity: 0;
+            transform: translateY(8px);
+            animation: splashFadeUp 1s ease 1s forwards;
+            margin-top: 1.5rem;
         }
-        .date-sep::after { background:linear-gradient(270deg, transparent, var(--color-border)); }
+        .splash-line {
+            width: 0; height: 1px;
+            background: var(--color-muted);
+            opacity: 0.3;
+            animation: splashLine 1.4s ease 0.2s forwards;
+            margin-bottom: 2.5rem;
+        }
+        @keyframes splashFadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes splashLine {
+            to { width: 60px; }
+        }
 
-        /* ── Header accent dot ── */
-        .online-dot {
-            width:6px;height:6px;border-radius:50%;
-            background:var(--color-accent);
-            animation:pulse 2.5s ease-in-out infinite;
+        /* ─── 随机表情包弹出 ─── */
+        .emoji-popup {
+            position: fixed;
+            z-index: 150;
+            pointer-events: none;
+            font-size: 2.5rem;
+            animation: emojiFloat 2.8s ease forwards;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
         }
-        @keyframes pulse { 0%,100%{opacity:.5;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+        .emoji-popup.is-img {
+            width: 80px; height: 80px;
+            border-radius: 12px;
+            overflow: hidden;
+            animation: emojiFloat 3s ease forwards;
+        }
+        .emoji-popup.is-img img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        @keyframes emojiFloat {
+            0%   { opacity: 0; transform: translateY(0) scale(0.4) rotate(-8deg); }
+            15%  { opacity: 1; transform: translateY(-20px) scale(1.1) rotate(4deg); }
+            60%  { opacity: 1; transform: translateY(-50px) scale(1) rotate(-2deg); }
+            100% { opacity: 0; transform: translateY(-110px) scale(0.85) rotate(3deg); }
+        }
+
+        /* ─── 通知横幅 (应用内) ─── */
+        .inapp-toast {
+            position: fixed; top: env(safe-area-inset-top, 0);
+            left: 50%; transform: translateX(-50%) translateY(-120%);
+            z-index: 180; min-width: 240px; max-width: 340px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            backdrop-filter: blur(12px);
+        }
+        .inapp-toast.show {
+            transform: translateX(-50%) translateY(12px);
+        }
+        .inapp-toast-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--color-bg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+            overflow: hidden;
+        }
+        .inapp-toast-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .inapp-toast-body { flex: 1; min-width: 0; }
+        .inapp-toast-name { font-size: 11px; color: var(--color-muted); tracking: widest; margin-bottom: 2px; }
+        .inapp-toast-text { font-size: 13px; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ─── PWA 安装提示 ─── */
+        .install-banner {
+            position: fixed; bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+            left: 50%; transform: translateX(-50%);
+            z-index: 160;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 14px;
+            padding: 10px 16px;
+            display: flex; align-items: center; gap-10px;
+            gap: 10px;
+            font-size: 12px; letter-spacing: 0.05em;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+        .install-banner button {
+            background: var(--color-text); color: var(--color-bg);
+            border: none; border-radius: 8px;
+            padding: 5px 12px; font-size: 11px;
+            cursor: pointer; letter-spacing: 0.05em;
+            font-family: inherit;
+        }
+        .install-banner .dismiss { background: transparent; color: var(--color-muted); padding: 5px 6px; }
+
+        /* ─── 通知权限提示 ─── */
+        .notif-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 10px; letter-spacing: 0.1em;
+            color: var(--color-muted);
+            border: 1px solid var(--color-border);
+            border-radius: 20px; padding: 3px 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notif-badge:hover { color: var(--color-text); border-color: var(--color-muted); }
+        .notif-badge.granted { color: #6b9e6b; border-color: #6b9e6b33; }
+
+        /* ─── 聊天气泡进场动画 ─── */
+        .msg-in { animation: msgSlideIn 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+        .msg-in-right { animation: msgSlideInRight 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes msgSlideIn {
+            from { opacity: 0; transform: translateX(-12px) scale(0.95); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes msgSlideInRight {
+            from { opacity: 0; transform: translateX(12px) scale(0.95); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
     </style>
     <style id="custom-bubble-css"></style>
 </head>
 <body>
 
-<!-- 开场动画 -->
-<div id="splash">
+<!-- ─── 开场动画 ─── -->
+<div id="splash-screen">
     <canvas id="splash-canvas"></canvas>
-    <div class="sp-feather">🪶</div>
-    <div class="sp-line"></div>
-    <div class="sp-title">静 语</div>
-    <div class="sp-cn">字 语 传 心</div>
-    <div class="sp-en">Jing Yu · words between us</div>
-    <div class="sp-progress"></div>
+    <div class="splash-line"></div>
+    <div class="splash-title">静 语</div>
+    <div class="splash-sub">JING YU · 字语传心</div>
 </div>
 
-<!-- 应用内通知 -->
-<div id="inapp-toast">
-    <div class="toast-av" id="toast-av"><span id="toast-av-char">？</span></div>
-    <div>
-        <div class="toast-name" id="toast-name">对方</div>
-        <div class="toast-text" id="toast-text">发来了新消息</div>
+<!-- ─── 应用内通知横幅 ─── -->
+<div id="inapp-toast" class="inapp-toast">
+    <div class="inapp-toast-avatar" id="toast-avatar">
+        <span id="toast-avatar-char">？</span>
+    </div>
+    <div class="inapp-toast-body">
+        <div class="inapp-toast-name" id="toast-name">对方</div>
+        <div class="inapp-toast-text" id="toast-text">发来了新消息</div>
     </div>
 </div>
 
-<!-- PWA 安装条 -->
-<div id="install-banner" style="display:none">
-    <span>🪶</span>
-    <span>添加到主屏幕</span>
+<!-- ─── PWA 安装横幅 ─── -->
+<div id="install-banner" class="install-banner" style="display:none;">
+    <span style="color:var(--color-muted);">🪶</span>
+    <span style="color:var(--color-text);">安装到桌面，随时使用</span>
     <button id="install-btn">安 装</button>
-    <button class="dis" id="dismiss-install">✕</button>
+    <button class="dismiss" id="dismiss-install">✕</button>
 </div>
 
-<div id="app"
-     class="h-[100dvh] w-full flex justify-center items-center bg-bg"
-     :style="settings.bgImage?{backgroundImage:`url(${settings.bgImage})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
+<div id="app" class="h-[100dvh] w-full flex justify-center items-center bg-bg selection:bg-text selection:text-bg relative"
+     :style="settings.bgImage ? { backgroundImage: `url(${settings.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
 
-    <div class="w-full md:max-w-2xl h-full flex flex-col bg-surface/95 backdrop-blur-xl relative md:shadow-[0_0_80px_rgba(0,0,0,.06)] md:border-x border-border transition-all duration-500">
+    <div class="w-full md:max-w-3xl h-full flex flex-col bg-surface/90 backdrop-blur-lg relative md:shadow-2xl md:border-x border-border/50 transition-all duration-500">
 
-        <!-- Header -->
-        <header class="h-[72px] flex items-center justify-between px-5 md:px-7 shrink-0 relative">
-            <div class="absolute bottom-0 left-0 right-0 h-[1px] bg-border"></div>
+<header class="h-20 md:h-24 flex items-center justify-between px-6 md:px-8 z-10 shrink-0 relative">
+    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
 
-            <!-- 左：对方 -->
-            <div class="flex flex-col items-center gap-[3px] cursor-pointer group w-14" @click="editProfile('them')">
-                <div v-if="settings.showAvatar"
-                     class="w-8 h-8 overflow-hidden bg-bg flex items-center justify-center text-muted transition-transform group-hover:scale-105"
-                     :style="{borderRadius: settings.avatarRadius+'%'}">
-                    <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
-                    <span v-else class="text-xs font-light">{{ profiles.them.name.charAt(0) }}</span>
-                </div>
-                <span class="text-[9px] tracking-widest text-muted">{{ profiles.them.name }}</span>
-                <span class="text-[8px] text-accent tracking-wider h-3 transition-opacity" :class="isTyping?'opacity-100':'opacity-0'">输入中</span>
-            </div>
+    <!-- 左边：对方头像 + 名字 -->
+    <div class="flex flex-col items-center justify-center gap-1 group cursor-pointer w-14" @click="editProfile('them')">
+        <div v-if="settings.showAvatar" class="w-9 h-9 md:w-10 md:h-10 overflow-hidden bg-bg flex items-center justify-center text-muted transition-transform group-hover:scale-105 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+            <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+            <span v-else class="text-sm font-light">{{ profiles.them.name.charAt(0) }}</span>
+        </div>
+        <span class="text-[9px] md:text-[10px] tracking-widest text-muted">{{ profiles.them.name }}</span>
+        <span class="text-[8px] text-muted/60 tracking-widest transition-opacity h-3" :class="isTyping ? 'opacity-100' : 'opacity-0'">输入中</span>
+    </div>
 
-            <!-- 中：按钮 -->
-            <div class="flex gap-3 text-muted items-center">
-                <div v-if="isTyping" class="online-dot"></div>
-                <button @click="toggleTheme" class="hover:text-text transition-colors p-1">
-                    <i :data-lucide="settings.isDark?'sun':'moon'" class="w-[15px] h-[15px] stroke-[1.5]"></i>
-                </button>
-                <button @click="modals.replyManager=true" class="hover:text-text transition-colors p-1">
-                    <i data-lucide="library" class="w-[15px] h-[15px] stroke-[1.5]"></i>
-                </button>
-                <button @click="modals.settings=true" class="hover:text-text transition-colors p-1">
-                    <i data-lucide="sliders-horizontal" class="w-[15px] h-[15px] stroke-[1.5]"></i>
-                </button>
-            </div>
+    <!-- 中间：功能按钮 -->
+    <div class="flex gap-2 md:gap-3 text-muted items-center">
+        <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button @click="exportScreenshot" class="hover:text-text transition-colors" title="截图导出"><i data-lucide="camera" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button @click="modals.settings = true" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
+    </div>
 
-            <!-- 右：我 -->
-            <div class="flex flex-col items-center gap-[3px] cursor-pointer group w-14" @click="editProfile('me')">
-                <div v-if="settings.showAvatar"
-                     class="w-8 h-8 overflow-hidden bg-bg flex items-center justify-center text-muted transition-transform group-hover:scale-105"
-                     :style="{borderRadius: settings.avatarRadius+'%'}">
-                    <img v-if="profiles.me.avatar" :src="profiles.me.avatar" class="w-full h-full object-cover">
-                    <span v-else class="text-xs font-light">{{ profiles.me.name.charAt(0) }}</span>
-                </div>
-                <span class="text-[9px] tracking-widest text-muted">{{ profiles.me.name }}</span>
-                <span class="h-3"></span>
-            </div>
-        </header>
+    <!-- 右边：我的头像 + 名字（同高占位） -->
+    <div class="flex flex-col items-center justify-center gap-1 group cursor-pointer w-14" @click="editProfile('me')">
+        <div v-if="settings.showAvatar" class="w-9 h-9 md:w-10 md:h-10 overflow-hidden bg-bg flex items-center justify-center text-muted transition-transform group-hover:scale-105 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+            <img v-if="profiles.me.avatar" :src="profiles.me.avatar" class="w-full h-full object-cover">
+            <span v-else class="text-sm font-light">{{ profiles.me.name.charAt(0) }}</span>
+        </div>
+        <span class="text-[9px] md:text-[10px] tracking-widest text-muted">{{ profiles.me.name }}</span>
+        <span class="h-3"></span>
+    </div>
+</header>
 
-        <!-- 聊天区 -->
-        <main id="chat-box" class="flex-1 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-1 scroll-smooth pb-24">
-            <div v-if="messages.length===0" class="flex-1 flex flex-col items-center justify-center gap-4 text-muted/30 tracking-[.3em] text-xs">
-                <i data-lucide="wind" class="w-5 h-5 stroke-[1]"></i>
+        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col gap-6 md:gap-8 scroll-smooth pb-20">
+
+            <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-muted/40 tracking-widest text-sm space-y-4">
+                <i data-lucide="wind" class="w-6 h-6 stroke-[1]"></i>
                 <span>留 白</span>
             </div>
 
-            <template v-for="(msg, idx) in messages" :key="msg.id">
-                <!-- 日期分隔 -->
-                <div v-if="shouldShowDate(idx)" class="date-sep my-5">{{ formatDateSep(msg.timestamp) }}</div>
+            <div ref="chatList" class="flex flex-col gap-6 md:gap-8">
+                <div v-for="(msg, index) in messages" :key="msg.id">
 
-                <div class="flex" :class="msg.sender==='me'?'justify-end':'justify-start'">
-                    <div class="flex gap-2 max-w-[82%]" :class="msg.sender==='me'?'flex-row-reverse':'flex-row'">
-                        <!-- 头像 -->
-                        <div v-if="settings.showAvatar"
-                             class="shrink-0 w-7 h-7 mt-1 cursor-pointer"
-                             :class="{'opacity-0 pointer-events-none': !shouldShowAvatar(idx)}"
-                             @click="editProfile(msg.sender)">
-                            <div class="w-full h-full overflow-hidden bg-bg flex items-center justify-center"
-                                 :style="{borderRadius: settings.avatarRadius+'%'}">
-                                <img v-if="profiles[msg.sender].avatar" :src="profiles[msg.sender].avatar" class="w-full h-full object-cover">
-                                <span v-else class="text-[10px] text-muted">{{ profiles[msg.sender].name.charAt(0) }}</span>
-                            </div>
-                        </div>
+                    <div v-if="shouldShowDate(index)" class="flex justify-center my-6 md:my-8">
+                        <span class="text-[10px] md:text-[11px] text-muted/50 tracking-[0.3em] uppercase">{{ formatDateSeparator(msg.timestamp) }}</span>
+                    </div>
 
-                        <div class="flex flex-col" :class="[msg.sender==='me'?'items-end msg-out':'items-start msg-in']">
-                            <span v-if="settings.showNickname && shouldShowAvatar(idx)"
-                                  class="text-[9px] text-muted/50 mb-1 px-1 tracking-widest">
-                                {{ profiles[msg.sender].name }}
-                            </span>
+                    <div class="flex group" :class="msg.sender === 'me' ? 'justify-end' : 'justify-start'">
+                        <div class="flex max-w-[85%] md:max-w-[75%] gap-3" :class="msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'">
 
-                            <div class="msg-bubble px-4 py-2.5 rounded-2xl transition-all group/bbl relative"
-                                 :class="msg.sender==='me'
-                                    ? 'bg-bubbleSend text-text rounded-tr-md'
-                                    : 'bg-surface border border-border text-text rounded-tl-md bubble-custom-class'">
-                                <template v-if="msg.type==='text'">
-                                    <!-- 打字机渲染 -->
-                                    <span v-if="msg.typing">{{ msg.displayed }}<span class="typewriter-cursor"></span></span>
-                                    <span v-else>{{ msg.content }}</span>
-                                </template>
-                                <template v-else-if="msg.type==='image'">
-                                    <img :src="msg.content" class="max-w-[190px] rounded-xl cursor-pointer" @click="previewImg=msg.content">
-                                </template>
-
-                                <!-- 长按删除（hover 显示） -->
-                                <button @click="deleteMsg(msg.id)"
-                                        class="absolute -top-1.5 opacity-0 group-hover/bbl:opacity-100 transition-opacity text-muted/40 hover:text-red-400"
-                                        :class="msg.sender==='me'?'-left-5':'-right-5'">
-                                    <i data-lucide="x" class="w-3 h-3"></i>
-                                </button>
+                            <div v-if="settings.showAvatar" class="shrink-0 w-8 h-8 mt-1 md:mt-2 cursor-pointer" :class="{'opacity-0 pointer-events-none': !shouldShowAvatar(index)}" @click="editProfile(msg.sender)">
+                                <div class="w-full h-full overflow-hidden bg-bg flex items-center justify-center transition-transform hover:scale-105 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                                    <img v-if="profiles[msg.sender].avatar" :src="profiles[msg.sender].avatar" class="w-full h-full object-cover">
+                                    <span v-else class="text-xs text-muted">{{ profiles[msg.sender].name.charAt(0) }}</span>
+                                </div>
                             </div>
 
-                            <div class="flex items-center gap-1 mt-1 px-1" :class="msg.sender==='me'?'flex-row-reverse':''">
-                                <span class="text-[9px] text-muted/40 font-sans tracking-wide">{{ formatTime(msg.timestamp) }}</span>
-                                <template v-if="msg.sender==='me'">
-                                    <i v-if="msg.status==='read'" data-lucide="check-circle-2" class="w-2.5 h-2.5 text-accent/50 stroke-[1.5]"></i>
-                                    <i v-else data-lucide="circle" class="w-2.5 h-2.5 text-muted/30 stroke-[1.5]"></i>
-                                </template>
+                            <div class="flex flex-col relative" :class="[msg.sender === 'me' ? 'items-end msg-in-right' : 'items-start msg-in']">
+                                <span v-if="settings.showNickname && shouldShowAvatar(index)" class="text-[10px] text-muted/60 mb-1 px-1 tracking-widest">
+                                    {{ profiles[msg.sender].name }}
+                                </span>
+
+                                <div class="msg-bubble px-4 md:px-5 py-2.5 md:py-3 rounded-2xl text-[14px] md:text-[15px] transition-all"
+                                     :class="[
+                                        msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text',
+                                        'bubble-custom-class'
+                                     ]">
+                                    <template v-if="msg.type === 'text'">{{ msg.content }}</template>
+                                    <template v-else-if="msg.type === 'image'">
+                                        <img :src="msg.content" class="max-w-[200px] md:max-w-[250px] rounded-lg cursor-pointer" @click="previewImg = msg.content">
+                                    </template>
+                                </div>
+
+                                <div class="text-[9px] md:text-[10px] text-muted/40 mt-1.5 flex items-center gap-1.5 tracking-wider px-1 font-sans">
+                                    <span>{{ formatTime(msg.timestamp) }}</span>
+                                    <template v-if="msg.sender === 'me'">
+                                        <i v-if="msg.status === 'read'" data-lucide="check-circle-2" class="w-3 h-3 text-text/40 stroke-[1.5]"></i>
+                                        <i v-else data-lucide="circle" class="w-3 h-3 stroke-[1.5]"></i>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center" :class="msg.sender === 'me' ? 'mr-2' : 'ml-2'">
+                                <button @click="deleteMsg(msg.id)" class="text-muted/30 hover:text-red-900/60"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </template>
 
-            <!-- 打字指示 -->
-            <div v-if="isTyping" class="flex justify-start mt-1">
-                <div class="flex gap-2">
-                    <div v-if="settings.showAvatar" class="w-7 h-7 overflow-hidden bg-bg flex items-center justify-center opacity-40" :style="{borderRadius:settings.avatarRadius+'%'}">
-                        <span class="text-[10px] text-muted">{{ profiles.them.name.charAt(0) }}</span>
-                    </div>
-                    <div class="px-4 py-2.5 bg-surface border border-border rounded-2xl rounded-tl-md flex items-center gap-0.5 h-9">
-                        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                <div v-if="isTyping" class="flex justify-start">
+                    <div class="flex gap-3">
+                        <div v-if="settings.showAvatar" class="w-8 h-8 overflow-hidden bg-bg flex items-center justify-center opacity-50 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                            <span class="text-xs text-muted">{{ profiles.them.name.charAt(0) }}</span>
+                        </div>
+                        <div class="px-5 py-3 bg-surface border border-border rounded-2xl flex items-center gap-1 h-[42px]">
+                            <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
 
-        <!-- Footer 输入区 -->
-        <footer class="bg-surface/95 backdrop-blur-lg shrink-0 px-4 md:px-7 pt-2 pb-[max(env(safe-area-inset-bottom,0px),16px)] relative z-10">
-            <div class="absolute top-0 left-0 right-0 h-[1px] bg-border"></div>
-            <div class="flex gap-3 px-1 pb-2 items-center">
-                <label class="cursor-pointer text-muted/60 hover:text-muted transition-colors">
-                    <i data-lucide="image" class="w-[15px] h-[15px] stroke-[1.5]"></i>
+        <footer class="bg-surface/90 backdrop-blur-md shrink-0 px-4 md:px-8 py-4 relative z-10 pb-6 md:pb-4">
+            <div class="absolute top-0 left-4 md:left-8 right-4 md:right-8 h-[1px] bg-border/80"></div>
+
+            <div class="flex gap-4 px-2 pb-2 text-muted/60 items-center">
+                <label class="cursor-pointer hover:text-text transition-colors" title="发送图片">
+                    <i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i>
                     <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
                 </label>
-                <button @click="popRandomEmoji" class="text-muted/60 hover:text-muted transition-colors">
-                    <i data-lucide="sparkles" class="w-[15px] h-[15px] stroke-[1.5]"></i>
+                <!-- 随机表情包按钮 -->
+                <button @click="popRandomEmoji" class="cursor-pointer hover:text-text transition-colors" title="随机表情包">
+                    <i data-lucide="sparkles" class="w-4 h-4 stroke-[1.5]"></i>
                 </button>
             </div>
-            <div class="flex items-end gap-2">
-                <textarea v-model="inputText" @keydown.enter.prevent="sendMsg('me','text')" rows="1"
-                          class="flex-1 bg-bg/60 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[13px] resize-none max-h-28 placeholder-muted/40 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border/80"
-                          placeholder="书写…"></textarea>
-                <div class="flex gap-1 shrink-0 pb-0.5 text-muted/70">
-                    <button @click="triggerReply" class="p-2 hover:bg-border/60 rounded-xl transition-all">
-                        <i data-lucide="pen-tool" class="w-[18px] h-[18px] stroke-[1.5]"></i>
+
+            <div class="flex items-end gap-3">
+                <textarea v-model="inputText" @keydown.enter.prevent="sendMsg('me', 'text')" rows="1"
+                          class="flex-1 bg-bg/50 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[14px] md:text-[15px] resize-none max-h-32 placeholder-muted/50 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border"
+                          placeholder="书写..."></textarea>
+
+                <div class="flex gap-2 md:gap-3 shrink-0 pb-1 text-muted/80">
+                    <button @click="triggerReply" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" title="让对方说话">
+                        <i data-lucide="pen-tool" class="w-5 h-5 md:w-5.5 md:h-5.5 stroke-[1.5]"></i>
                     </button>
-                    <button @click="sendMsg('me','text')" class="p-2 hover:bg-border/60 rounded-xl transition-all" :class="{'text-accent':inputText.trim()}">
-                        <i data-lucide="send" class="w-[18px] h-[18px] stroke-[1.5]"></i>
+                    <button @click="sendMsg('me', 'text')" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" :class="{'text-text': inputText.trim()}" title="发送">
+                        <i data-lucide="send" class="w-5 h-5 md:w-5.5 md:h-5.5 stroke-[1.5]"></i>
                     </button>
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- ══ 设置弹窗 ══ -->
+    <!-- 设置弹窗 -->
     <transition name="fade">
-        <div v-if="modals.settings" class="fixed inset-0 bg-bg/75 backdrop-blur-md z-50 flex justify-center items-end md:items-center p-0 md:p-4">
-            <div class="bg-surface w-full max-w-md md:rounded-2xl rounded-t-3xl shadow-2xl border-t md:border border-border flex flex-col max-h-[88vh] overflow-hidden">
-                <div class="px-6 py-5 flex justify-between items-center relative shrink-0">
-                    <h2 class="text-[13px] tracking-[.3em] font-medium">偏 好</h2>
-                    <button @click="modals.settings=false" class="text-muted hover:text-text w-7 h-7 flex items-center justify-center rounded-full hover:bg-border transition-all">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border"></div>
+        <div v-if="modals.settings" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4 md:p-0">
+            <div class="bg-surface w-full max-w-md shadow-2xl md:border border-border/50 flex flex-col max-h-[85vh] rounded-2xl md:rounded-none overflow-hidden">
+                <div class="px-6 py-5 flex justify-between items-center relative bg-surface">
+                    <h2 class="text-[14px] tracking-[0.3em] font-medium">偏好</h2>
+                    <button @click="modals.settings = false" class="text-muted hover:text-text"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
                 </div>
-                <div class="px-6 py-5 overflow-y-auto flex flex-col gap-7 text-[13px]">
+                <div class="px-6 py-6 overflow-y-auto flex flex-col gap-8 text-[13px] md:text-[14px]">
 
-                    <div class="space-y-2.5">
-                        <p class="text-[9px] text-muted/50 tracking-[.25em] uppercase mb-3">身份</p>
-                        <div class="flex justify-between items-center bg-bg px-4 py-3 rounded-xl cursor-pointer hover:bg-border/40 transition-colors" @click="editProfile('me')">
-                            <span class="tracking-wider">我的资料</span>
+                    <div class="space-y-3">
+                        <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">身份与显示</span>
+                        <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('me')">
+                            <span class="tracking-widest">我的资料</span>
                             <span class="text-muted text-xs flex items-center gap-1">{{ profiles.me.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
                         </div>
-                        <div class="flex justify-between items-center bg-bg px-4 py-3 rounded-xl cursor-pointer hover:bg-border/40 transition-colors" @click="editProfile('them')">
-                            <span class="tracking-wider">对方资料</span>
+                        <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('them')">
+                            <span class="tracking-widest">对方资料</span>
                             <span class="text-muted text-xs flex items-center gap-1">{{ profiles.them.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
                         </div>
-                        <div class="flex gap-3 pt-1">
-                            <label class="flex-1 flex justify-between items-center cursor-pointer bg-bg px-4 py-2.5 rounded-xl">
-                                <span class="tracking-wider text-xs">头像</span>
+                        <div class="flex gap-4 pt-2">
+                            <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
+                                <span class="tracking-widest text-xs">头像</span>
                                 <input type="checkbox" v-model="settings.showAvatar" class="accent-text">
                             </label>
-                            <label class="flex-1 flex justify-between items-center cursor-pointer bg-bg px-4 py-2.5 rounded-xl">
-                                <span class="tracking-wider text-xs">昵称</span>
+                            <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
+                                <span class="tracking-widest text-xs">昵称</span>
                                 <input type="checkbox" v-model="settings.showNickname" class="accent-text">
                             </label>
                         </div>
                     </div>
 
-                    <div class="space-y-3">
-                        <p class="text-[9px] text-muted/50 tracking-[.25em] uppercase mb-3">交互</p>
-                        <div class="flex justify-between items-center cursor-pointer" @click="requestNotifPermission">
-                            <span class="tracking-wider">后台通知</span>
-                            <span :class="['text-[11px] px-3 py-1 rounded-full border transition-all', notifGranted?'text-green-600 border-green-200':'text-muted border-border']">
-                                {{ notifGranted ? '✓ 已开启' : '点击开启' }}
-                            </span>
-                        </div>
-                        <label class="flex justify-between items-center cursor-pointer">
-                            <span class="tracking-wider">消息音效</span>
-                            <input type="checkbox" v-model="settings.sound" class="accent-text w-4 h-4">
-                        </label>
-                        <label class="flex justify-between items-center cursor-pointer">
-                            <span class="tracking-wider">打字机效果</span>
-                            <input type="checkbox" v-model="settings.typewriter" class="accent-text w-4 h-4">
-                        </label>
+                    <!-- ✅ 这是修复后的代码 -->
+<div class="space-y-4">
+    <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">交互与行为</span>
+    
+    <!-- 通知开关 -->
+    <div class="flex justify-between items-center cursor-pointer" @click="requestNotifPermission">
+        <span class="tracking-widest">后台消息通知</span>
+        <span :class="['text-[11px] tracking-wider px-3 py-1 rounded-full border transition-all cursor-pointer', notifGranted ? 'text-green-600 border-green-200' : 'text-muted border-border hover:border-muted']">
+            {{ notifGranted ? '✓ 已开启' : '点击开启' }}
+        </span>
+    </div>
+
+    <!-- 消息音效开关 -->
+    <label class="flex justify-between items-center cursor-pointer group">
+        <span class="tracking-widest">消息音效</span>
+        <input type="checkbox" v-model="settings.sound" class="accent-text w-4 h-4">
+    </label>
+
+    <!-- 自动回复延迟 -->
+    <div class="flex justify-between items-center">
+        <span class="tracking-widest">自动回复延迟 (秒)</span>
+        <div class="flex items-center gap-2 text-xs">
+            <input type="number" v-model.number="settings.delayMin" min="0" class="w-12 bg-bg text-center py-1 outline-none border border-border">
+            <span class="text-muted">-</span>
+            <input type="number" v-model.number="settings.delayMax" min="1" class="w-12 bg-bg text-center py-1 outline-none border border-border">
+        </div>
+    </div>
+
+    <!-- 主动发消息开关 -->
+    <label class="flex justify-between items-center cursor-pointer group pt-2">
+        <span class="tracking-widest">允许对方主动发消息</span>
+        <input type="checkbox" v-model="settings.activeMsg" class="accent-text w-4 h-4">
+    </label>
+
+    <!-- 主动触发间隔 -->
+    <div v-if="settings.activeMsg" class="flex justify-between items-center pl-4 border-l-2 border-border/50">
+        <span class="tracking-widest text-xs text-muted">主动触发间隔 (秒)</span>
+        <input type="number" v-model.number="settings.activeInterval" min="5" class="w-16 bg-bg text-center py-1 text-xs outline-none border border-border">
+    </div>
+</div>
                         <div class="flex justify-between items-center">
-                            <span class="tracking-wider">自动回复延迟 (秒)</span>
+                            <span class="tracking-widest">自动回复延迟 (秒)</span>
                             <div class="flex items-center gap-2 text-xs">
-                                <input type="number" v-model.number="settings.delayMin" min="0" class="w-10 bg-bg text-center py-1 border border-border rounded-lg text-xs">
-                                <span class="text-muted">—</span>
-                                <input type="number" v-model.number="settings.delayMax" min="1" class="w-10 bg-bg text-center py-1 border border-border rounded-lg text-xs">
+                                <input type="number" v-model.number="settings.delayMin" min="0" class="w-12 bg-bg text-center py-1 outline-none border border-border">
+                                <span class="text-muted">-</span>
+                                <input type="number" v-model.number="settings.delayMax" min="1" class="w-12 bg-bg text-center py-1 outline-none border border-border">
                             </div>
                         </div>
-                        <label class="flex justify-between items-center cursor-pointer">
-                            <span class="tracking-wider">对方主动发消息</span>
+                        <label class="flex justify-between items-center cursor-pointer group pt-2">
+                            <span class="tracking-widest">允许对方主动发消息</span>
                             <input type="checkbox" v-model="settings.activeMsg" class="accent-text w-4 h-4">
                         </label>
                         <div v-if="settings.activeMsg" class="flex justify-between items-center pl-4 border-l-2 border-border/50">
-                            <span class="text-muted text-xs tracking-wider">间隔 (秒)</span>
-                            <input type="number" v-model.number="settings.activeInterval" min="5" class="w-14 bg-bg text-center py-1 text-xs border border-border rounded-lg">
+                            <span class="tracking-widest text-xs text-muted">主动触发间隔 (秒)</span>
+                            <input type="number" v-model.number="settings.activeInterval" min="5" class="w-16 bg-bg text-center py-1 text-xs outline-none border border-border">
                         </div>
                     </div>
 
-                    <div class="space-y-3">
-                        <p class="text-[9px] text-muted/50 tracking-[.25em] uppercase mb-3">外观</p>
+                    <div class="space-y-4">
+                        <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">外观定制</span>
                         <div>
                             <div class="flex justify-between text-xs mb-2">
-                                <span class="tracking-wider">头像圆角</span>
-                                <span class="text-muted">{{ settings.avatarRadius }}%</span>
+                                <span class="tracking-widest">头像圆角</span>
+                                <span class="text-muted">{{settings.avatarRadius}}%</span>
                             </div>
-                            <input type="range" v-model="settings.avatarRadius" min="0" max="50" class="w-full h-1 bg-border appearance-none rounded-full accent-text">
+                            <input type="range" v-model="settings.avatarRadius" min="0" max="50" class="w-full accent-text h-1 bg-border appearance-none">
                         </div>
-                        <div class="flex flex-col gap-1.5">
-                            <span class="tracking-wider text-xs">背景图片</span>
-                            <input type="file" accept="image/*" @change="uploadBg" class="text-[10px] text-muted file:bg-bg file:border file:border-border file:rounded-lg file:px-3 file:py-1 file:mr-2 cursor-pointer">
-                            <button v-if="settings.bgImage" @click="settings.bgImage=''" class="text-[10px] text-red-400/70 self-start">清除</button>
+                        <div class="pt-2 flex flex-col gap-2">
+                            <span class="tracking-widest text-xs">背景图片</span>
+                            <input type="file" accept="image/*" @change="uploadBg" class="text-[10px] text-muted file:bg-bg file:border-none file:px-3 file:py-1 file:mr-2 cursor-pointer">
+                            <button v-if="settings.bgImage" @click="settings.bgImage=''" class="text-[10px] text-red-900/50 self-start">清除背景</button>
                         </div>
-                        <div>
-                            <span class="tracking-wider text-xs block mb-2">自定义气泡 CSS</span>
-                            <textarea v-model="settings.customCSS" rows="2" class="w-full bg-bg border border-border rounded-xl px-3 py-2 text-[10px] font-mono resize-none" placeholder=".bubble-custom-class { }"></textarea>
-                            <button @click="applyCSS" class="text-[10px] tracking-wider text-text border border-border px-3 py-1 mt-2 rounded-lg hover:bg-border transition-colors">应用</button>
+                        <div class="pt-2">
+                            <span class="tracking-widest text-xs block mb-2">自定义气泡 CSS</span>
+                            <textarea v-model="settings.customCSS" rows="2" class="w-full bg-bg border border-border px-3 py-2 text-[10px] font-mono resize-none" placeholder=".bubble-custom-class { }"></textarea>
+                            <button @click="applyCSS" class="text-[10px] tracking-widest text-text border border-border px-3 py-1 mt-2 hover:bg-border">应用</button>
                         </div>
                     </div>
 
-                    <div class="pt-4 pb-1 flex justify-between border-t border-border">
-                        <button @click="exportChat" class="text-[11px] tracking-wider text-muted border border-border px-4 py-1.5 rounded-lg hover:bg-border transition-colors">导出记录</button>
-                        <button @click="clearChat" class="text-[11px] tracking-wider text-red-400/80 border border-red-200/30 px-4 py-1.5 rounded-lg hover:bg-red-50/30 transition-colors">清空所有</button>
+                    <div class="pt-6 pb-2 flex justify-between border-t border-border/50">
+                        <button @click="exportChat" class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border">导出记录</button>
+                        <button @click="clearChat" class="text-[11px] tracking-widest text-red-700/80 border border-red-900/10 px-4 py-1.5 hover:bg-red-900/5">清空所有</button>
                     </div>
                 </div>
             </div>
         </div>
     </transition>
 
-    <!-- ══ 逻辑库弹窗 ══ -->
+    <!-- 逻辑库弹窗 -->
     <transition name="fade">
-        <div v-if="modals.replyManager" class="fixed inset-0 bg-bg/75 backdrop-blur-md z-50 flex justify-center items-end md:items-center p-0 md:p-4">
-            <div class="bg-surface w-full max-w-3xl md:rounded-2xl rounded-t-3xl shadow-2xl border-t md:border border-border flex flex-col h-[90vh] md:h-[85vh] overflow-hidden">
+        <div v-if="modals.replyManager" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4 md:p-0">
+            <div class="bg-surface w-full max-w-3xl shadow-2xl md:border border-border/50 flex flex-col h-[85vh] rounded-2xl md:rounded-none overflow-hidden">
                 <div class="px-6 py-5 flex justify-between items-center relative shrink-0">
-                    <h2 class="text-[13px] tracking-[.3em] font-medium">字 卡 库</h2>
-                    <div class="flex gap-3 items-center">
-                        <button @click="exportReplies" class="text-[10px] tracking-wider text-muted border border-border px-2.5 py-1 rounded-lg hover:bg-border transition-colors">导出</button>
-                        <label class="text-[10px] tracking-wider text-muted border border-border px-2.5 py-1 rounded-lg hover:bg-border transition-colors cursor-pointer">
+                    <h2 class="text-[14px] tracking-[0.3em] font-medium">逻辑库</h2>
+                    <div class="flex gap-4 items-center">
+                        <button @click="exportReplies" class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border">导出</button>
+                        <label class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border cursor-pointer">
                             导入 <input type="file" accept=".json" class="hidden" @change="importReplies">
                         </label>
-                        <button @click="modals.replyManager=false" class="text-muted hover:text-text w-7 h-7 flex items-center justify-center rounded-full hover:bg-border transition-all">
-                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                        </button>
+                        <button @click="modals.replyManager = false" class="text-muted hover:text-text ml-2"><i data-lucide="x" class="w-4 h-4"></i></button>
                     </div>
-                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border"></div>
+                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
                 </div>
 
                 <div class="flex flex-1 overflow-hidden flex-col md:flex-row">
-                    <!-- 左：分组 -->
-                    <div class="w-full md:w-[200px] border-b md:border-b-0 md:border-r border-border p-3 flex flex-col gap-1 overflow-x-auto md:overflow-y-auto shrink-0 h-[80px] md:h-full">
-                        <div class="flex md:flex-col gap-1.5 flex-row flex-nowrap">
-                            <div v-for="group in replyGroups" :key="group.id"
-                                 @click="currentGroupId=group.id"
-                                 class="px-3 py-2 rounded-xl cursor-pointer transition-all text-[11px] tracking-wider flex justify-between items-center shrink-0 group/g"
-                                 :class="currentGroupId===group.id?'bg-bg text-text':'text-muted hover:bg-bg/50'">
-                                <span>{{ group.name }}<span class="text-muted/50 ml-1 text-[9px]">{{ group.replies.length }}</span></span>
-                                <button @click.stop="deleteGroup(group.id)" v-if="replyGroups.length>1"
-                                        class="opacity-0 group-hover/g:opacity-100 text-red-400/60 hover:text-red-400 ml-1">
-                                    <i data-lucide="trash" class="w-2.5 h-2.5"></i>
-                                </button>
-                            </div>
-                            <button @click="addGroup" class="text-[10px] text-muted/60 tracking-wider border border-dashed border-border rounded-xl py-1.5 px-3 text-center hover:bg-bg transition-colors shrink-0">+ 新建</button>
+                    <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-border/50 p-4 flex flex-col gap-2 overflow-y-auto shrink-0 md:shrink h-1/3 md:h-full">
+                        <div v-for="group in replyGroups" :key="group.id"
+                             @click="currentGroupId = group.id"
+                             class="px-4 py-2.5 rounded cursor-pointer transition-all text-xs tracking-wider flex justify-between group/item"
+                             :class="currentGroupId === group.id ? 'bg-bg text-text font-medium' : 'text-muted hover:bg-bg/50'">
+                            <span>{{ group.name }} ({{ group.replies.length }})</span>
+                            <button @click.stop="deleteGroup(group.id)" v-if="replyGroups.length>1" class="opacity-0 group-hover/item:opacity-100 text-red-900/50 hover:text-red-900"><i data-lucide="trash" class="w-3 h-3"></i></button>
                         </div>
+                        <button @click="addGroup" class="text-[11px] text-muted tracking-widest mt-2 border border-dashed border-border py-2 text-center hover:bg-bg transition-colors">+ 新建分组</button>
                     </div>
 
-                    <!-- 右：内容 -->
-                    <div class="flex-1 p-4 flex flex-col overflow-hidden">
-                        <!-- 搜索 + 标签筛选 -->
-                        <div class="mb-3 space-y-2 shrink-0">
-                            <div class="relative">
-                                <i data-lucide="search" class="w-3.5 h-3.5 text-muted/50 absolute left-3 top-1/2 -translate-y-1/2 stroke-[1.5]"></i>
-                                <input v-model="searchQuery" placeholder="搜索字卡…"
-                                       class="w-full bg-bg border border-border rounded-xl pl-8 pr-3 py-2 text-[12px] transition-colors focus:border-accent/40">
-                            </div>
-                            <!-- 标签行 -->
-                            <div class="flex gap-1.5 flex-wrap">
-                                <button v-for="tag in allTags" :key="tag"
-                                        @click="toggleTagFilter(tag)"
-                                        :class="['tag-pill', activeTagFilter===tag?'active':'']">
-                                    {{ tag }}
-                                </button>
-                                <button v-if="activeTagFilter" @click="activeTagFilter=''" class="tag-pill text-red-400/70 border-red-200/40">✕ 清除</button>
-                            </div>
+                    <div class="flex-1 p-4 flex flex-col overflow-hidden bg-surface relative">
+                        <div class="flex gap-2 mb-4 shrink-0">
+                            <i data-lucide="search" class="w-4 h-4 text-muted absolute left-7 top-6 stroke-[1.5]"></i>
+                            <input type="text" v-model="searchQuery" placeholder="搜索此组内容..." class="w-full bg-bg/50 border border-transparent focus:border-border rounded px-9 py-2 text-[13px] outline-none transition-colors">
                         </div>
 
-                        <div class="flex-1 overflow-y-auto space-y-0.5 pb-3" ref="replyListEl">
-                            <div v-for="(reply, idx) in filteredReplies" :key="idx"
-                                 class="flex items-center group/r py-2 border-b border-border/20 gap-2 hover:bg-bg/40 px-1 rounded-lg transition-colors">
-                                <span class="text-[9px] text-muted/25 w-4 font-mono shrink-0 text-right">{{ idx+1 }}</span>
-                                <template v-if="reply.type==='image'">
-                                    <div class="flex items-center gap-2 flex-1 px-1">
-                                        <img :src="reply.img" class="w-10 h-10 object-cover rounded-lg cursor-pointer" @click="previewImg=reply.img">
-                                        <span class="text-[10px] text-muted/50">图片</span>
+                        <div class="flex-1 overflow-y-auto space-y-1 pb-4 px-2" ref="replyList">
+                            <div v-for="(reply, idx) in filteredReplies" :key="idx" class="flex items-center group py-1.5 border-b border-border/30 gap-2">
+                                <span class="text-[9px] text-muted/30 w-5 font-mono shrink-0">{{ idx + 1 }}</span>
+                                <template v-if="reply.type === 'image'">
+                                    <div class="flex items-center gap-2 flex-1 px-2">
+                                        <img :src="reply.img" class="w-12 h-12 object-cover rounded cursor-pointer" @click="previewImg = reply.img">
+                                        <span class="text-[11px] text-muted/60 tracking-wide">表情包</span>
                                     </div>
                                 </template>
                                 <template v-else>
-                                    <!-- 字卡内容 -->
-                                    <div class="flex-1 flex items-center gap-1.5 min-w-0">
-                                        <input v-model="reply.text" @change="saveData"
-                                               class="flex-1 bg-transparent px-1 text-[12px] text-text outline-none border border-transparent focus:border-border/50 rounded-lg transition-colors truncate">
-                                        <!-- 标签 -->
-                                        <span v-if="reply.tag" class="tag-pill active shrink-0 text-[9px] py-0.5">{{ reply.tag }}</span>
-                                    </div>
-                                    <!-- 标签编辑 -->
-                                    <button @click="editReplyTag(reply)"
-                                            class="opacity-0 group-hover/r:opacity-100 transition-opacity text-muted/40 hover:text-accent shrink-0">
-                                        <i data-lucide="tag" class="w-3 h-3"></i>
-                                    </button>
+                                    <input type="text" v-model="reply.text" @change="saveData" class="flex-1 bg-transparent px-2 text-[13px] text-text outline-none border border-transparent focus:border-border/50 rounded transition-colors">
                                 </template>
-                                <button @click="removeReply(reply)" class="text-muted/25 hover:text-red-400/70 opacity-0 group-hover/r:opacity-100 transition-opacity shrink-0">
-                                    <i data-lucide="minus" class="w-3 h-3"></i>
-                                </button>
+                                <button @click="removeReply(reply)" class="text-muted/30 hover:text-red-900/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><i data-lucide="minus" class="w-3.5 h-3.5"></i></button>
                             </div>
-                            <div v-if="filteredReplies.length===0" class="text-[11px] text-muted/40 tracking-widest pt-10 text-center">空无一物</div>
+                            <div v-if="filteredReplies.length === 0" class="text-[11px] text-muted tracking-widest pt-8 text-center">空无一物</div>
                         </div>
 
-                        <!-- 添加区 -->
                         <div class="pt-3 border-t border-border/50 flex flex-col gap-2 shrink-0">
                             <div class="flex gap-2">
-                                <input v-model="newReplyText" @keydown.enter="addReply" placeholder="添加新字卡…"
-                                       class="flex-1 bg-bg border border-border rounded-xl px-4 py-2 text-[12px] focus:border-accent/40 transition-colors">
-                                <button @click="addReply" class="px-4 bg-text text-bg text-[11px] tracking-wider rounded-xl hover:opacity-80 transition-opacity shrink-0">添 加</button>
+                                <input type="text" v-model="newReplyText" @keydown.enter="addReply" placeholder="增加新文字回复..." class="flex-1 bg-bg border border-border rounded px-4 py-2 text-[13px] outline-none">
+                                <button @click="addReply" class="px-4 bg-text text-bg text-[11px] tracking-widest rounded hover:opacity-80 transition-opacity shrink-0">添加</button>
                             </div>
-                            <label class="flex items-center gap-2 cursor-pointer border border-dashed border-border/60 rounded-xl px-4 py-2 hover:bg-bg/50 transition-colors">
-                                <i data-lucide="image-plus" class="w-3.5 h-3.5 text-muted/50 stroke-[1.5] shrink-0"></i>
-                                <span class="text-[10px] text-muted/60 tracking-wider">上传表情包（可多选）</span>
+                            <label class="flex items-center gap-2 cursor-pointer border border-dashed border-border/60 rounded px-4 py-2 hover:bg-bg/50 transition-colors">
+                                <i data-lucide="image-plus" class="w-3.5 h-3.5 text-muted stroke-[1.5] shrink-0"></i>
+                                <span class="text-[11px] text-muted tracking-wider">上传表情包图片（可多选）</span>
                                 <input type="file" accept="image/*" multiple class="hidden" @change="addImageReplies">
                             </label>
                         </div>
@@ -628,436 +606,580 @@
 
     <!-- 图片预览 -->
     <transition name="fade">
-        <div v-if="previewImg" @click="previewImg=''" class="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out">
-            <img :src="previewImg" class="max-w-full max-h-full object-contain rounded-xl">
+        <div v-if="previewImg" @click="previewImg=''" class="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out">
+            <img :src="previewImg" class="max-w-full max-h-full object-contain">
         </div>
     </transition>
+
 </div>
 
-<!-- PWA Manifest -->
+<!-- Service Worker 注册脚本 -->
 <script>
-(function(){
-    const m={name:"静语",short_name:"静语",description:"字语传心",start_url:"./",display:"standalone",orientation:"portrait",background_color:"#faf9f7",theme_color:"#faf9f7",icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23faf9f7'/><text y='145' x='24' font-size='140'>🪶</text></svg>",sizes:"192x192",type:"image/svg+xml"}]};
-    const b=new Blob([JSON.stringify(m)],{type:'application/json'});
-    document.getElementById('pwa-manifest').href=URL.createObjectURL(b);
+// ─── PWA Manifest 动态生成 ───
+(function() {
+    const manifest = {
+        name: "静语",
+        short_name: "静语",
+        description: "字语传心",
+        start_url: "./",
+        display: "standalone",
+        orientation: "portrait",
+        background_color: "#f9f9f9",
+        theme_color: "#f9f9f9",
+        icons: [
+            {
+                src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23f9f9f9'/><text y='145' x='24' font-size='140'>🪶</text></svg>",
+                sizes: "192x192",
+                type: "image/svg+xml"
+            }
+        ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
 })();
 
-if('serviceWorker' in navigator){
-    const sw=`
-self.addEventListener('install',()=>self.skipWaiting());
-self.addEventListener('activate',e=>e.waitUntil(clients.claim()));
-self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});
-self.addEventListener('push',e=>{
-    const d=e.data?e.data.json():{title:'静语',body:'你有新消息'};
-    e.waitUntil(self.registration.showNotification(d.title||'静语',{body:d.body,vibrate:[200,100,200],tag:'jy',renotify:true}));
+// ─── Service Worker ───
+if ('serviceWorker' in navigator) {
+    const swCode = `
+const CACHE = 'jingyu-v1';
+const ASSETS = [location.href];
+
+self.addEventListener('install', e => {
+    self.skipWaiting();
 });
-self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(clients.matchAll({type:'window'}).then(cs=>{if(cs.length)return cs[0].focus();return clients.openWindow('/');}));});
+self.addEventListener('activate', e => {
+    e.waitUntil(clients.claim());
+});
+self.addEventListener('fetch', e => {
+    e.respondWith(
+        caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+            return res;
+        }).catch(() => r))
+    );
+});
+
+// 后台推送通知监听
+self.addEventListener('push', e => {
+    const data = e.data ? e.data.json() : { title: '静语', body: '你有新消息' };
+    e.waitUntil(
+        self.registration.showNotification(data.title || '静语', {
+            body: data.body || '你有新消息',
+            icon: data.icon || '',
+            badge: data.icon || '',
+            vibrate: [200, 100, 200],
+            tag: 'jingyu-msg',
+            renotify: true
+        })
+    );
+});
+
+self.addEventListener('notificationclick', e => {
+    e.notification.close();
+    e.waitUntil(clients.matchAll({type:'window'}).then(cs => {
+        if(cs.length) return cs[0].focus();
+        return clients.openWindow('/');
+    }));
+});
     `;
-    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
+    const swBlob = new Blob([swCode], {type: 'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(() => {});
 }
 </script>
 
 <script>
+
 const { createApp, ref, reactive, computed, watch, nextTick, onMounted } = Vue;
-localforage.config({ name:'JingYuApp', storeName:'data' });
+
+localforage.config({ name: 'JingYuApp', storeName: 'data_store' });
 
 createApp({
     setup() {
         const chatList = ref(null);
-        const replyListEl = ref(null);
+
         const messages = ref([]);
         const inputText = ref('');
         const isTyping = ref(false);
         const previewImg = ref('');
         const activeTimer = ref(null);
-        const notifGranted = ref(false);
-        const searchQuery = ref('');
-        const newReplyText = ref('');
-        const activeTagFilter = ref('');
-        let bgWorker = null;
+        const notifGranted = ref(false); // ✅【修复】这个变量被误删了，加回来！
 
-        const profiles = reactive({ me:{name:'我',avatar:''}, them:{name:'对方',avatar:''} });
-        const settings = reactive({
-            isDark:false, showAvatar:true, showNickname:false,
-            sound:true, typewriter:true,
-            delayMin:1, delayMax:3,
-            activeMsg:false, activeInterval:30,
-            avatarRadius:50, bgImage:'', customCSS:''
+        const profiles = reactive({
+            me: { name: '我', avatar: '' },
+            them: { name: '对方', avatar: '' }
         });
-        const modals = reactive({ settings:false, replyManager:false });
 
-        const genEmojis = () => "😀 😁 😂 🤣 😄 😅 😆 😉 😊 😋 😎 😍 😘 ☺️ 😐 😬 🙄 😯 😮 😲 🥱 😴 😵 😷 😈 👿 💩 👻 💀 👽 🤖 😺 😸 😹 😻 😿 🙈 🙉 🙊 💋 💌 💘 💝 💖 💗 💓 💞 💕 ❣️ 💔 ❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 💯 💢 💥 💫 💦 💨 💬 💤 👋 ✋ 👌 ✌️ 🤞 🤝 🙏 👍 👎 👏 🙌 💪 ✍️ 💅".split(" ").filter(Boolean).map(e=>({text:e}));
+        const settings = reactive({
+            isDark: false, showAvatar: true, showNickname: false,
+            sound: true, delayMin: 1, delayMax: 3,
+            activeMsg: false, activeInterval: 30,
+            avatarRadius: 50, bgImage: '', customCSS: ''
+        });
+
+        const modals = reactive({ settings: false, replyManager: false });
+
+        const generateEmojis = () => {
+            const emojis = "😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😋 😎 😍 😘 😗 😙 😚 ☺️ 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩 👻 💀 👽 👾 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊 💋 💌 💘 💝 💖 💗 💓 💞 💕 💟 ❣️ 💔 ❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 💯 💢 💥 💫 💦 💨 🕳️ 💣 💬 💤 👋 🤚 🖐️ ✋ 🖖 👌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪".split(" ").filter(e=>e.trim());
+            return emojis.map(e => ({ text: e }));
+        };
 
         const replyGroups = ref([
-            { id:'g_custom', name:'我的回复', replies:[] },
-            { id:'g_emoji', name:'表情库', replies:genEmojis() }
+            { id: 'g_custom', name: '我的回复', replies: [] },
+            { id: 'g_emoji', name: '表情库', replies: generateEmojis() }
         ]);
         const currentGroupId = ref('g_custom');
-        const currentGroup = computed(()=>replyGroups.value.find(g=>g.id===currentGroupId.value)||replyGroups.value[0]);
+        const searchQuery = ref('');
+        const newReplyText = ref('');
 
-        // 所有标签
-        const allTags = computed(()=>{
-            const tags = new Set();
-            replyGroups.value.forEach(g=>g.replies.forEach(r=>{ if(r.tag) tags.add(r.tag); }));
-            return [...tags];
-        });
-
-        const filteredReplies = computed(()=>{
-            let list = currentGroup.value.replies;
-            if(activeTagFilter.value) list = list.filter(r=>r.tag===activeTagFilter.value);
-            if(searchQuery.value) list = list.filter(r=>r.type==='image'||(r.text&&r.text.includes(searchQuery.value)));
-            return list;
-        });
-
-        const toggleTagFilter = tag => { activeTagFilter.value = activeTagFilter.value===tag?'':tag; };
-
-        const editReplyTag = reply => {
-            const current = reply.tag || '';
-            const tags = allTags.value;
-            const hint = tags.length ? `\n已有标签：${tags.join('、')}` : '';
-            const t = prompt(`给这条字卡设置标签（留空清除）${hint}`, current);
-            if(t !== null) reply.tag = t.trim() || undefined;
-            saveData();
+        const checkNotifPermission = () => {
+            if ('Notification' in window) {
+                notifGranted.value = Notification.permission === 'granted';
+            }
         };
 
-        // ── 通知 ──
-        const checkNotifPermission = () => { if('Notification' in window) notifGranted.value = Notification.permission==='granted'; };
         const requestNotifPermission = async () => {
-            if(!('Notification' in window)) return;
-            if(Notification.permission==='granted'){ notifGranted.value=true; new Notification('静语',{body:'🔔 通知已开启'}); return; }
-            const p = await Notification.requestPermission();
-            notifGranted.value = p==='granted';
-            if(p==='granted') new Notification('静语',{body:'🔔 通知已开启！'});
+            if (!('Notification' in window)) {
+                alert('您的浏览器不支持通知功能');
+                return;
+            }
+            if (Notification.permission === 'granted') {
+                notifGranted.value = true;
+                new Notification('静语', { body: '🔔 通知已开启，后台收到消息会提醒你' });
+                return;
+            }
+            const perm = await Notification.requestPermission();
+            notifGranted.value = perm === 'granted';
+            if (perm === 'granted') {
+                new Notification('静语', { body: '🔔 通知已开启！' });
+            }
         };
 
-        const showToast = (name, text, avatar) => {
-            const el = document.getElementById('inapp-toast');
-            if(!el) return;
-            document.getElementById('toast-name').textContent = name;
-            document.getElementById('toast-text').textContent = text;
-            const av = document.getElementById('toast-av');
-            av.innerHTML = avatar ? `<img src="${avatar}">` : `<span>${name.charAt(0)}</span>`;
-            el.classList.add('show');
-            clearTimeout(el._t);
-            el._t = setTimeout(()=>el.classList.remove('show'), 3200);
+        const showInAppToast = (name, text, avatar) => {
+            const toast = document.getElementById('inapp-toast');
+            const toastName = document.getElementById('toast-name');
+            const toastText = document.getElementById('toast-text');
+            const toastAvatar = document.getElementById('toast-avatar');
+            if (!toast) return;
+            toastName.textContent = name;
+            toastText.textContent = text;
+            if (avatar) {
+                toastAvatar.innerHTML = `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+            } else {
+                toastAvatar.innerHTML = `<span id="toast-avatar-char">${name.charAt(0)}</span>`;
+            }
+            toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
         };
 
         const sendSystemNotif = (name, text) => {
-            if(Notification.permission==='granted' && document.visibilityState==='hidden')
-                new Notification(`静语 · ${name}`, {body: text.length>60?text.slice(0,60)+'…':text, tag:'jy', renotify:true});
-        };
-
-        // ── 音效（清脆） ──
-        let audioCtx;
-        const playSound = type => {
-            if(!settings.sound) return;
-            try {
-                if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-                if(audioCtx.state==='suspended') audioCtx.resume();
-                const now = audioCtx.currentTime;
-                const freqs = type==='send' ? [1318,1760] : [1047,1319];
-                freqs.forEach((freq,i)=>{
-                    const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.type='sine'; osc.frequency.setValueAtTime(freq,now);
-                    gain.gain.setValueAtTime(0,now);
-                    gain.gain.linearRampToValueAtTime(i===0?.16:.09, now+.008);
-                    gain.gain.exponentialRampToValueAtTime(.001, now+.35);
-                    osc.start(now+i*.04); osc.stop(now+.42);
+            if (notifGranted.value && document.visibilityState === 'hidden') {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(`静语 · ${name}`, {
+                        body: text.length > 50 ? text.slice(0, 50) + '...' : text,
+                        icon: 'data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2780%27>🪶</text></svg>',
+                        badge: 'data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2780%27>🪶</text></svg>',
+                        tag: 'jingyu-msg',
+                        renotify: true,
+                        silent: false
+                    });
                 });
-            } catch(e){}
+            }
         };
 
-        // ── 打字机 ──
-        const typewriterQueue = [];
-        let twRunning = false;
-        const runTypewriter = () => {
-            if(twRunning || typewriterQueue.length===0) return;
-            twRunning = true;
-            const msg = typewriterQueue.shift();
-            msg.typing = true;
-            msg.displayed = '';
-            const chars = [...msg.content];
-            let i = 0;
-            const speed = Math.max(18, Math.min(60, 1200/chars.length));
-            const tick = () => {
-                if(i < chars.length){
-                    msg.displayed += chars[i++];
-                    scrollToBottom();
-                    setTimeout(tick, speed);
-                } else {
-                    msg.typing = false;
-                    twRunning = false;
-                    runTypewriter();
-                }
-            };
-            tick();
+        let audioCtx;
+        const playSound = (type) => {
+            if (!settings.sound) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const now = audioCtx.currentTime;
+                const freqs = type === 'send' ? [1318, 1760] : [1047, 1319];
+                freqs.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(i === 0 ? 0.18 : 0.10, now + 0.008);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now + i * 0.04);
+                    osc.stop(now + 0.4);
+                });
+            } catch (e) {}
         };
 
-        // ── 数据存储 ──
         let saveTimeout;
         const saveData = () => {
             clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(async ()=>{
-                await localforage.setItem('jingyu_data', JSON.parse(JSON.stringify({
-                    messages: messages.value, profiles, settings,
-                    replyGroups: replyGroups.value
-                })));
+            saveTimeout = setTimeout(async () => {
+                await localforage.setItem('jingyu_data', {
+                    messages: JSON.parse(JSON.stringify(messages.value)),
+                    profiles: JSON.parse(JSON.stringify(profiles)),
+                    settings: JSON.parse(JSON.stringify(settings)),
+                    replyGroups: JSON.parse(JSON.stringify(replyGroups.value))
+                });
             }, 500);
         };
-        watch([messages, profiles, settings, replyGroups], saveData, {deep:true});
+
+        watch([messages, profiles, settings, replyGroups], saveData, { deep: true });
 
         const scrollToBottom = async () => {
             await nextTick();
-            const el = document.getElementById('chat-box');
-            if(el) el.scrollTo({top:el.scrollHeight, behavior:'smooth'});
+            const container = document.getElementById('chat-container');
+            if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
         };
 
-        const sendMsg = async (sender, type, content=null) => {
+        const sendMsg = async (sender, type, content = null) => {
             let txt = content;
-            if(type==='text' && sender==='me'){
+            if(type === 'text' && sender === 'me') {
                 if(!inputText.value.trim()) return;
                 txt = inputText.value.trim();
                 inputText.value = '';
                 const ta = document.querySelector('textarea');
-                if(ta) ta.style.height='auto';
+                if(ta) ta.style.height = 'auto';
             }
             if(!txt) return;
-
-            const msgId = Date.now().toString();
-            const msg = { id:msgId, sender, type, content:txt, timestamp:Date.now(), status:'sent', typing:false, displayed:'' };
-            messages.value.push(msg);
+            messages.value.push({ id: Date.now().toString(), sender, type, content: txt, timestamp: Date.now(), status: 'sent' });
             playSound(sender);
             scrollToBottom();
-
-            if(sender==='them' && type==='text' && settings.typewriter){
-                typewriterQueue.push(msg);
-                runTypewriter();
+            if (sender === 'them') {
+                const displayText = type === 'image' ? '[图片]' : txt;
+                showInAppToast(profiles.them.name, displayText, profiles.them.avatar);
+                sendSystemNotif(profiles.them.name, displayText);
             }
-
-            if(sender==='them'){
-                const d = type==='image'?'[图片]':txt;
-                showToast(profiles.them.name, d, profiles.them.avatar);
-                sendSystemNotif(profiles.them.name, d);
-            }
-
-            if(sender==='me'){
-                setTimeout(()=>{ const m=messages.value.find(x=>x.id===msgId); if(m) m.status='read'; }, Math.random()*1500+800);
+            if (sender === 'me') {
+                setTimeout(() => {
+                    const m = messages.value[messages.value.length - 1];
+                    if(m) m.status = 'read';
+                }, Math.random() * 1500 + 1000);
                 triggerAutoReply();
             }
         };
 
         const triggerAutoReply = () => {
-            if(isTyping.value) return;
-            isTyping.value = true; scrollToBottom();
-            const delay = (Math.random()*(settings.delayMax-settings.delayMin)+settings.delayMin)*1000;
-            setTimeout(()=>{
+            if (isTyping.value) return;
+            isTyping.value = true;
+            scrollToBottom();
+            const delay = (Math.random() * (settings.delayMax - settings.delayMin) + settings.delayMin) * 1000;
+            setTimeout(() => {
                 isTyping.value = false;
-                const all = replyGroups.value.flatMap(g=>g.replies);
-                if(all.length>0){
-                    const pick = all[Math.floor(Math.random()*all.length)];
-                    if(pick.type==='image') sendMsg('them','image',pick.img);
-                    else sendMsg('them','text',pick.text);
-                } else sendMsg('them','text','……');
+                const all = replyGroups.value.flatMap(g => g.replies);
+                if(all.length > 0) {
+                    const pick = all[Math.floor(Math.random() * all.length)];
+                    sendMsg('them', pick.type || 'text', pick.type === 'image' ? pick.img : pick.text);
+                } else {
+                    sendMsg('them', 'text', "......");
+                }
             }, delay);
         };
-
-        const triggerReply = () => { if(inputText.value.trim()) sendMsg('me','text'); else triggerAutoReply(); };
-
-        const handleImageUpload = e => {
-            const file=e.target.files[0]; if(!file) return;
-            const r=new FileReader();
-            r.onload=ev=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); let w=img.width,h=img.height,M=800; if(w>M){h*=M/w;w=M;} c.width=w;c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); sendMsg('me','image',c.toDataURL('image/jpeg',.8)); }; img.src=ev.target.result; };
-            r.readAsDataURL(file); e.target.value='';
-        };
-
-        const deleteMsg = id => { messages.value=messages.value.filter(m=>m.id!==id); };
-
-        // ── 后台计时（Web Worker） ──
+        
+        let bgWorker = null;
         const setupActiveMsg = () => {
-            if(bgWorker){ bgWorker.terminate(); bgWorker=null; }
-            if(settings.activeMsg){
-                const ms=(settings.activeInterval||30)*1000;
-                const code=`let t;self.onmessage=e=>{if(e.data==='start'){clearInterval(t);t=setInterval(()=>self.postMessage('tick'),${ms});}else{clearInterval(t);}};`;
-                bgWorker=new Worker(URL.createObjectURL(new Blob([code],{type:'application/javascript'})));
-                bgWorker.onmessage=()=>triggerAutoReply();
-                bgWorker.postMessage('start');
+            if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
+            if (settings.activeMsg) {
+                const interval = (settings.activeInterval || 30) * 1000;
+                const workerCode = `let t=null;self.onmessage=e=>{if(e.data==='s'){clearInterval(t);t=setInterval(()=>self.postMessage('t'),${interval})}else if(e.data==='x')clearInterval(t)}`;
+                bgWorker = new Worker(URL.createObjectURL(new Blob([workerCode])));
+                bgWorker.onmessage = triggerAutoReply;
+                bgWorker.postMessage('s');
             }
         };
-        watch(()=>settings.activeMsg, setupActiveMsg);
-        watch(()=>settings.activeInterval, setupActiveMsg);
 
-        // ── 随机表情包弹出 ──
+        watch(() => settings.activeMsg, setupActiveMsg);
+        watch(() => settings.activeInterval, setupActiveMsg);
+
+        const triggerReply = () => {
+            if(inputText.value.trim()) sendMsg('me', 'text');
+            else triggerAutoReply();
+        };
+
+        const handleImageUpload = (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    let w = img.width, h = img.height, MAX = 800;
+                    if(w>MAX) { h*=MAX/w; w=MAX; }
+                    c.width=w; c.height=h;
+                    c.getContext('2d').drawImage(img,0,0,w,h);
+                    sendMsg('me', 'image', c.toDataURL('image/jpeg', 0.8));
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file); e.target.value = '';
+        };
+
+        const deleteMsg = id => messages.value = messages.value.filter(m => m.id !== id);
+
         const popRandomEmoji = () => {
-            const all=replyGroups.value.flatMap(g=>g.replies); if(!all.length) return;
-            const imgs=all.filter(r=>r.type==='image');
-            const pick=imgs.length>0&&Math.random()>.4 ? imgs[Math.floor(Math.random()*imgs.length)] : all[Math.floor(Math.random()*all.length)];
-            const el=document.createElement('div');
-            el.className=pick.type==='image'?'emoji-pop img':'emoji-pop';
-            el.style.left=(20+Math.random()*(window.innerWidth-140))+'px';
-            el.style.top=(window.innerHeight-180-Math.random()*60)+'px';
-            if(pick.type==='image') el.innerHTML=`<img src="${pick.img}">`;
-            else el.textContent=pick.text;
+            const all = replyGroups.value.flatMap(g => g.replies);
+            if(all.length === 0) return;
+            const pick = all[Math.floor(Math.random() * all.length)];
+            const el = document.createElement('div');
+            el.className = pick.type === 'image' ? 'emoji-popup is-img' : 'emoji-popup';
+            el.style.left = `${20 + Math.random() * (window.innerWidth - 120)}px`;
+            el.style.top = `${window.innerHeight - 160 - Math.random() * 80}px`;
+            el.innerHTML = pick.type === 'image' ? `<img src="${pick.img}" alt="表情包">` : pick.text;
             document.body.appendChild(el);
-            setTimeout(()=>el.remove(),3400);
+            setTimeout(() => el.remove(), 3200);
         };
 
-        // ── 日期/时间 ──
-        const shouldShowDate = i => {
-            if(i===0) return true;
-            const c=new Date(messages.value[i].timestamp), p=new Date(messages.value[i-1].timestamp);
-            return c.toDateString()!==p.toDateString();
+        const shouldShowDate = i => i===0 || new Date(messages.value[i].timestamp).toDateString() !== new Date(messages.value[i-1].timestamp).toDateString();
+        const formatDateSeparator = ts => {
+            const d = new Date(ts), today = new Date();
+            const yest = new Date(today); yest.setDate(yest.getDate()-1);
+            if(d.toDateString() === today.toDateString()) return '今 日';
+            if(d.toDateString() === yest.toDateString()) return '昨 日';
+            return `${(d.getMonth()+1).toString().padStart(2,'0')} / ${d.getDate().toString().padStart(2,'0')}`;
         };
-        const formatDateSep = ts => {
-            const d=new Date(ts),t=new Date(),y=new Date(t);y.setDate(y.getDate()-1);
-            if(d.toDateString()===t.toDateString()) return '今 日';
-            if(d.toDateString()===y.toDateString()) return '昨 日';
-            return `${(d.getMonth()+1).toString().padStart(2,'0')} · ${d.getDate().toString().padStart(2,'0')}`;
-        };
-        const formatTime = ts => { const d=new Date(ts); return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; };
-        const shouldShowAvatar = i => {
-            if(i===0) return true;
-            const c=messages.value[i],p=messages.value[i-1];
-            return c.sender!==p.sender || c.timestamp-p.timestamp>60000;
-        };
+        const formatTime = ts => new Date(ts).toLocaleTimeString('zh-CN', { hour12: false });
+        const shouldShowAvatar = i => i===0 || messages.value[i].sender !== messages.value[i-1].sender || messages.value[i].timestamp - messages.value[i-1].timestamp > 60000;
 
         const toggleTheme = () => {
-            settings.isDark=!settings.isDark;
-            document.documentElement.classList.toggle('dark',settings.isDark);
-            document.getElementById('theme-color-meta').content=settings.isDark?'#0f0f0f':'#faf9f7';
+            settings.isDark = !settings.isDark;
+            document.documentElement.classList.toggle('dark', settings.isDark);
+            document.getElementById('theme-color-meta').content = settings.isDark ? '#111111' : '#f9f9f9';
         };
-        const applyCSS = () => { const el=document.getElementById('custom-bubble-css'); if(el) el.innerHTML=settings.customCSS; };
+        const applyCSS = () => document.getElementById('custom-bubble-css').innerHTML = settings.customCSS;
 
         const editProfile = role => {
-            const n=prompt(`修改${role==='me'?'我的':'对方'}昵称：`,profiles[role].name);
-            if(n&&n.trim()) profiles[role].name=n.trim().substring(0,12);
-            if(confirm('是否更换头像？')){
-                const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
-                inp.onchange=e=>{ const f=e.target.files[0]; if(f){ const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); let w=img.width,h=img.height,M=200; if(w>M){h*=M/w;w=M;} c.width=w;c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); profiles[role].avatar=c.toDataURL('image/jpeg',.8); }; img.src=ev.target.result; }; r.readAsDataURL(f); } else profiles[role].avatar=''; };
-                inp.click();
+            const n = prompt(`修改${role==='me'?'我的':'对方'}昵称：`, profiles[role].name);
+            if(n && n.trim()) profiles[role].name = n.trim().substring(0,12);
+            if(confirm('是否上传新头像图片？')) {
+                const input = document.createElement('input'); input.type='file'; input.accept='image/*';
+                input.onchange = e => {
+                    const f = e.target.files[0];
+                    if(f) {
+                        const r = new FileReader();
+                        r.onload = ev => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const c=document.createElement('canvas'), w=img.width, h=img.height, MAX=200;
+                                const ratio = w/h; c.width=w>h?MAX:MAX*ratio; c.height=w>h?MAX/ratio:MAX;
+                                c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+                                profiles[role].avatar = c.toDataURL('image/jpeg', 0.8);
+                            }; img.src = ev.target.result;
+                        }; r.readAsDataURL(f);
+                    } else { profiles[role].avatar = ''; }
+                }; input.click();
             }
         };
-        const uploadBg = e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>settings.bgImage=ev.target.result; r.readAsDataURL(f); };
-        const clearChat = () => { if(confirm('清空全部聊天记录？')){ messages.value=[]; modals.settings=false; } };
+
+        const uploadBg = e => { // ✅【修复】这个函数现在可以正常工作了
+            const f = e.target.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = ev => settings.bgImage = ev.target.result;
+            r.readAsDataURL(f); e.target.value = '';
+        };
+
+        const clearChat = () => { if(confirm('将彻底清空聊天记录，确认吗？')) { messages.value = []; modals.settings = false; } };
         const exportChat = () => {
-            let s="─── 聊天记录 ───\n\n";
-            messages.value.forEach(m=>{ s+=`[${new Date(m.timestamp).toLocaleString()}] ${profiles[m.sender].name}：${m.type==='text'?m.content:'[图片]'}\n`; });
-            const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'text/plain;charset=utf-8'})); a.download=`静语_${Date.now()}.txt`; a.click();
+            let str = messages.value.map(m => `[${new Date(m.timestamp).toLocaleString()}] ${profiles[m.sender].name}: ${m.type==='text'?m.content:'[图片]'}`).join('\n');
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([str]));
+            a.download = `Chat_${Date.now()}.txt`; a.click();
         };
 
-        const addGroup = () => { const n=prompt("新分组名称："); if(n&&n.trim()){ const id='g_'+Date.now(); replyGroups.value.push({id,name:n.trim(),replies:[]}); currentGroupId.value=id; } };
-        const deleteGroup = id => { if(confirm('删除此组？')){ replyGroups.value=replyGroups.value.filter(g=>g.id!==id); if(currentGroupId.value===id) currentGroupId.value=replyGroups.value[0].id; } };
-        const addReply = () => { if(newReplyText.value.trim()){ currentGroup.value.replies.push({text:newReplyText.value.trim()}); newReplyText.value=''; } };
-        const removeReply = reply => { const i=currentGroup.value.replies.indexOf(reply); if(i>-1) currentGroup.value.replies.splice(i,1); };
+        const currentGroup = computed(() => replyGroups.value.find(g => g.id === currentGroupId.value) || replyGroups.value[0]);
+        const filteredReplies = computed(() => {
+            if(!searchQuery.value) return currentGroup.value?.replies || [];
+            return currentGroup.value.replies.filter(r => r.text?.includes(searchQuery.value));
+        });
 
-        const addImageReplies = e => {
-            const files=Array.from(e.target.files); if(!files.length) return;
-            let done=0;
-            files.forEach(file=>{ const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); let w=img.width,h=img.height,M=400; if(w>M){h*=M/w;w=M;} c.width=w;c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); currentGroup.value.replies.push({type:'image',img:c.toDataURL('image/jpeg',.85),text:''}); if(++done===files.length) saveData(); }; img.src=ev.target.result; }; r.readAsDataURL(file); });
-            e.target.value='';
+        const addGroup = () => { const n=prompt("输入新分组名称："); if(n?.trim()){const id='g_'+Date.now();replyGroups.value.push({id,name:n.trim(),replies:[]});currentGroupId.value=id;} };
+        const deleteGroup = id => { if(confirm('删除此组及其所有内容？')){replyGroups.value=replyGroups.value.filter(g=>g.id!==id);if(currentGroupId.value===id)currentGroupId.value=replyGroups.value[0]?.id;} };
+        const addReply = () => { if(newReplyText.value.trim()){currentGroup.value.replies.push({text:newReplyText.value.trim()});newReplyText.value='';} };
+        const removeReply = reply => { const i=currentGroup.value.replies.indexOf(reply); if(i>-1)currentGroup.value.replies.splice(i,1); };
+
+        const addImageReplies = (e) => {
+            for (const file of e.target.files) {
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 400;
+                        const ratio = w/h; c.width=w>h?MAX:MAX*ratio; c.height=w>h?MAX/ratio:MAX;
+                        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+                        currentGroup.value.replies.push({ type:'image', img: c.toDataURL('image/jpeg', 0.85), text:'' });
+                    }; img.src = ev.target.result;
+                }; r.readAsDataURL(file);
+            }
+            e.target.value = '';
         };
 
-        const exportReplies = () => { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(replyGroups.value)],{type:'application/json'})); a.download='Replies.json'; a.click(); };
-        const importReplies = e => {
-            const f=e.target.files[0]; if(!f) return;
-            const r=new FileReader();
-            r.onload=ev=>{ try{
-                const p=JSON.parse(ev.target.result);
-                if(p.customReplies&&Array.isArray(p.customReplies)){
-                    const reps=p.customReplies.filter(t=>typeof t==='string'&&t.trim()).map(t=>({text:t.trim()}));
-                    if(!reps.length) return;
-                    const id='g_'+Date.now();
-                    replyGroups.value.push({id, name:f.name.replace(/\.json$/i,'')||'导入字卡', replies:reps});
-                    currentGroupId.value=id; saveData(); return;
-                }
-                if(Array.isArray(p)){ replyGroups.value.push(...p); currentGroupId.value=replyGroups.value[replyGroups.value.length-1].id; saveData(); }
-            }catch(err){} };
+        const exportReplies = () => { const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(replyGroups.value)]));a.download="Replies.json";a.click(); };
+        
+        const importReplies = e => { // ✅【修复】增加了成功和失败的提示
+            const f = e.target.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                try {
+                    const parsed = JSON.parse(ev.target.result);
+                    let newRepliesCount = 0;
+                    if (parsed.customReplies && Array.isArray(parsed.customReplies)) {
+                        const newReplies = parsed.customReplies.filter(t => typeof t === 'string' && t.trim()).map(t => ({ text: t.trim() }));
+                        if (newReplies.length > 0) {
+                            const groupName = f.name.replace(/\.json$/i, '') || '导入的字卡';
+                            replyGroups.value.push({ id: 'g_' + Date.now(), name: groupName, replies: newReplies });
+                            currentGroupId.value = replyGroups.value[replyGroups.value.length - 1].id;
+                            newRepliesCount = newReplies.length;
+                        }
+                    } else if (Array.isArray(parsed)) {
+                        const validGroups = parsed.filter(g => g.id && g.name && Array.isArray(g.replies));
+                        if (validGroups.length > 0) {
+                            replyGroups.value.push(...validGroups);
+                            currentGroupId.value = validGroups[validGroups.length - 1].id;
+                            newRepliesCount = validGroups.reduce((sum, g) => sum + g.replies.length, 0);
+                        }
+                    }
+                    if (newRepliesCount > 0) alert(`✅ 成功导入 ${newRepliesCount} 条回复！`);
+                    else alert('🤔 文件中未找到有效回复内容。');
+                } catch(err) { alert(`❌ 导入失败：文件格式错误。\n${err.message}`); }
+            };
             r.readAsText(f); e.target.value='';
         };
 
-        onMounted(async ()=>{
-            try{
-                const data=await localforage.getItem('jingyu_data');
-                if(data){
-                    if(data.messages) messages.value=data.messages;
-                    if(data.profiles) Object.assign(profiles,data.profiles);
-                    if(data.settings) Object.assign(settings,data.settings);
-                    if(data.replyGroups) replyGroups.value=data.replyGroups;
+        const exportScreenshot = async () => {
+            const chatEl = document.getElementById('chat-container');
+            if(!chatEl) return;
+            const origO=chatEl.style.overflow, origH=chatEl.style.height; chatEl.style.overflow='visible'; chatEl.style.height='auto';
+            try {
+                const canvas = await html2canvas(chatEl, {backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim()||'#fff',scale:2,useCORS:true});
+                const a=document.createElement('a'); a.download=`静语_${new Date().toLocaleDateString().replace(/\//g,'-')}.png`; a.href=canvas.toDataURL(); a.click();
+            } catch(err) { alert('截图失败'); } finally { chatEl.style.overflow=origO; chatEl.style.height=origH; }
+        };
+
+        onMounted(async () => {
+            try {
+                const data = await localforage.getItem('jingyu_data');
+                if(data) {
+                    if(data.messages) messages.value = data.messages;
+                    if(data.profiles) Object.assign(profiles, data.profiles);
+                    if(data.settings) Object.assign(settings, data.settings);
+                    if(data.replyGroups) replyGroups.value = data.replyGroups;
                 }
-            }catch(e){}
+            } catch(e) {}
             if(settings.isDark) document.documentElement.classList.add('dark');
             applyCSS(); setupActiveMsg(); checkNotifPermission();
-
-            document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') nextTick(()=>lucide.createIcons()); });
-
-            const ta=document.querySelector('textarea');
-            if(ta) ta.addEventListener('input',function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
-
-            // 开场动画 4.5 秒后退出
-            setTimeout(()=>{
-                const sp=document.getElementById('splash');
-                if(sp){ sp.classList.add('hide'); setTimeout(()=>sp.remove(),1700); }
-                nextTick(()=>{ scrollToBottom(); lucide.createIcons(); });
-            }, 4500);
+            document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') nextTick(lucide.createIcons); });
+            const ta = document.querySelector('textarea');
+            if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if(splash) { splash.classList.add('hide'); setTimeout(() => splash.remove(), 1300); }
+                nextTick(() => { scrollToBottom(); if(window.formkit && chatList.value) formkit.autoAnimate(chatList.value, {duration: 300}); });
+            }, 2800);
+            lucide.createIcons();
         });
 
-        watch([messages,modals],()=>nextTick(()=>lucide.createIcons()),{deep:true});
-        onMounted(()=>setTimeout(()=>lucide.createIcons(),120));
+        watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
 
         return {
-            chatList, replyListEl, messages, inputText, isTyping, previewImg,
-            profiles, settings, modals, notifGranted,
-            replyGroups, currentGroupId, currentGroup, searchQuery, newReplyText,
-            filteredReplies, allTags, activeTagFilter,
+            chatList, messages, inputText, isTyping, previewImg, notifGranted,
+            profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
             sendMsg, triggerReply, handleImageUpload, deleteMsg,
-            shouldShowDate, formatDateSep, formatTime, shouldShowAvatar,
+            shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
             toggleTheme, applyCSS, editProfile, uploadBg, clearChat, exportChat,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
-            addImageReplies, requestNotifPermission, popRandomEmoji,
-            toggleTagFilter, editReplyTag
+            addImageReplies, exportScreenshot, requestNotifPermission, popRandomEmoji
         };
     }
 }).mount('#app');
 
-// ── 开场粒子 ──
-(function(){
-    const cv=document.getElementById('splash-canvas');
-    if(!cv) return;
-    const ctx=cv.getContext('2d');
-    let W,H,pts=[],animId;
-    const resize=()=>{ W=cv.width=window.innerWidth; H=cv.height=window.innerHeight; };
-    resize(); window.addEventListener('resize',resize);
+// ─── 开场动画粒子效果 ───
+(function() {
+    const canvas = document.getElementById('splash-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [], animId;
 
-    class P {
-        constructor(){ this.r(); }
-        r(){
-            this.x=Math.random()*W; this.y=Math.random()*H;
-            this.vx=(Math.random()-.5)*.25; this.vy=-Math.random()*.45-.08;
-            this.sz=Math.random()*1.4+.2; this.a=Math.random()*.5+.08; this.life=1;
+    const resize = () => {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * W;
+            this.y = Math.random() * H;
+            this.r = Math.random() * 1.5 + 0.3;
+            this.vx = (Math.random() - 0.5) * 0.3;
+            this.vy = -Math.random() * 0.5 - 0.1;
+            this.alpha = Math.random() * 0.6 + 0.1;
+            this.life = 1;
         }
-        tick(){ this.x+=this.vx; this.y+=this.vy; this.life-=.0025; if(this.life<=0||this.y<-4) this.r(); }
-        draw(){
-            ctx.beginPath(); ctx.arc(this.x,this.y,this.sz,0,Math.PI*2);
-            // 暖金粒子
-            ctx.fillStyle=`rgba(201,168,130,${this.a*this.life*.8})`; ctx.fill();
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            this.life -= 0.003;
+            if(this.life <= 0 || this.y < -5) this.reset();
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(120,120,120,${this.alpha * this.life})`;
+            ctx.fill();
         }
     }
-    for(let i=0;i<100;i++) pts.push(new P());
-    const loop=()=>{ ctx.clearRect(0,0,W,H); pts.forEach(p=>{p.tick();p.draw();}); animId=requestAnimationFrame(loop); };
+
+    for(let i=0; i<80; i++) particles.push(new Particle());
+
+    const loop = () => {
+        ctx.clearRect(0,0,W,H);
+        particles.forEach(p => { p.update(); p.draw(); });
+        animId = requestAnimationFrame(loop);
+    };
     loop();
-    setTimeout(()=>cancelAnimationFrame(animId), 6200);
+
+    // 开场完成后停止粒子
+    setTimeout(() => {
+        cancelAnimationFrame(animId);
+    }, 4200);
 })();
 
-// ── PWA 安装 ──
-(function(){
-    let dp;
-    const b=document.getElementById('install-banner');
-    window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); dp=e; if(b) b.style.display='flex'; });
-    document.getElementById('install-btn')?.addEventListener('click',async()=>{ if(!dp) return; dp.prompt(); await dp.userChoice; dp=null; if(b) b.style.display='none'; });
-    document.getElementById('dismiss-install')?.addEventListener('click',()=>{ if(b) b.style.display='none'; });
-    const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
-    const standalone=window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone;
-    if(isIos&&!standalone&&b){ b.querySelector('span:nth-child(2)').textContent='分享 → 添加到主屏幕'; b.style.display='flex'; document.getElementById('install-btn').style.display='none'; }
+// ─── PWA 安装提示 ───
+(function() {
+    let deferredPrompt;
+    const banner = document.getElementById('install-banner');
+    const installBtn = document.getElementById('install-btn');
+    const dismissBtn = document.getElementById('dismiss-install');
+
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if(banner) banner.style.display = 'flex';
+    });
+
+    if(installBtn) installBtn.addEventListener('click', async () => {
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        if(banner) banner.style.display = 'none';
+    });
+
+    if(dismissBtn) dismissBtn.addEventListener('click', () => {
+        if(banner) banner.style.display = 'none';
+    });
+
+    // iOS 提示（Safari 不支持 beforeinstallprompt）
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isInStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if(isIos && !isInStandalone && banner) {
+        banner.querySelector('span:nth-child(2)').textContent = '点击分享按钮 → 添加到主屏幕';
+        banner.style.display = 'flex';
+        if(installBtn) installBtn.style.display = 'none';
+    }
 })();
 </script>
 </body>

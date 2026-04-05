@@ -298,6 +298,7 @@
 
     <!-- 中间：功能按钮 -->
     <div class="flex gap-2 md:gap-3 text-muted items-center">
+    <button @click="requestNotifPermission" :class="['notif-badge', notifGranted ? 'granted' : '']" title="后台通知
         <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="exportScreenshot" class="hover:text-text transition-colors" title="截图导出"><i data-lucide="camera" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
@@ -432,6 +433,9 @@
                             <span class="tracking-widest">我的资料</span>
                             <span class="text-muted text-xs flex items-center gap-1">{{ profiles.me.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
                         </div>
+                  
+    <div class="space-y-4">
+       <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">交互与行为</span>
                         <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('them')">
                             <span class="tracking-widest">对方资料</span>
                             <span class="text-muted text-xs flex items-center gap-1">{{ profiles.them.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
@@ -448,47 +452,6 @@
                         </div>
                     </div>
 
-                    <!-- ✅ 这是修复后的代码 -->
-<div class="space-y-4">
-    <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">交互与行为</span>
-    
-    <!-- 通知开关 -->
-    <div class="flex justify-between items-center cursor-pointer" @click="requestNotifPermission">
-        <span class="tracking-widest">后台消息通知</span>
-        <span :class="['text-[11px] tracking-wider px-3 py-1 rounded-full border transition-all cursor-pointer', notifGranted ? 'text-green-600 border-green-200' : 'text-muted border-border hover:border-muted']">
-            {{ notifGranted ? '✓ 已开启' : '点击开启' }}
-        </span>
-    </div>
-
-    <!-- 消息音效开关 -->
-    <label class="flex justify-between items-center cursor-pointer group">
-        <span class="tracking-widest">消息音效</span>
-        <input type="checkbox" v-model="settings.sound" class="accent-text w-4 h-4">
-    </label>
-
-    <!-- 自动回复延迟 -->
-    <div class="flex justify-between items-center">
-        <span class="tracking-widest">自动回复延迟 (秒)</span>
-        <div class="flex items-center gap-2 text-xs">
-            <input type="number" v-model.number="settings.delayMin" min="0" class="w-12 bg-bg text-center py-1 outline-none border border-border">
-            <span class="text-muted">-</span>
-            <input type="number" v-model.number="settings.delayMax" min="1" class="w-12 bg-bg text-center py-1 outline-none border border-border">
-        </div>
-    </div>
-
-    <!-- 主动发消息开关 -->
-    <label class="flex justify-between items-center cursor-pointer group pt-2">
-        <span class="tracking-widest">允许对方主动发消息</span>
-        <input type="checkbox" v-model="settings.activeMsg" class="accent-text w-4 h-4">
-    </label>
-
-    <!-- 主动触发间隔 -->
-    <div v-if="settings.activeMsg" class="flex justify-between items-center pl-4 border-l-2 border-border/50">
-        <span class="tracking-widest text-xs text-muted">主动触发间隔 (秒)</span>
-        <input type="number" v-model.number="settings.activeInterval" min="5" class="w-16 bg-bg text-center py-1 text-xs outline-none border border-border">
-    </div>
-</div>
-                        <div class="flex justify-between items-center">
                             <span class="tracking-widest">自动回复延迟 (秒)</span>
                             <div class="flex items-center gap-2 text-xs">
                                 <input type="number" v-model.number="settings.delayMin" min="0" class="w-12 bg-bg text-center py-1 outline-none border border-border">

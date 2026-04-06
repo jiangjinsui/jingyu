@@ -1374,7 +1374,7 @@ const bgPreview = ref('');
     if (!data) { alert('没有数据可导出'); return; }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-    a.download = `那是我们相爱的证明_${Date.now()}.json`;
+    a.download = `此刻，我们正相爱_${Date.now()}.json`;
     a.click();
 };
 

@@ -824,24 +824,27 @@
             </div>
 
             <div class="flex items-end gap-2">
-                <label class="cursor-pointer hover:text-text transition-colors text-muted/60 pb-2.5 shrink-0" title="发送图片">
-                    <i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i>
-                    <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
-                </label>
+    <label class="p-2 cursor-pointer hover:bg-border/50 rounded-xl transition-all duration-300 text-muted/80 shrink-0">
+        <i data-lucide="image" class="w-5 h-5 stroke-[1.5]"></i>
+        <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
+    </label>
+    <button @click="modals.multiDraft = true" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300 text-muted/80 shrink-0">
+        <i data-lucide="layout-list" class="w-5 h-5 stroke-[1.5]"></i>
+    </button>
 
-                <textarea v-model="inputText" @keydown.enter.prevent="sendMsg('me', 'text')" rows="1"
-                          class="flex-1 bg-bg/50 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[12px] md:text-[13px] resize-none max-h-32 placeholder-muted/50 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border"
-                          placeholder="书写..."></textarea>
+    <textarea v-model="inputText" @keydown.enter.prevent="sendMsg('me', 'text')" rows="1"
+              class="flex-1 bg-bg/50 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[12px] md:text-[13px] resize-none max-h-32 placeholder-muted/50 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border"
+              placeholder="书写..."></textarea>
 
-                <div class="flex gap-2 shrink-0 pb-1 text-muted/80">
-                    <button @click="triggerReply" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" title="让对方说话">
-                        <i data-lucide="pen-tool" class="w-5 h-5 stroke-[1.5]"></i>
-                    </button>
-                    <button @click="sendMsg('me', 'text')" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" :class="{'text-text': inputText.trim()}" title="发送">
-                        <i data-lucide="send" class="w-5 h-5 stroke-[1.5]"></i>
-                    </button>
-                </div>
-            </div>
+    <div class="flex gap-2 shrink-0 text-muted/80">
+        <button @click="triggerReply" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" title="让对方说话">
+            <i data-lucide="pen-tool" class="w-5 h-5 stroke-[1.5]"></i>
+        </button>
+        <button @click="sendMsg('me', 'text')" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" :class="{'text-text': inputText.trim()}" title="发送">
+            <i data-lucide="send" class="w-5 h-5 stroke-[1.5]"></i>
+        </button>
+    </div>
+</div>
         </footer>
     </div>
 
@@ -1087,6 +1090,61 @@
             <img :src="previewImg" class="max-w-full max-h-full object-contain">
         </div>
     </transition>
+    <!-- 多条草稿弹窗 -->
+<transition name="fade">
+    <div v-if="modals.multiDraft" @click.self="modals.multiDraft = false"
+         class="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex justify-center items-center px-6">
+        <div class="bg-surface w-full max-w-sm flex flex-col overflow-hidden shadow-2xl"
+             style="border: 1px solid var(--color-border); border-radius: 4px;">
+
+            <!-- 顶栏 -->
+            <div class="px-6 pt-6 pb-4 flex justify-between items-start">
+                <div class="flex flex-col gap-1">
+                    <span class="text-[13px] tracking-[0.35em] text-text font-light">草 稿</span>
+                    <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">DRAFT · MULTI SEND</span>
+                </div>
+                <button @click="modals.multiDraft = false" class="text-muted/30 hover:text-muted transition-colors mt-0.5">
+                    <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+                </button>
+            </div>
+
+            <!-- 分隔线 -->
+            <div class="mx-6 h-[1px] bg-border/60"></div>
+
+            <!-- 输入区 -->
+            <div class="px-6 py-5 relative">
+                <textarea v-model="draftText" rows="6"
+                    class="w-full bg-transparent text-[13px] resize-none outline-none leading-[1.9] tracking-wide placeholder-muted/25 border-none font-light"
+                    placeholder="每行将作为一条独立消息发出&#10;&#10;例如&#10;你好呀&#10;我想你了"></textarea>
+                <!-- 右下角行数 -->
+                <span class="absolute bottom-6 right-6 text-[9px] tracking-[0.2em] text-muted/25 font-mono select-none transition-opacity"
+                      :style="{ opacity: draftLines.length > 0 ? 1 : 0 }">
+                    {{ draftLines.length }} LINE{{ draftLines.length > 1 ? 'S' : '' }}
+                </span>
+            </div>
+
+            <!-- 分隔线 -->
+            <div class="mx-6 h-[1px] bg-border/60"></div>
+
+            <!-- 底部操作 -->
+            <div class="px-6 py-4 flex justify-between items-center">
+                <button @click="draftText = ''"
+                        class="text-[10px] tracking-[0.25em] text-muted/30 hover:text-muted transition-colors uppercase"
+                        :class="draftLines.length === 0 ? 'pointer-events-none' : ''">
+                    清 空
+                </button>
+                <button @click="sendDraft"
+                        class="text-[11px] tracking-[0.3em] transition-all px-5 py-2 border uppercase"
+                        :class="draftLines.length > 0
+                            ? 'text-text border-text/30 hover:bg-text hover:text-bg'
+                            : 'text-muted/20 border-border/30 pointer-events-none'">
+                    发 送
+                </button>
+            </div>
+
+        </div>
+    </div>
+</transition>
 
 </div>
 
@@ -1144,6 +1202,8 @@ createApp({
         const activeTimer = ref(null);
         const notifGranted = ref(false); // ✅【修复】这个变量被误删了，加回来！
         const selectedMsgId = ref(null);
+        const draftText = ref('');
+const draftLines = computed(() => draftText.value.split('\n').map(l => l.trim()).filter(l => l));
 
         const profiles = reactive({
             me: { name: '我', avatar: '' },
@@ -1157,7 +1217,7 @@ createApp({
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-        const modals = reactive({ settings: false, replyManager: false, stickerPanel: false });
+        const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false });
         const stickerImages = ref([]);
 
         const generateEmojis = () => {
@@ -1361,6 +1421,36 @@ if (count > 3 && Math.random() > Math.random()) count = Math.floor(Math.random()
         const triggerReply = () => {
             triggerAutoReply();
         };
+        
+        const sendDraft = () => {
+    if (draftLines.value.length === 0) return;
+    const lines = [...draftLines.value];
+    draftText.value = '';
+    modals.multiDraft = false;
+
+    lines.forEach((line, i) => {
+        setTimeout(() => {
+            const msgId = Date.now().toString() + '_' + i;
+            const q = (i === 0 && quoteMsg.value) ? { ...quoteMsg.value } : null;
+            if (i === 0) quoteMsg.value = null;
+            messages.value.push({
+                id: msgId, sender: 'me', type: 'text',
+                content: line, timestamp: Date.now(),
+                status: 'sent', quote: q
+            });
+            playSound('me');
+            scrollToBottom();
+            if (i === lines.length - 1) {
+                const readDelay = Math.random() * 1500 + 1200;
+                setTimeout(() => {
+                    messages.value.filter(m => m.sender === 'me' && m.status === 'sent')
+                        .forEach(m => m.status = 'read');
+                    setTimeout(() => triggerAutoReply(), Math.random() * 1500 + 500);
+                }, readDelay);
+            }
+        }, i * 400);
+    });
+};
 
         const handleImageUpload = (e) => {
             const file = e.target.files[0];
@@ -1622,17 +1712,33 @@ const importAllData = (e) => {
 
         // ── 去重 ──
         const dedupReplies = () => {
-            const g = currentGroup.value;
-            const seen = new Set();
-            g.replies = g.replies.filter(r => {
-                const key = r.type === 'image' ? r.img : r.text;
-                if (seen.has(key)) return false;
-                seen.add(key); return true;
-            });
-            saveData();
-            alert('✅ 去重完成！');
-        };
+    const g = currentGroup.value;
+    // 先收集其他分组的所有内容作为参照
+    const otherKeys = new Set();
+    replyGroups.value.forEach(group => {
+        if (group.id === currentGroupId.value) return;
+        group.replies.forEach(r => {
+            otherKeys.add(r.type === 'image' ? r.img : r.text);
+        });
+    });
 
+    const selfSeen = new Set();
+    const before = g.replies.length;
+
+    g.replies = g.replies.filter(r => {
+        const key = r.type === 'image' ? r.img : r.text;
+        // 组内重复
+        if (selfSeen.has(key)) return false;
+        selfSeen.add(key);
+        // 跟其他组重复
+        if (otherKeys.has(key)) return false;
+        return true;
+    });
+
+    const removed = before - g.replies.length;
+    saveData();
+    alert(`✅ 去重完成！移除了 ${removed} 条重复`);
+};
         // ── 编辑字卡 ──
         const editingReply = ref(null);
         const startEditReply = (reply) => {
@@ -1716,7 +1822,7 @@ const importAllData = (e) => {
                         }
                     }
                     if (count > 0) { saveData(); alert(`✅ 已追加 ${count} 条到「${currentGroup.value.name}」`); }
-                    else alert('🤔 文件中未找到有效内容。');
+                    else alert('🤔 文件中未找到有效内容');
                 } catch(err) { alert(`❌ 导入失败：${err.message}`); }
             };
             r.readAsText(f); e.target.value='';
@@ -1753,7 +1859,7 @@ const importAllData = (e) => {
             chatList, messages, inputText, isTyping, previewImg, notifGranted,
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
-            sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg, selectedMsgId,
+            sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg, selectedMsgId, draftText, draftLines, sendDraft,
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
@@ -1777,17 +1883,18 @@ const importAllData = (e) => {
     // ── 随机诗句 ──
     const poems = [
         '此时相望不相闻，愿逐月华流照君',
-        '浮世万千，吾爱有三',
         '山有木兮木有枝，心悦君兮君不知',
         '玲珑骰子安红豆，入骨相思知不知',
         '晚来天欲雪，能饮一杯无',
         '我见青山多妩媚，料青山见我应如是',
         '人生若只如初见，何事秋风悲画扇',
         '愿我如星君如月，夜夜流光相皎洁',
-        '陌上花开，可缓缓归矣',
-        '世间安得双全法，不负如来不负卿',
-        '一别两宽，各生欢喜',
         '但愿人长久，千里共婵娟',
+        '他生莫作有情痴，人间无地著相思',
+        '花时同醉破春愁，醉折花枝作酒筹',
+        '仆本恨人，卿须怜我',
+        '若是前世未有缘，待重结、来生愿',
+        '瘦影自临春水照，卿须怜我我怜卿',
     ];
     const poemEl = document.getElementById('sp-poem');
     if(poemEl) poemEl.textContent = poems[Math.floor(Math.random() * poems.length)];

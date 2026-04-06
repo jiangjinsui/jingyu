@@ -91,58 +91,228 @@
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
         input, textarea, button { outline: none !important; box-shadow: none !important; }
-        .msg-bubble { line-height: 1.8; letter-spacing: 0.5px; word-break: break-word; }
+        .msg-bubble { line-height: 1.6; letter-spacing: 0.3px; word-break: break-word; }
 
-        /* ─── 开场动画 ─── */
+        /* ══════════════════════════════════════
+           开场动画  —  重工业极简
+        ══════════════════════════════════════ */
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,600&display=swap');
+
         #splash-screen {
             position: fixed; inset: 0; z-index: 200;
-            background: var(--color-surface);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            transition: opacity 1.2s ease, transform 1.2s ease;
+            background: var(--color-bg);
+            display: grid;
+            transition: opacity 2s cubic-bezier(0.77,0,0.18,1),
+                        transform 2s cubic-bezier(0.77,0,0.18,1);
+            overflow: hidden;
         }
-        #splash-screen.hide {
-            opacity: 0; transform: scale(1.04); pointer-events: none;
-        }
+        #splash-screen.hide { opacity: 0; transform: scale(1.04); pointer-events: none; }
+        #splash-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-        /* 粒子画布 */
-        #splash-canvas {
-            position: absolute; inset: 0; width: 100%; height: 100%;
-            opacity: 0.18;
-        }
-
-        .splash-title {
-            font-size: clamp(2rem, 8vw, 3.5rem);
-            letter-spacing: 1.2em;
-            font-weight: 300;
+        /* 满版底层大字（极浅水印层） */
+        .sp-watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(22vw, 38vw, 52vw);
+            font-weight: 600;
+            font-style: italic;
             color: var(--color-text);
             opacity: 0;
-            transform: translateY(12px);
-            animation: splashFadeUp 1.2s ease 0.4s forwards;
-            margin-left: 1.2em;
+            letter-spacing: -0.05em;
+            user-select: none;
+            animation: spWater 2.5s ease 0.1s forwards;
+            white-space: nowrap;
         }
-        .splash-sub {
-            font-size: 0.65rem;
-            letter-spacing: 0.5em;
-            color: var(--color-muted);
+        @keyframes spWater {
+            0%   { opacity: 0; transform: scale(1.08); }
+            40%  { opacity: 0.04; transform: scale(1.02); }
+            100% { opacity: 0.032; transform: scale(1); }
+        }
+
+        /* 网格线 */
+        .sp-grid {
+            position: absolute; inset: 0; pointer-events: none;
+        }
+        .sp-grid::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(var(--color-border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+            background-size: calc(100%/6) calc(100%/10);
             opacity: 0;
-            transform: translateY(8px);
-            animation: splashFadeUp 1s ease 1s forwards;
-            margin-top: 1.5rem;
+            animation: spGridIn 1.8s ease 0.3s forwards;
         }
-        .splash-line {
-            width: 0; height: 1px;
-            background: var(--color-muted);
-            opacity: 0.3;
-            animation: splashLine 1.4s ease 0.2s forwards;
-            margin-bottom: 2.5rem;
+        @keyframes spGridIn {
+            to { opacity: 0.35; }
         }
-        @keyframes splashFadeUp {
-            to { opacity: 1; transform: translateY(0); }
+
+        /* 中央主内容框 */
+        .sp-main {
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: min(480px, 88vw);
         }
-        @keyframes splashLine {
-            to { width: 60px; }
+
+        /* 顶部编号行 */
+        .sp-topline {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            animation: spFade 0.6s ease 0.4s forwards;
+            margin-bottom: 24px;
         }
+        .sp-topline span {
+            font-size: 0.45rem;
+            letter-spacing: 0.35em;
+            color: var(--color-muted);
+            font-family: 'Courier New', monospace;
+            opacity: 0.5;
+            text-transform: uppercase;
+        }
+        .sp-topline-line {
+            flex: 1; height: 1px;
+            background: var(--color-border);
+            margin: 0 12px;
+        }
+
+        /* 主标题区 */
+        .sp-title-block {
+            width: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 0;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .sp-cn-big {
+            font-family: 'Noto Serif SC', serif;
+            font-size: clamp(3.8rem, 13vw, 7.5rem);
+            font-weight: 300;
+            line-height: 1;
+            letter-spacing: 0.28em;
+            color: var(--color-text);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: spRise 1.1s cubic-bezier(0.16,1,0.3,1) 0.6s forwards;
+            margin-left: 0.28em;
+        }
+        .sp-en-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            padding-bottom: 6px;
+            opacity: 0;
+            transform: translateX(14px);
+            animation: spSlide 0.9s cubic-bezier(0.16,1,0.3,1) 1.1s forwards;
+        }
+        .sp-en-big {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1rem, 3.2vw, 1.6rem);
+            font-style: italic;
+            font-weight: 300;
+            letter-spacing: 0.08em;
+            color: var(--color-text);
+        }
+        .sp-en-small {
+            font-size: 0.46rem;
+            letter-spacing: 0.4em;
+            color: var(--color-muted);
+            opacity: 0.55;
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+
+        /* 副信息行 */
+        .sp-meta {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1px 1fr 1px 1fr;
+            gap: 0;
+            opacity: 0;
+            animation: spFade 0.7s ease 1.7s forwards;
+        }
+        .sp-meta-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 8px;
+        }
+        .sp-meta-val {
+            font-size: 0.55rem;
+            letter-spacing: 0.2em;
+            color: var(--color-text);
+            opacity: 0.7;
+            font-family: monospace;
+        }
+        .sp-meta-key {
+            font-size: 0.4rem;
+            letter-spacing: 0.3em;
+            color: var(--color-muted);
+            opacity: 0.4;
+            text-transform: uppercase;
+        }
+        .sp-meta-div {
+            width: 1px;
+            background: var(--color-border);
+            margin: 8px 0;
+        }
+
+        /* 底部进度条 */
+        .sp-progress-wrap {
+            position: absolute;
+            bottom: max(28px, 5vh);
+            left: max(28px, 6vw);
+            right: max(28px, 6vw);
+            opacity: 0;
+            animation: spFade 0.5s ease 0.8s forwards;
+        }
+        .sp-progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .sp-progress-label span {
+            font-size: 0.38rem;
+            letter-spacing: 0.35em;
+            color: var(--color-muted);
+            opacity: 0.4;
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+        .sp-progress-bar {
+            width: 100%; height: 1px;
+            background: var(--color-border);
+            position: relative;
+            overflow: hidden;
+        }
+        .sp-progress-fill {
+            position: absolute;
+            left: 0; top: 0; height: 100%;
+            background: var(--color-text);
+            opacity: 0.4;
+            width: 0;
+            animation: spProgress 3.8s cubic-bezier(0.4,0,0.6,1) 0.5s forwards;
+        }
+        @keyframes spProgress { to { width: 100%; } }
+
+        @keyframes spRise  { to { opacity: 1; transform: translateY(0); } }
+        @keyframes spSlide { to { opacity: 1; transform: translateX(0); } }
+        @keyframes spFade  { to { opacity: 1; } }
 
         /* ─── 随机表情包弹出 ─── */
         .emoji-popup {
@@ -169,35 +339,6 @@
             100% { opacity: 0; transform: translateY(-110px) scale(0.85) rotate(3deg); }
         }
 
-        /* ─── 通知横幅 (应用内) ─── */
-        .inapp-toast {
-            position: fixed; top: env(safe-area-inset-top, 0);
-            left: 50%; transform: translateX(-50%) translateY(-120%);
-            z-index: 180; min-width: 240px; max-width: 340px;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 16px;
-            padding: 12px 16px;
-            display: flex; align-items: center; gap: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
-            backdrop-filter: blur(12px);
-        }
-        .inapp-toast.show {
-            transform: translateX(-50%) translateY(12px);
-        }
-        .inapp-toast-avatar {
-            width: 36px; height: 36px; border-radius: 50%;
-            background: var(--color-bg);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1rem; flex-shrink: 0;
-            overflow: hidden;
-        }
-        .inapp-toast-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .inapp-toast-body { flex: 1; min-width: 0; }
-        .inapp-toast-name { font-size: 11px; color: var(--color-muted); tracking: widest; margin-bottom: 2px; }
-        .inapp-toast-text { font-size: 13px; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
         /* ─── PWA 安装提示 ─── */
         .install-banner {
             position: fixed; bottom: max(env(safe-area-inset-bottom, 0px), 16px);
@@ -222,19 +363,6 @@
         }
         .install-banner .dismiss { background: transparent; color: var(--color-muted); padding: 5px 6px; }
 
-        /* ─── 通知权限提示 ─── */
-        .notif-badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            font-size: 10px; letter-spacing: 0.1em;
-            color: var(--color-muted);
-            border: 1px solid var(--color-border);
-            border-radius: 20px; padding: 3px 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .notif-badge:hover { color: var(--color-text); border-color: var(--color-muted); }
-        .notif-badge.granted { color: #6b9e6b; border-color: #6b9e6b33; }
-
         /* ─── 聊天气泡进场动画 ─── */
         .msg-in { animation: msgSlideIn 0.3s cubic-bezier(0.34,1.56,0.64,1); }
         .msg-in-right { animation: msgSlideInRight 0.3s cubic-bezier(0.34,1.56,0.64,1); }
@@ -246,6 +374,20 @@
             from { opacity: 0; transform: translateX(12px) scale(0.95); }
             to   { opacity: 1; transform: translateX(0) scale(1); }
         }
+
+        /* ─── 已读状态 ─── */
+        .read-tick {
+            font-size: 9px;
+            color: var(--color-muted);
+            opacity: 0.45;
+            letter-spacing: -1px;
+            font-family: sans-serif;
+            transition: color 0.3s, opacity 0.3s;
+        }
+        .read-tick.read {
+            color: var(--color-text);
+            opacity: 0.55;
+        }
     </style>
     <style id="custom-bubble-css"></style>
 </head>
@@ -254,19 +396,66 @@
 <!-- ─── 开场动画 ─── -->
 <div id="splash-screen">
     <canvas id="splash-canvas"></canvas>
-    <div class="splash-line"></div>
-    <div class="splash-title">静 语</div>
-    <div class="splash-sub">JING YU · 字语传心</div>
+
+    <!-- 满版水印底字 -->
+    <div class="sp-watermark">静语</div>
+
+    <!-- 网格线 -->
+    <div class="sp-grid"></div>
+
+    <!-- 中央主内容 -->
+    <div class="sp-main">
+        <!-- 顶部编号行 -->
+        <div class="sp-topline">
+            <span>PRIVATE · MESSAGING</span>
+            <div class="sp-topline-line"></div>
+            <span id="sp-time">00:00</span>
+        </div>
+
+        <!-- 主标题 -->
+        <div class="sp-title-block">
+            <div class="sp-cn-big">静语</div>
+            <div class="sp-en-stack">
+                <span class="sp-en-big">Jing Yu</span>
+                <span class="sp-en-small">WORDS · BETWEEN · US</span>
+            </div>
+        </div>
+
+        <!-- 副信息 -->
+        <div class="sp-meta">
+            <div class="sp-meta-item">
+                <span class="sp-meta-val">字语</span>
+                <span class="sp-meta-key">CHANNEL</span>
+            </div>
+            <div class="sp-meta-div"></div>
+            <div class="sp-meta-item">
+                <span class="sp-meta-val">传心</span>
+                <span class="sp-meta-key">PURPOSE</span>
+            </div>
+            <div class="sp-meta-div"></div>
+            <div class="sp-meta-item">
+                <span class="sp-meta-val" id="sp-date">——</span>
+                <span class="sp-meta-key">DATE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部进度条 -->
+    <div class="sp-progress-wrap">
+        <div class="sp-progress-label">
+            <span>LOADING</span>
+            <span>静语 · v2</span>
+        </div>
+        <div class="sp-progress-bar">
+            <div class="sp-progress-fill"></div>
+        </div>
+    </div>
 </div>
 
-<!-- ─── 应用内通知横幅 ─── -->
-<div id="inapp-toast" class="inapp-toast">
-    <div class="inapp-toast-avatar" id="toast-avatar">
-        <span id="toast-avatar-char">？</span>
-    </div>
+<div id="inapp-toast" style="position:fixed;top:max(env(safe-area-inset-top,0px),16px);left:50%;transform:translateX(-50%);z-index:180;background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;padding:10px 18px;min-width:200px;max-width:80vw;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:none;flex-direction:column;gap:2px;">
     <div class="inapp-toast-body">
-        <div class="inapp-toast-name" id="toast-name">对方</div>
-        <div class="inapp-toast-text" id="toast-text">发来了新消息</div>
+        <div class="inapp-toast-name" id="toast-name" style="font-size:11px;letter-spacing:0.1em;color:var(--color-text);font-weight:500;">对方</div>
+        <div class="inapp-toast-text" id="toast-text" style="font-size:12px;color:var(--color-muted);letter-spacing:0.05em;">发来了新消息</div>
     </div>
 </div>
 
@@ -278,45 +467,44 @@
     <button class="dismiss" id="dismiss-install">✕</button>
 </div>
 
-<div id="app" class="h-[100dvh] w-full flex justify-center items-center bg-bg selection:bg-text selection:text-bg relative"
-     :style="settings.bgImage ? { backgroundImage: `url(${settings.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
+<div id="app" class="h-[100dvh] w-full flex justify-center items-center selection:bg-text selection:text-bg relative"
+     :class="settings.bgImage ? '' : 'bg-bg'">
 
-    <div class="w-full md:max-w-3xl h-full flex flex-col bg-surface/90 backdrop-blur-lg relative md:shadow-2xl md:border-x border-border/50 transition-all duration-500">
+    <div class="w-full md:max-w-3xl h-full flex flex-col relative md:shadow-2xl md:border-x border-border/50 transition-all duration-500" :class="settings.bgImage ? 'bg-transparent' : 'bg-surface/90 backdrop-blur-lg'">
 
-<header class="h-20 md:h-24 flex items-center justify-between px-6 md:px-8 z-10 shrink-0 relative">
+<header class="h-16 flex items-center justify-between px-4 md:px-6 z-10 shrink-0 relative backdrop-blur-md bg-surface" style="padding-top: 6px;">
     <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
 
     <!-- 左边：对方头像 + 名字 -->
-    <div class="flex flex-col items-center justify-center gap-1 group cursor-pointer w-14" @click="editProfile('them')">
-        <div v-if="settings.showAvatar" class="w-9 h-9 md:w-10 md:h-10 overflow-hidden bg-bg flex items-center justify-center text-muted transition-transform group-hover:scale-105 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+    <div class="flex flex-col items-center justify-center gap-0 w-14">
+        <div v-if="settings.showAvatar" @click="changeAvatar('them')" class="w-9 h-9 overflow-hidden bg-bg flex items-center justify-center text-muted cursor-pointer hover:scale-105 transition-transform shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
             <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
             <span v-else class="text-sm font-light">{{ profiles.them.name.charAt(0) }}</span>
         </div>
-        <span class="text-[9px] md:text-[10px] tracking-widest text-muted">{{ profiles.them.name }}</span>
-        <span class="text-[8px] text-muted/60 tracking-widest transition-opacity h-3" :class="isTyping ? 'opacity-100' : 'opacity-0'">输入中</span>
+        <span @click="changeName('them')" class="text-[9px] tracking-widest text-muted cursor-pointer hover:text-text transition-colors">{{ profiles.them.name }}</span>
+        <span v-show="isTyping" class="text-[8px] text-muted/60 tracking-widest h-3">输入中</span>
+        <span v-show="!isTyping" class="h-3 inline-block"></span>
     </div>
 
     <!-- 中间：功能按钮 -->
     <div class="flex gap-2 md:gap-3 text-muted items-center">
-    <button @click="requestNotifPermission" :class="['notif-badge', notifGranted ? 'granted' : '']" title="后台通知
-        <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
-        <button @click="exportScreenshot" class="hover:text-text transition-colors" title="截图导出"><i data-lucide="camera" class="w-4 h-4 stroke-[1.5]"></i></button>
+<button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.settings = true" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
     </div>
 
     <!-- 右边：我的头像 + 名字（同高占位） -->
-    <div class="flex flex-col items-center justify-center gap-1 group cursor-pointer w-14" @click="editProfile('me')">
-        <div v-if="settings.showAvatar" class="w-9 h-9 md:w-10 md:h-10 overflow-hidden bg-bg flex items-center justify-center text-muted transition-transform group-hover:scale-105 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+    <div class="flex flex-col items-center justify-center gap-0 w-14">
+        <div v-if="settings.showAvatar" @click="changeAvatar('me')" class="w-9 h-9 overflow-hidden bg-bg flex items-center justify-center text-muted cursor-pointer hover:scale-105 transition-transform shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
             <img v-if="profiles.me.avatar" :src="profiles.me.avatar" class="w-full h-full object-cover">
             <span v-else class="text-sm font-light">{{ profiles.me.name.charAt(0) }}</span>
         </div>
-        <span class="text-[9px] md:text-[10px] tracking-widest text-muted">{{ profiles.me.name }}</span>
+        <span @click="changeName('me')" class="text-[9px] tracking-widest text-muted cursor-pointer hover:text-text transition-colors">{{ profiles.me.name }}</span>
         <span class="h-3"></span>
     </div>
 </header>
 
-        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col gap-6 md:gap-8 scroll-smooth pb-20">
+        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col-reverse gap-6 md:gap-8 scroll-smooth pb-20">
 
             <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-muted/40 tracking-widest text-sm space-y-4">
                 <i data-lucide="wind" class="w-6 h-6 stroke-[1]"></i>
@@ -345,7 +533,7 @@
                                     {{ profiles[msg.sender].name }}
                                 </span>
 
-                                <div class="msg-bubble px-4 md:px-5 py-2.5 md:py-3 rounded-2xl text-[14px] md:text-[15px] transition-all"
+                                <div class="msg-bubble px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[12px] md:text-[13px] transition-all"
                                      :class="[
                                         msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text',
                                         'bubble-custom-class'
@@ -356,11 +544,11 @@
                                     </template>
                                 </div>
 
-                                <div class="text-[9px] md:text-[10px] text-muted/40 mt-1.5 flex items-center gap-1.5 tracking-wider px-1 font-sans">
+                                <div class="text-[9px] md:text-[10px] text-muted/40 mt-1.5 flex items-center gap-1 tracking-wider px-1 font-sans">
                                     <span>{{ formatTime(msg.timestamp) }}</span>
                                     <template v-if="msg.sender === 'me'">
-                                        <i v-if="msg.status === 'read'" data-lucide="check-circle-2" class="w-3 h-3 text-text/40 stroke-[1.5]"></i>
-                                        <i v-else data-lucide="circle" class="w-3 h-3 stroke-[1.5]"></i>
+                                        <span v-if="msg.status === 'read'" class="read-tick read">✓✓</span>
+                                        <span v-else class="read-tick">✓</span>
                                     </template>
                                 </div>
                             </div>
@@ -374,10 +562,11 @@
 
                 <div v-if="isTyping" class="flex justify-start">
                     <div class="flex gap-3">
-                        <div v-if="settings.showAvatar" class="w-8 h-8 overflow-hidden bg-bg flex items-center justify-center opacity-50 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
-                            <span class="text-xs text-muted">{{ profiles.them.name.charAt(0) }}</span>
+                        <div v-if="settings.showAvatar" class="w-8 h-8 overflow-hidden bg-bg flex items-center justify-center shadow-sm shrink-0" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                            <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+                            <span v-else class="text-xs text-muted">{{ profiles.them.name.charAt(0) }}</span>
                         </div>
-                        <div class="px-5 py-3 bg-surface border border-border rounded-2xl flex items-center gap-1 h-[42px]">
+                        <div class="px-3 py-2 bg-surface border border-border rounded-xl flex items-center gap-1 h-[34px]">
                             <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
                         </div>
                     </div>
@@ -385,119 +574,134 @@
             </div>
         </main>
 
-        <footer class="bg-surface/90 backdrop-blur-md shrink-0 px-4 md:px-8 py-4 relative z-10 pb-6 md:pb-4">
+        <footer class="backdrop-blur-md shrink-0 px-4 md:px-6 py-2 relative z-10 pb-3 md:pb-2 bg-surface">
             <div class="absolute top-0 left-4 md:left-8 right-4 md:right-8 h-[1px] bg-border/80"></div>
 
-            <div class="flex gap-4 px-2 pb-2 text-muted/60 items-center">
-                <label class="cursor-pointer hover:text-text transition-colors" title="发送图片">
+            <div class="flex items-end gap-2">
+                <label class="cursor-pointer hover:text-text transition-colors text-muted/60 pb-2.5 shrink-0" title="发送图片">
                     <i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i>
                     <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
                 </label>
-                <!-- 随机表情包按钮 -->
-                <button @click="popRandomEmoji" class="cursor-pointer hover:text-text transition-colors" title="随机表情包">
-                    <i data-lucide="sparkles" class="w-4 h-4 stroke-[1.5]"></i>
-                </button>
-            </div>
 
-            <div class="flex items-end gap-3">
                 <textarea v-model="inputText" @keydown.enter.prevent="sendMsg('me', 'text')" rows="1"
-                          class="flex-1 bg-bg/50 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[14px] md:text-[15px] resize-none max-h-32 placeholder-muted/50 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border"
+                          class="flex-1 bg-bg/50 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[12px] md:text-[13px] resize-none max-h-32 placeholder-muted/50 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border"
                           placeholder="书写..."></textarea>
 
-                <div class="flex gap-2 md:gap-3 shrink-0 pb-1 text-muted/80">
+                <div class="flex gap-2 shrink-0 pb-1 text-muted/80">
                     <button @click="triggerReply" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" title="让对方说话">
-                        <i data-lucide="pen-tool" class="w-5 h-5 md:w-5.5 md:h-5.5 stroke-[1.5]"></i>
+                        <i data-lucide="pen-tool" class="w-5 h-5 stroke-[1.5]"></i>
                     </button>
                     <button @click="sendMsg('me', 'text')" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" :class="{'text-text': inputText.trim()}" title="发送">
-                        <i data-lucide="send" class="w-5 h-5 md:w-5.5 md:h-5.5 stroke-[1.5]"></i>
+                        <i data-lucide="send" class="w-5 h-5 stroke-[1.5]"></i>
                     </button>
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- 设置弹窗 -->
-    <transition name="fade">
-        <div v-if="modals.settings" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4 md:p-0">
-            <div class="bg-surface w-full max-w-md shadow-2xl md:border border-border/50 flex flex-col max-h-[85vh] rounded-2xl md:rounded-none overflow-hidden">
-                <div class="px-6 py-5 flex justify-between items-center relative bg-surface">
-                    <h2 class="text-[14px] tracking-[0.3em] font-medium">偏好</h2>
-                    <button @click="modals.settings = false" class="text-muted hover:text-text"><i data-lucide="x" class="w-4 h-4"></i></button>
-                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
-                </div>
-                <div class="px-6 py-6 overflow-y-auto flex flex-col gap-8 text-[13px] md:text-[14px]">
+<!-- 设置弹窗 -->
+<transition name="fade">
+    <div v-if="modals.settings" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4 md:p-0">
+        <div class="bg-surface w-full max-w-md shadow-2xl md:border border-border/50 flex flex-col max-h-[85vh] rounded-2xl md:rounded-none overflow-hidden">
+            <div class="px-6 py-5 flex justify-between items-center relative bg-surface">
+                <h2 class="text-[14px] tracking-[0.3em] font-medium">偏好</h2>
+                <button @click="modals.settings = false" class="text-muted hover:text-text"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
+            </div>
+            <div class="px-6 py-6 overflow-y-auto flex flex-col gap-8 text-[13px] md:text-[14px]">
 
-                    <div class="space-y-3">
-                        <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">身份与显示</span>
-                        <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('me')">
-                            <span class="tracking-widest">我的资料</span>
-                            <span class="text-muted text-xs flex items-center gap-1">{{ profiles.me.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
-                        </div>
-                  
-    <div class="space-y-4">
-       <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">交互与行为</span>
-                        <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('them')">
-                            <span class="tracking-widest">对方资料</span>
-                            <span class="text-muted text-xs flex items-center gap-1">{{ profiles.them.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
-                        </div>
-                        <div class="flex gap-4 pt-2">
-                            <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
-                                <span class="tracking-widest text-xs">头像</span>
-                                <input type="checkbox" v-model="settings.showAvatar" class="accent-text">
-                            </label>
-                            <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
-                                <span class="tracking-widest text-xs">昵称</span>
-                                <input type="checkbox" v-model="settings.showNickname" class="accent-text">
-                            </label>
-                        </div>
+                <!-- 身份与显示 -->
+                <div class="space-y-3">
+                    <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">身份与显示</span>
+                    <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('me')">
+                        <span class="tracking-widest">我的资料</span>
+                        <span class="text-muted text-xs flex items-center gap-1">{{ profiles.me.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
                     </div>
-
-                            <span class="tracking-widest">自动回复延迟 (秒)</span>
-                            <div class="flex items-center gap-2 text-xs">
-                                <input type="number" v-model.number="settings.delayMin" min="0" class="w-12 bg-bg text-center py-1 outline-none border border-border">
-                                <span class="text-muted">-</span>
-                                <input type="number" v-model.number="settings.delayMax" min="1" class="w-12 bg-bg text-center py-1 outline-none border border-border">
-                            </div>
-                        </div>
-                        <label class="flex justify-between items-center cursor-pointer group pt-2">
-                            <span class="tracking-widest">允许对方主动发消息</span>
-                            <input type="checkbox" v-model="settings.activeMsg" class="accent-text w-4 h-4">
+                    <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="editProfile('them')">
+                        <span class="tracking-widest">对方资料</span>
+                        <span class="text-muted text-xs flex items-center gap-1">{{ profiles.them.name }} <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
+                    </div>
+                    <div class="flex gap-4 pt-2">
+                        <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
+                            <span class="tracking-widest text-xs">头像</span>
+                            <input type="checkbox" v-model="settings.showAvatar" class="accent-text">
                         </label>
-                        <div v-if="settings.activeMsg" class="flex justify-between items-center pl-4 border-l-2 border-border/50">
-                            <span class="tracking-widest text-xs text-muted">主动触发间隔 (秒)</span>
-                            <input type="number" v-model.number="settings.activeInterval" min="5" class="w-16 bg-bg text-center py-1 text-xs outline-none border border-border">
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">外观定制</span>
-                        <div>
-                            <div class="flex justify-between text-xs mb-2">
-                                <span class="tracking-widest">头像圆角</span>
-                                <span class="text-muted">{{settings.avatarRadius}}%</span>
-                            </div>
-                            <input type="range" v-model="settings.avatarRadius" min="0" max="50" class="w-full accent-text h-1 bg-border appearance-none">
-                        </div>
-                        <div class="pt-2 flex flex-col gap-2">
-                            <span class="tracking-widest text-xs">背景图片</span>
-                            <input type="file" accept="image/*" @change="uploadBg" class="text-[10px] text-muted file:bg-bg file:border-none file:px-3 file:py-1 file:mr-2 cursor-pointer">
-                            <button v-if="settings.bgImage" @click="settings.bgImage=''" class="text-[10px] text-red-900/50 self-start">清除背景</button>
-                        </div>
-                        <div class="pt-2">
-                            <span class="tracking-widest text-xs block mb-2">自定义气泡 CSS</span>
-                            <textarea v-model="settings.customCSS" rows="2" class="w-full bg-bg border border-border px-3 py-2 text-[10px] font-mono resize-none" placeholder=".bubble-custom-class { }"></textarea>
-                            <button @click="applyCSS" class="text-[10px] tracking-widest text-text border border-border px-3 py-1 mt-2 hover:bg-border">应用</button>
-                        </div>
-                    </div>
-
-                    <div class="pt-6 pb-2 flex justify-between border-t border-border/50">
-                        <button @click="exportChat" class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border">导出记录</button>
-                        <button @click="clearChat" class="text-[11px] tracking-widest text-red-700/80 border border-red-900/10 px-4 py-1.5 hover:bg-red-900/5">清空所有</button>
+                        <label class="flex-1 flex justify-between items-center cursor-pointer group bg-bg/50 px-4 py-2 rounded">
+                            <span class="tracking-widest text-xs">昵称</span>
+                            <input type="checkbox" v-model="settings.showNickname" class="accent-text">
+                        </label>
                     </div>
                 </div>
+
+                <!-- 交互与行为 -->
+                <div class="space-y-4">
+                    <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">交互与行为</span>
+                    <div class="flex justify-between items-center cursor-pointer" @click="requestNotifPermission">
+                        <span class="tracking-widest">后台消息通知</span>
+                        <span :class="['text-[11px] tracking-wider px-3 py-1 rounded-full border transition-all cursor-pointer', notifGranted ? 'text-green-600 border-green-200' : 'text-muted border-border hover:border-muted']">
+                            {{ notifGranted ? '✓ 已开启' : '点击开启' }}
+                        </span>
+                    </div>
+                    <label class="flex justify-between items-center cursor-pointer group">
+                        <span class="tracking-widest">消息音效</span>
+                        <input type="checkbox" v-model="settings.sound" class="accent-text w-4 h-4">
+                    </label>
+                    <div class="flex justify-between items-center">
+                        <span class="tracking-widest">自动回复延迟 (秒)</span>
+                        <div class="flex items-center gap-2 text-xs">
+                            <input type="number" v-model.number="settings.delayMin" min="0" class="w-12 bg-bg text-center py-1 outline-none border border-border">
+                            <span class="text-muted">-</span>
+                            <input type="number" v-model.number="settings.delayMax" min="1" class="w-12 bg-bg text-center py-1 outline-none border border-border">
+                        </div>
+                    </div>
+                    <label class="flex justify-between items-center cursor-pointer group pt-2">
+                        <span class="tracking-widest">允许对方主动发消息</span>
+                        <input type="checkbox" v-model="settings.activeMsg" class="accent-text w-4 h-4">
+                    </label>
+                    <div v-if="settings.activeMsg" class="flex justify-between items-center pl-4 border-l-2 border-border/50">
+                        <span class="tracking-widest text-xs text-muted">主动触发间隔 (秒)</span>
+                        <input type="number" v-model.number="settings.activeInterval" min="5" class="w-16 bg-bg text-center py-1 text-xs outline-none border border-border">
+                    </div>
+                </div>
+
+                <!-- 外观定制 -->
+                <div class="space-y-4">
+                    <span class="text-[10px] text-muted/50 tracking-widest uppercase block mb-2">外观定制</span>
+                    <div>
+                        <div class="flex justify-between text-xs mb-2">
+                            <span class="tracking-widest">头像圆角</span>
+                            <span class="text-muted">{{settings.avatarRadius}}%</span>
+                        </div>
+                        <input type="range" v-model="settings.avatarRadius" min="0" max="50" class="w-full accent-text h-1 bg-border appearance-none">
+                    </div>
+                    <div class="pt-2 flex flex-col gap-2">
+                        <span class="tracking-widest text-xs">背景图片</span>
+                        <label class="text-[11px] tracking-widest border border-border px-4 py-2 hover:bg-border transition-colors rounded text-left text-muted cursor-pointer">
+                            📷 选择背景图片
+                            <input type="file" accept="image/*" class="hidden" @change="pickBgImage">
+                        </label>
+                        <div v-if="settings.bgImage" class="flex flex-col gap-2">
+                            <img :src="settings.bgImage" class="w-full h-28 object-cover rounded opacity-80">
+                            <button @click="clearBgImage" class="text-[10px] text-red-900/50 self-start">✕ 清除背景</button>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <span class="tracking-widest text-xs block mb-2">自定义气泡 CSS</span>
+                        <textarea v-model="settings.customCSS" rows="2" class="w-full bg-bg border border-border px-3 py-2 text-[10px] font-mono resize-none" placeholder=".bubble-custom-class { }"></textarea>
+                        <button @click="applyCSS" class="text-[10px] tracking-widest text-text border border-border px-3 py-1 mt-2 hover:bg-border">应用</button>
+                    </div>
+                </div>
+
+                <!-- 数据操作 -->
+                <div class="pt-6 pb-2 flex justify-between border-t border-border/50">
+                    <button @click="exportChat" class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border">导出记录</button>
+                    <button @click="clearChat" class="text-[11px] tracking-widest text-red-700/80 border border-red-900/10 px-4 py-1.5 hover:bg-red-900/5">清空所有</button>
+                </div>
+
             </div>
         </div>
-    </transition>
+    </div>
+</transition>
 
     <!-- 逻辑库弹窗 -->
     <transition name="fade">
@@ -719,35 +923,12 @@ createApp({
             }
         };
 
-        const showInAppToast = (name, text, avatar) => {
-            const toast = document.getElementById('inapp-toast');
-            const toastName = document.getElementById('toast-name');
-            const toastText = document.getElementById('toast-text');
-            const toastAvatar = document.getElementById('toast-avatar');
-            if (!toast) return;
-            toastName.textContent = name;
-            toastText.textContent = text;
-            if (avatar) {
-                toastAvatar.innerHTML = `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;">`;
-            } else {
-                toastAvatar.innerHTML = `<span id="toast-avatar-char">${name.charAt(0)}</span>`;
-            }
-            toast.classList.add('show');
-            clearTimeout(toast._timer);
-            toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
-        };
-
         const sendSystemNotif = (name, text) => {
-            if (notifGranted.value && document.visibilityState === 'hidden') {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(`静语 · ${name}`, {
-                        body: text.length > 50 ? text.slice(0, 50) + '...' : text,
-                        icon: 'data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2780%27>🪶</text></svg>',
-                        badge: 'data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2780%27>🪶</text></svg>',
-                        tag: 'jingyu-msg',
-                        renotify: true,
-                        silent: false
-                    });
+            if (Notification.permission === 'granted' && document.visibilityState === 'hidden') {
+                new Notification('静语 · ' + name, {
+                    body: text.length > 60 ? text.slice(0, 60) + '…' : text,
+                    tag: 'jingyu-msg',
+                    renotify: true
                 });
             }
         };
@@ -790,11 +971,11 @@ createApp({
 
         watch([messages, profiles, settings, replyGroups], saveData, { deep: true });
 
-        const scrollToBottom = async () => {
-            await nextTick();
-            const container = document.getElementById('chat-container');
-            if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-        };
+const scrollToBottom = async () => {
+    await nextTick();
+    const container = document.getElementById('chat-container');
+    if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
         const sendMsg = async (sender, type, content = null) => {
             let txt = content;
@@ -806,39 +987,45 @@ createApp({
                 if(ta) ta.style.height = 'auto';
             }
             if(!txt) return;
-            messages.value.push({ id: Date.now().toString(), sender, type, content: txt, timestamp: Date.now(), status: 'sent' });
+            const msgId = Date.now().toString();
+            messages.value.push({ id: msgId, sender, type, content: txt, timestamp: Date.now(), status: 'sent' });
             playSound(sender);
             scrollToBottom();
             if (sender === 'them') {
                 const displayText = type === 'image' ? '[图片]' : txt;
-                showInAppToast(profiles.them.name, displayText, profiles.them.avatar);
                 sendSystemNotif(profiles.them.name, displayText);
             }
             if (sender === 'me') {
+                const readDelay = Math.random() * 1500 + 1200;
                 setTimeout(() => {
-                    const m = messages.value[messages.value.length - 1];
+                    const m = messages.value.find(x => x.id === msgId);
                     if(m) m.status = 'read';
-                }, Math.random() * 1500 + 1000);
+                }, readDelay);
                 triggerAutoReply();
             }
         };
 
         const triggerAutoReply = () => {
-            if (isTyping.value) return;
-            isTyping.value = true;
-            scrollToBottom();
-            const delay = (Math.random() * (settings.delayMax - settings.delayMin) + settings.delayMin) * 1000;
-            setTimeout(() => {
-                isTyping.value = false;
-                const all = replyGroups.value.flatMap(g => g.replies);
-                if(all.length > 0) {
-                    const pick = all[Math.floor(Math.random() * all.length)];
-                    sendMsg('them', pick.type || 'text', pick.type === 'image' ? pick.img : pick.text);
-                } else {
-                    sendMsg('them', 'text', "......");
-                }
-            }, delay);
-        };
+    if (isTyping.value) return;
+    isTyping.value = true;
+    scrollToBottom();
+    const delay = (Math.random() * (settings.delayMax - settings.delayMin) + settings.delayMin) * 1000;
+
+    // 用 Web Worker 计时，后台不会被冻住
+    const timerCode = `setTimeout(() => self.postMessage('done'), ${delay})`;
+    const timerWorker = new Worker(URL.createObjectURL(new Blob([timerCode])));
+    timerWorker.onmessage = () => {
+        timerWorker.terminate();
+        isTyping.value = false;
+        const all = replyGroups.value.flatMap(g => g.replies);
+        if(all.length > 0) {
+            const pick = all[Math.floor(Math.random() * all.length)];
+            sendMsg('them', pick.type || 'text', pick.type === 'image' ? pick.img : pick.text);
+        } else {
+            sendMsg('them', 'text', "......");
+        }
+    };
+};
         
         let bgWorker = null;
         const setupActiveMsg = () => {
@@ -856,8 +1043,7 @@ createApp({
         watch(() => settings.activeInterval, setupActiveMsg);
 
         const triggerReply = () => {
-            if(inputText.value.trim()) sendMsg('me', 'text');
-            else triggerAutoReply();
+            triggerAutoReply();
         };
 
         const handleImageUpload = (e) => {
@@ -910,7 +1096,52 @@ createApp({
             document.documentElement.classList.toggle('dark', settings.isDark);
             document.getElementById('theme-color-meta').content = settings.isDark ? '#111111' : '#f9f9f9';
         };
-        const applyCSS = () => document.getElementById('custom-bubble-css').innerHTML = settings.customCSS;
+        const applyCSS = () => {
+            document.getElementById('custom-bubble-css').innerHTML = settings.customCSS;
+        };
+        const applyBg = () => {
+            if (settings.bgImage) {
+                document.body.style.backgroundImage = `url(${settings.bgImage})`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+                document.body.style.backgroundColor = 'transparent';
+            } else {
+                document.body.style.backgroundImage = '';
+                document.body.style.backgroundColor = '';
+            }
+        };
+
+        watch(() => settings.bgImage, applyBg);
+
+        const changeAvatar = role => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*';
+            input.onchange = e => {
+                const f = e.target.files[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const c = document.createElement('canvas'), MAX = 200;
+                        const ratio = img.width / img.height;
+                        c.width = ratio >= 1 ? MAX : MAX * ratio;
+                        c.height = ratio >= 1 ? MAX / ratio : MAX;
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                        profiles[role].avatar = c.toDataURL('image/jpeg', 0.85);
+                    };
+                    img.src = ev.target.result;
+                };
+                r.readAsDataURL(f);
+            };
+            input.click();
+        };
+
+        const changeName = role => {
+            const n = prompt(`修改昵称：`, profiles[role].name);
+            if (n && n.trim()) profiles[role].name = n.trim().substring(0, 12);
+        };
 
         const editProfile = role => {
             const n = prompt(`修改${role==='me'?'我的':'对方'}昵称：`, profiles[role].name);
@@ -941,6 +1172,28 @@ createApp({
             const r = new FileReader();
             r.onload = ev => settings.bgImage = ev.target.result;
             r.readAsDataURL(f); e.target.value = '';
+        };
+
+const bgPreview = ref('');
+        const pickBgImage = (e) => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                settings.bgImage = ev.target.result;
+                saveData();
+            };
+            r.readAsDataURL(f);
+            e.target.value = '';
+        };
+        const confirmBg = () => {
+            if (!bgPreview.value) return;
+            settings.bgImage = bgPreview.value;
+            bgPreview.value = '';
+        };
+        const clearBgImage = () => {
+            settings.bgImage = '';
+            saveData();
         };
 
         const clearChat = () => { if(confirm('将彻底清空聊天记录，确认吗？')) { messages.value = []; modals.settings = false; } };
@@ -1010,15 +1263,6 @@ createApp({
             r.readAsText(f); e.target.value='';
         };
 
-        const exportScreenshot = async () => {
-            const chatEl = document.getElementById('chat-container');
-            if(!chatEl) return;
-            const origO=chatEl.style.overflow, origH=chatEl.style.height; chatEl.style.overflow='visible'; chatEl.style.height='auto';
-            try {
-                const canvas = await html2canvas(chatEl, {backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim()||'#fff',scale:2,useCORS:true});
-                const a=document.createElement('a'); a.download=`静语_${new Date().toLocaleDateString().replace(/\//g,'-')}.png`; a.href=canvas.toDataURL(); a.click();
-            } catch(err) { alert('截图失败'); } finally { chatEl.style.overflow=origO; chatEl.style.height=origH; }
-        };
 
         onMounted(async () => {
             try {
@@ -1031,7 +1275,7 @@ createApp({
                 }
             } catch(e) {}
             if(settings.isDark) document.documentElement.classList.add('dark');
-            applyCSS(); setupActiveMsg(); checkNotifPermission();
+            applyCSS(); applyBg(); setupActiveMsg(); checkNotifPermission();
             document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') nextTick(lucide.createIcons); });
             const ta = document.querySelector('textarea');
             if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
@@ -1047,67 +1291,82 @@ createApp({
 
         return {
             chatList, messages, inputText, isTyping, previewImg, notifGranted,
+            bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
             sendMsg, triggerReply, handleImageUpload, deleteMsg,
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
-            toggleTheme, applyCSS, editProfile, uploadBg, clearChat, exportChat,
+            toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
-            addImageReplies, exportScreenshot, requestNotifPermission, popRandomEmoji
+            addImageReplies, requestNotifPermission, popRandomEmoji
         };
     }
 }).mount('#app');
 
-// ─── 开场动画粒子效果 ───
+// ─── 开场动画 ───
 (function() {
+    // 填入实时时间和日期
+    const now = new Date();
+    const timeEl = document.getElementById('sp-time');
+    const dateEl = document.getElementById('sp-date');
+    if(timeEl) timeEl.textContent = now.toTimeString().slice(0,5);
+    if(dateEl) dateEl.textContent = `${now.getMonth()+1}`.padStart(2,'0') + '.' + `${now.getDate()}`.padStart(2,'0');
+
     const canvas = document.getElementById('splash-canvas');
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
-    let W, H, particles = [], animId;
+    let W, H, pts = [], animId;
+    const isDark = document.documentElement.classList.contains('dark');
+    const col = isDark ? '210,205,198' : '60,55,50';
 
-    const resize = () => {
-        W = canvas.width = window.innerWidth;
-        H = canvas.height = window.innerHeight;
-    };
+    const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
     resize();
     window.addEventListener('resize', resize);
 
-    class Particle {
-        constructor() { this.reset(); }
-        reset() {
-            this.x = Math.random() * W;
-            this.y = Math.random() * H;
-            this.r = Math.random() * 1.5 + 0.3;
-            this.vx = (Math.random() - 0.5) * 0.3;
-            this.vy = -Math.random() * 0.5 - 0.1;
-            this.alpha = Math.random() * 0.6 + 0.1;
-            this.life = 1;
-        }
-        update() {
-            this.x += this.vx; this.y += this.vy;
-            this.life -= 0.003;
-            if(this.life <= 0 || this.y < -5) this.reset();
-        }
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
-            ctx.fillStyle = `rgba(120,120,120,${this.alpha * this.life})`;
-            ctx.fill();
-        }
+    // 极稀疏浮点，做成「尘埃」质感
+    for(let i = 0; i < 55; i++) {
+        pts.push({
+            x: Math.random() * W, y: Math.random() * H,
+            vx: (Math.random() - 0.5) * 0.14,
+            vy: (Math.random() - 0.5) * 0.14,
+            r: Math.random() * 0.9 + 0.2,
+            a: Math.random() * 0.18 + 0.04,
+            pulse: Math.random() * Math.PI * 2  // 呼吸相位
+        });
     }
 
-    for(let i=0; i<80; i++) particles.push(new Particle());
-
+    let t = 0;
     const loop = () => {
-        ctx.clearRect(0,0,W,H);
-        particles.forEach(p => { p.update(); p.draw(); });
+        t += 0.012;
+        ctx.clearRect(0, 0, W, H);
+        pts.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            if(p.x < -5) p.x = W+5; if(p.x > W+5) p.x = -5;
+            if(p.y < -5) p.y = H+5; if(p.y > H+5) p.y = -5;
+            const breath = 0.6 + 0.4 * Math.sin(t + p.pulse);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * breath, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${col},${p.a * breath})`;
+            ctx.fill();
+        });
+        // 近距离细线
+        for(let i = 0; i < pts.length; i++) {
+            for(let j = i+1; j < pts.length; j++) {
+                const dx = pts[i].x-pts[j].x, dy = pts[i].y-pts[j].y;
+                const d = Math.sqrt(dx*dx+dy*dy);
+                if(d < 110) {
+                    ctx.beginPath();
+                    ctx.moveTo(pts[i].x, pts[i].y);
+                    ctx.lineTo(pts[j].x, pts[j].y);
+                    ctx.strokeStyle = `rgba(${col},${0.05*(1-d/110)})`;
+                    ctx.lineWidth = 0.4;
+                    ctx.stroke();
+                }
+            }
+        }
         animId = requestAnimationFrame(loop);
     };
     loop();
-
-    // 开场完成后停止粒子
-    setTimeout(() => {
-        cancelAnimationFrame(animId);
-    }, 4200);
+    setTimeout(() => cancelAnimationFrame(animId), 6500);
 })();
 
 // ─── PWA 安装提示 ───

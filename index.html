@@ -521,6 +521,7 @@
     <!-- 中间：功能按钮 -->
     <div class="flex gap-2 md:gap-3 text-muted items-center">
 <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.settings = true" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
     </div>
@@ -536,6 +537,32 @@
     </div>
 </header>
 
+    <!-- 表情包面板 -->
+<transition name="fade">
+    <div v-if="modals.stickerPanel" class="absolute top-16 left-0 right-0 z-20 bg-white dark:bg-[#1a1a1a] border-b border-border/60 shadow-sm overflow-hidden flex flex-col" style="max-height:190px;">
+        <div class="flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-1.5" style="-webkit-overflow-scrolling: touch;">
+            <div v-if="stickerImages.length === 0" class="flex flex-col items-center justify-center py-8 text-muted/30 text-[10px] tracking-[0.25em] gap-2">
+                <i data-lucide="image-off" class="w-4 h-4 stroke-[1]"></i>
+                <span>尚无表情</span>
+            </div>
+            <div v-else class="grid gap-[6px]" style="grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));">
+                <div v-for="(src, idx) in stickerImages" :key="idx" class="relative group/sticker cursor-pointer aspect-square bg-bg/60 rounded overflow-hidden" @click="sendSticker(src)">
+                    <img :src="src" class="w-full h-full object-cover hover:scale-105 active:scale-95 transition-transform duration-200">
+                    <div class="absolute inset-0 bg-black/0 group-hover/sticker:bg-black/10 transition-colors"></div>
+                    <button @click.stop="deleteSticker(idx)" class="absolute top-0 right-0 w-4 h-4 bg-black/40 text-white text-[7px] flex items-center justify-center opacity-0 group-hover/sticker:opacity-100 transition-opacity rounded-bl">✕</button>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-border/40 bg-white dark:bg-[#1a1a1a]">
+            <label class="flex items-center justify-center gap-1 cursor-pointer py-2 hover:bg-bg/60 active:bg-bg transition-colors">
+                <i data-lucide="plus" class="w-3 h-3 text-muted/50 stroke-[1.5]"></i>
+                <span class="text-[9px] text-muted/50 tracking-[0.2em]">添加</span>
+                <input type="file" accept="image/*" multiple class="hidden" @change="addStickers">
+            </label>
+        </div>
+    </div>
+</transition>
+
         <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col-reverse gap-6 md:gap-8 scroll-smooth pb-20">
 
             <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-muted/40 tracking-widest text-sm space-y-4">
@@ -550,7 +577,7 @@
                         <span class="text-[10px] md:text-[11px] text-muted/50 tracking-[0.3em] uppercase">{{ formatDateSeparator(msg.timestamp) }}</span>
                     </div>
 
-                    <div class="flex group" :class="msg.sender === 'me' ? 'justify-end' : 'justify-start'">
+                    <div class="flex group" :class="msg.sender === 'me' ? 'justify-end' : 'justify-start'" @click.self="selectedMsgId = null">
                         <div class="flex max-w-[85%] md:max-w-[75%] gap-3" :class="msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'">
 
                             <div v-if="settings.showAvatar" class="shrink-0 w-8 h-8 mt-1 md:mt-2 cursor-pointer" :class="{'opacity-0 pointer-events-none': !shouldShowAvatar(index)}" @click="editProfile(msg.sender)">
@@ -561,42 +588,50 @@
                             </div>
 
                             <div class="flex flex-col relative" :class="[msg.sender === 'me' ? 'items-end msg-in-right' : 'items-start msg-in']">
-                                <span v-if="settings.showNickname && shouldShowAvatar(index)" class="text-[10px] text-muted/60 mb-1 px-1 tracking-widest">
-                                    {{ profiles[msg.sender].name }}
-                                </span>
+    <!-- 撤回按钮 · 气泡上方浮出 -->
+    <transition name="fade">
+        <div v-if="selectedMsgId === msg.id"
+             class="mb-1.5 z-10">
+            <button @click.stop="deleteMsg(msg.id)"
+                    class="flex items-center gap-1 bg-white dark:bg-[#222] border border-border/50 rounded-full pl-2 pr-2.5 py-[3px] shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-900/40 active:scale-95 transition-all duration-200 group/del">
+                <i data-lucide="eraser" class="w-[10px] h-[10px] stroke-[1.5] text-muted/40 group-hover/del:text-red-400 transition-colors"></i>
+                <span class="text-[8px] tracking-[0.12em] text-muted/40 group-hover/del:text-red-400 transition-colors leading-none">撤回</span>
+            </button>
+        </div>
+    </transition>
 
-                                <div class="msg-bubble px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[12px] md:text-[13px] transition-all select-none"
-                                     :class="[
-                                        msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text',
-                                        'bubble-custom-class'
-                                     ]"
-                                     @contextmenu.prevent="setQuote(msg)"
-                                     @touchstart="onTouchStart(msg)"
-                                     @touchend="onTouchEnd">
-                                    <!-- 引用块 -->
-                                    <div v-if="msg.quote" class="quote-block" @click="scrollToMsg(msg.quote.id)">
-                                        <span class="text-[10px] opacity-70">{{ msg.quote.senderName }}：</span>
-                                        <template v-if="msg.quote.type === 'image'">📷 图片</template>
-                                        <template v-else>{{ msg.quote.content }}</template>
-                                    </div>
-                                    <template v-if="msg.type === 'text'">{{ msg.content }}</template>
-                                    <template v-else-if="msg.type === 'image'">
-                                        <img :src="msg.content" class="max-w-[200px] md:max-w-[250px] rounded-lg cursor-pointer" @click="previewImg = msg.content">
-                                    </template>
-                                </div>
+    <span v-if="settings.showNickname && shouldShowAvatar(index)" class="text-[10px] text-muted/60 mb-1 px-1 tracking-widest">
+        {{ profiles[msg.sender].name }}
+    </span>
 
-                                <div class="text-[9px] md:text-[10px] text-muted/40 mt-1.5 flex items-center gap-1 tracking-wider px-1 font-sans">
-                                    <span>{{ formatTime(msg.timestamp) }}</span>
-                                    <template v-if="msg.sender === 'me'">
-                                        <span v-if="msg.status === 'read'" class="read-tick read">✓✓</span>
-                                        <span v-else class="read-tick">✓</span>
-                                    </template>
-                                </div>
-                            </div>
+    <div class="msg-bubble px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[12px] md:text-[13px] transition-all select-none"
+         :class="[
+            msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text',
+            'bubble-custom-class'
+         ]"
+         @click="selectedMsgId = selectedMsgId === msg.id ? null : msg.id"
+         @contextmenu.prevent="setQuote(msg)"
+         @touchstart="onTouchStart(msg)"
+         @touchend="onTouchEnd">
+        <div v-if="msg.quote" class="quote-block" @click.stop="scrollToMsg(msg.quote.id)">
+            <span class="text-[10px] opacity-70">{{ msg.quote.senderName }}：</span>
+            <template v-if="msg.quote.type === 'image'">图片</template>
+            <template v-else>{{ msg.quote.content }}</template>
+        </div>
+        <template v-if="msg.type === 'text'">{{ msg.content }}</template>
+        <template v-else-if="msg.type === 'image'">
+            <img :src="msg.content" class="max-w-[75px] md:max-w-[160px] rounded-lg cursor-pointer" @click.stop="previewImg = msg.content">
+        </template>
+    </div>
 
-                            <div class="opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center" :class="msg.sender === 'me' ? 'mr-2' : 'ml-2'">
-                                <button @click="deleteMsg(msg.id)" class="text-muted/30 hover:text-red-900/60"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-                            </div>
+    <div class="text-[9px] md:text-[10px] text-muted/40 mt-1.5 flex items-center gap-1 tracking-wider px-1 font-sans">
+        <span>{{ formatTime(msg.timestamp) }}</span>
+        <template v-if="msg.sender === 'me'">
+            <span v-if="msg.status === 'read'" class="read-tick read">✓✓</span>
+            <span v-else class="read-tick">✓</span>
+        </template>
+    </div>
+</div>
                         </div>
                     </div>
                 </div>
@@ -623,7 +658,7 @@
                 <i data-lucide="corner-up-left" class="w-3 h-3 shrink-0"></i>
                 <span class="flex-1 truncate">
                     <span class="opacity-60">{{ quoteMsg.senderName }}：</span>
-                    <template v-if="quoteMsg.type === 'image'">📷 图片</template>
+                    <template v-if="quoteMsg.type === 'image'">图片</template>
                     <template v-else>{{ quoteMsg.content }}</template>
                 </span>
                 <button @click="quoteMsg = null" class="text-muted/50 hover:text-text shrink-0">✕</button>
@@ -753,8 +788,7 @@
     </label>
 </div>
                 <!-- 数据操作 -->
-                <div class="pt-6 pb-2 flex justify-between border-t border-border/50">
-                    <button @click="exportChat" class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border">导出记录</button>
+                <div class="pt-6 pb-2 flex justify-end border-t border-border/50">
                     <button @click="clearChat" class="text-[11px] tracking-widest text-red-700/80 border border-red-900/10 px-4 py-1.5 hover:bg-red-900/5">清空所有</button>
                 </div>
 
@@ -989,6 +1023,7 @@ createApp({
         const previewImg = ref('');
         const activeTimer = ref(null);
         const notifGranted = ref(false); // ✅【修复】这个变量被误删了，加回来！
+        const selectedMsgId = ref(null);
 
         const profiles = reactive({
             me: { name: '我', avatar: '' },
@@ -1002,7 +1037,8 @@ createApp({
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-        const modals = reactive({ settings: false, replyManager: false });
+        const modals = reactive({ settings: false, replyManager: false, stickerPanel: false });
+        const stickerImages = ref([]);
 
         const generateEmojis = () => {
             const emojis = "🥰 🙁 🥲".split(" ").filter(e=>e.trim());
@@ -1091,7 +1127,8 @@ createApp({
                     messages: JSON.parse(JSON.stringify(messages.value)),
                     profiles: JSON.parse(JSON.stringify(profiles)),
                     settings: JSON.parse(JSON.stringify(settings)),
-                    replyGroups: JSON.parse(JSON.stringify(replyGroups.value))
+                    replyGroups: JSON.parse(JSON.stringify(replyGroups.value)),
+                    stickerImages: JSON.parse(JSON.stringify(stickerImages.value))
                 });
             }, 500);
         };
@@ -1151,7 +1188,7 @@ const scrollToBottom = async () => {
         if (all.length === 0) { sendMsg('them', 'text', '......'); return; }
 
         // 基础随机1~6，3句以上再掷一次骰子决定是否截断
-let count = Math.floor(Math.random() * 6) + 1;
+let count = Math.floor(Math.random() * 4) + 1;
 if (count > 3 && Math.random() > Math.random()) count = Math.floor(Math.random() * 3) + 1;
 
         const myMsgs = messages.value.filter(m => m.sender === 'me');
@@ -1497,6 +1534,33 @@ const importAllData = (e) => {
             e.target.value = '';
         };
 
+        const addStickers = (e) => {
+            for (const file of e.target.files) {
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 400;
+                        const ratio = w/h; c.width=w>h?MAX:MAX*ratio; c.height=w>h?MAX/ratio:MAX;
+                        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+                        stickerImages.value.push(c.toDataURL('image/jpeg', 0.85));
+                        saveData();
+                    }; img.src = ev.target.result;
+                }; r.readAsDataURL(file);
+            }
+            e.target.value = '';
+        };
+
+        const sendSticker = (src) => {
+            sendMsg('me', 'image', src);
+            modals.stickerPanel = false;
+        };
+
+        const deleteSticker = (idx) => {
+            stickerImages.value.splice(idx, 1);
+            saveData();
+        };
+
         const exportReplies = () => { const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(replyGroups.value)]));a.download="Replies.json";a.click(); };
         
         const importReplies = e => {
@@ -1536,6 +1600,7 @@ const importAllData = (e) => {
                     if(data.profiles) Object.assign(profiles, data.profiles);
                     if(data.settings) Object.assign(settings, data.settings);
                     if(data.replyGroups) replyGroups.value = data.replyGroups;
+                    if(data.stickerImages) stickerImages.value = data.stickerImages;
                 }
             } catch(e) {}
             if(settings.isDark) document.documentElement.classList.add('dark');
@@ -1557,13 +1622,15 @@ const importAllData = (e) => {
             chatList, messages, inputText, isTyping, previewImg, notifGranted,
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
-            sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg,
+            sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg, selectedMsgId,
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
             selectedReplies, multiSelectMode, moveTargetGroupId, toggleSelect, moveSelected, deleteSelected,
             dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,
-            addImageReplies, requestNotifPermission, popRandomEmoji
+            addImageReplies, requestNotifPermission, popRandomEmoji,
+            stickerImages, addStickers, sendSticker, deleteSticker,
+            stickerImages, addStickers, sendSticker, deleteSticker
         };
     }
 }).mount('#app');

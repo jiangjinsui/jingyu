@@ -353,9 +353,15 @@
     align-items: center; gap: 4px; padding: 12px 8px;
 }
 .sp-meta-val {
-    font-size: 0.55rem; letter-spacing: 0.2em;
-    color: var(--color-text); opacity: 0.7;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    color: var(--color-text);
+    opacity: 0.7;
     font-family: monospace;
+    writing-mode: vertical-rl;
+}
+.sp-meta-date {
+    writing-mode: horizontal-tb !important;
 }
 .sp-meta-key {
     font-size: 0.4rem; letter-spacing: 0.3em;
@@ -608,17 +614,17 @@
 
         <div class="sp-meta">
             <div class="sp-meta-item">
-                <span class="sp-meta-val">字语</span>
+                <span class="sp-meta-val">见字如面</span>
                 <span class="sp-meta-key">CHANNEL</span>
             </div>
             <div class="sp-meta-div"></div>
             <div class="sp-meta-item">
-                <span class="sp-meta-val">传心</span>
+                <span class="sp-meta-val">此刻只与你说</span>
                 <span class="sp-meta-key">PURPOSE</span>
             </div>
             <div class="sp-meta-div"></div>
             <div class="sp-meta-item">
-                <span class="sp-meta-val" id="sp-date">——</span>
+<span class="sp-meta-val sp-meta-date" id="sp-date">——</span>
                 <span class="sp-meta-key">DATE</span>
             </div>
         </div>
@@ -1111,52 +1117,13 @@
 
 // ─── Service Worker ───
 if ('serviceWorker' in navigator) {
-    const swCode = `
-const CACHE = 'jingyu-v1';
-const ASSETS = [location.href];
-
-self.addEventListener('install', e => {
-    self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-    e.waitUntil(clients.claim());
-});
-self.addEventListener('fetch', e => {
-    e.respondWith(
-        caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-            return res;
-        }).catch(() => r))
-    );
-});
-
-// 后台推送通知监听
-self.addEventListener('push', e => {
-    const data = e.data ? e.data.json() : { title: '静语', body: '你有新消息' };
-    e.waitUntil(
-        self.registration.showNotification(data.title || '静语', {
-            body: data.body || '你有新消息',
-            icon: data.icon || '',
-            badge: data.icon || '',
-            vibrate: [200, 100, 200],
-            tag: 'jingyu-msg',
-            renotify: true
+    navigator.serviceWorker.register('./sw.js')
+        .then(reg => {
+            console.log('SW 注册成功');
         })
-    );
-});
-
-self.addEventListener('notificationclick', e => {
-    e.notification.close();
-    e.waitUntil(clients.matchAll({type:'window'}).then(cs => {
-        if(cs.length) return cs[0].focus();
-        return clients.openWindow('/');
-    }));
-});
-    `;
-    const swBlob = new Blob([swCode], {type: 'application/javascript'});
-    const swUrl = URL.createObjectURL(swBlob);
-    navigator.serviceWorker.register(swUrl).catch(() => {});
+        .catch(err => {
+            console.log('SW 注册失败', err);
+        });
 }
 </script>
 
@@ -1231,21 +1198,32 @@ createApp({
 
         const sendSystemNotif = (name, text) => {
     if (Notification.permission !== 'granted') return;
-    const body = text.length > 60 ? text.slice(0, 60) + '…' : text;
 
-    try {
-        new Notification('静语 · ' + name, {
-            body, tag: 'jingyu-msg', renotify: true, silent: false,
-            vibrate: [200, 100, 200]
-        });
-    } catch (e) {
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification('静语 · ' + name, {
-                    body, tag: 'jingyu-msg', renotify: true, vibrate: [200, 100, 200]
-                });
-            });
+    const body = text.length > 60 ? text.slice(0, 60) + '…' : text;
+    const title = '静语 · ' + name;
+
+    // 页面在前台 → 用应用内 toast
+    if (document.visibilityState === 'visible') {
+        const toastEl = document.getElementById('inapp-toast');
+        const toastName = document.getElementById('toast-name');
+        const toastText = document.getElementById('toast-text');
+        if (toastEl && toastName && toastText) {
+            toastName.textContent = name;
+            toastText.textContent = body;
+            toastEl.style.display = 'flex';
+            clearTimeout(toastEl._timer);
+            toastEl._timer = setTimeout(() => { toastEl.style.display = 'none'; }, 3000);
         }
+        return;
+    }
+
+    // 页面在后台 → 通过 SW 发通知
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIF',
+            title: title,
+            body: body
+        });
     }
 };
 

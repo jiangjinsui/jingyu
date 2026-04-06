@@ -375,18 +375,50 @@
             to   { opacity: 1; transform: translateX(0) scale(1); }
         }
 
+        /* ─── 引用块 ─── */
+        .quote-block {
+            border-left: 2px solid var(--color-muted);
+            padding: 3px 8px;
+            margin-bottom: 4px;
+            opacity: 0.65;
+            font-size: 11px;
+            line-height: 1.4;
+            border-radius: 0 4px 4px 0;
+            background: rgba(0,0,0,0.04);
+            cursor: pointer;
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .dark .quote-block { background: rgba(255,255,255,0.05); }
+        .quote-preview-bar {
+            position: absolute;
+            bottom: 100%;
+            left: 0; right: 0;
+            background: var(--color-surface);
+            border-top: 1px solid var(--color-border);
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--color-muted);
+        }
+
         /* ─── 已读状态 ─── */
         .read-tick {
             font-size: 9px;
             color: var(--color-muted);
             opacity: 0.45;
-            letter-spacing: -1px;
+            letter-spacing: -3px;
             font-family: sans-serif;
             transition: color 0.3s, opacity 0.3s;
+            margin-left: 1px;
         }
         .read-tick.read {
             color: var(--color-text);
-            opacity: 0.55;
+            opacity: 0.6;
         }
     </style>
     <style id="custom-bubble-css"></style>
@@ -512,7 +544,7 @@
             </div>
 
             <div ref="chatList" class="flex flex-col gap-6 md:gap-8">
-                <div v-for="(msg, index) in messages" :key="msg.id">
+                <div v-for="(msg, index) in messages" :key="msg.id" :id="'msg-' + msg.id">
 
                     <div v-if="shouldShowDate(index)" class="flex justify-center my-6 md:my-8">
                         <span class="text-[10px] md:text-[11px] text-muted/50 tracking-[0.3em] uppercase">{{ formatDateSeparator(msg.timestamp) }}</span>
@@ -533,11 +565,20 @@
                                     {{ profiles[msg.sender].name }}
                                 </span>
 
-                                <div class="msg-bubble px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[12px] md:text-[13px] transition-all"
+                                <div class="msg-bubble px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[12px] md:text-[13px] transition-all select-none"
                                      :class="[
                                         msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text',
                                         'bubble-custom-class'
-                                     ]">
+                                     ]"
+                                     @contextmenu.prevent="setQuote(msg)"
+                                     @touchstart="onTouchStart(msg)"
+                                     @touchend="onTouchEnd">
+                                    <!-- 引用块 -->
+                                    <div v-if="msg.quote" class="quote-block" @click="scrollToMsg(msg.quote.id)">
+                                        <span class="text-[10px] opacity-70">{{ msg.quote.senderName }}：</span>
+                                        <template v-if="msg.quote.type === 'image'">📷 图片</template>
+                                        <template v-else>{{ msg.quote.content }}</template>
+                                    </div>
                                     <template v-if="msg.type === 'text'">{{ msg.content }}</template>
                                     <template v-else-if="msg.type === 'image'">
                                         <img :src="msg.content" class="max-w-[200px] md:max-w-[250px] rounded-lg cursor-pointer" @click="previewImg = msg.content">
@@ -576,6 +617,17 @@
 
         <footer class="backdrop-blur-md shrink-0 px-4 md:px-6 py-2 relative z-10 pb-3 md:pb-2 bg-surface">
             <div class="absolute top-0 left-4 md:left-8 right-4 md:right-8 h-[1px] bg-border/80"></div>
+
+            <!-- 引用预览条 -->
+            <div v-if="quoteMsg" class="flex items-center gap-2 pb-1.5 text-[11px] text-muted border-b border-border mb-1.5">
+                <i data-lucide="corner-up-left" class="w-3 h-3 shrink-0"></i>
+                <span class="flex-1 truncate">
+                    <span class="opacity-60">{{ quoteMsg.senderName }}：</span>
+                    <template v-if="quoteMsg.type === 'image'">📷 图片</template>
+                    <template v-else>{{ quoteMsg.content }}</template>
+                </span>
+                <button @click="quoteMsg = null" class="text-muted/50 hover:text-text shrink-0">✕</button>
+            </div>
 
             <div class="flex items-end gap-2">
                 <label class="cursor-pointer hover:text-text transition-colors text-muted/60 pb-2.5 shrink-0" title="发送图片">
@@ -706,66 +758,123 @@
     <!-- 逻辑库弹窗 -->
     <transition name="fade">
         <div v-if="modals.replyManager" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4 md:p-0">
-            <div class="bg-surface w-full max-w-3xl shadow-2xl md:border border-border/50 flex flex-col h-[85vh] rounded-2xl md:rounded-none overflow-hidden">
-                <div class="px-6 py-5 flex justify-between items-center relative shrink-0">
-                    <h2 class="text-[14px] tracking-[0.3em] font-medium">逻辑库</h2>
-                    <div class="flex gap-4 items-center">
-                        <button @click="exportReplies" class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border">导出</button>
-                        <label class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border cursor-pointer">
+            <div class="bg-surface w-full max-w-3xl shadow-2xl md:border border-border/50 flex flex-col h-[88vh] rounded-2xl md:rounded-none overflow-hidden">
+
+                <!-- 顶栏 -->
+                <div class="px-5 py-4 flex justify-between items-center relative shrink-0">
+                    <h2 class="text-[13px] tracking-[0.3em] font-medium">逻辑库</h2>
+                    <div class="flex gap-2 items-center">
+                        <button @click="exportReplies" class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border rounded transition-colors">导出</button>
+                        <label class="text-[10px] tracking-widest border border-border px-2 py-1 hover:bg-border rounded transition-colors cursor-pointer">
                             导入 <input type="file" accept=".json" class="hidden" @change="importReplies">
                         </label>
-                        <button @click="modals.replyManager = false" class="text-muted hover:text-text ml-2"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        <button @click="modals.replyManager = false" class="text-muted hover:text-text ml-1"><i data-lucide="x" class="w-4 h-4"></i></button>
                     </div>
-                    <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
+                    <div class="absolute bottom-0 left-5 right-5 h-[1px] bg-border/80"></div>
                 </div>
 
                 <div class="flex flex-1 overflow-hidden flex-col md:flex-row">
-                    <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-border/50 p-4 flex flex-col gap-2 overflow-y-auto shrink-0 md:shrink h-1/3 md:h-full">
+                    <!-- 左：分组列表 -->
+                    <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-border/50 p-3 flex flex-col gap-1.5 overflow-y-auto shrink-0 md:shrink h-[28%] md:h-full">
                         <div v-for="group in replyGroups" :key="group.id"
-                             @click="currentGroupId = group.id"
-                             class="px-4 py-2.5 rounded cursor-pointer transition-all text-xs tracking-wider flex justify-between group/item"
+                             @click="currentGroupId = group.id; selectedReplies = []"
+                             class="px-3 py-2 rounded cursor-pointer transition-all text-xs tracking-wider flex justify-between group/item"
                              :class="currentGroupId === group.id ? 'bg-bg text-text font-medium' : 'text-muted hover:bg-bg/50'">
-                            <span>{{ group.name }} ({{ group.replies.length }})</span>
+                            <span>{{ group.name }} <span class="opacity-40">({{ group.replies.length }})</span></span>
                             <button @click.stop="deleteGroup(group.id)" v-if="replyGroups.length>1" class="opacity-0 group-hover/item:opacity-100 text-red-900/50 hover:text-red-900"><i data-lucide="trash" class="w-3 h-3"></i></button>
                         </div>
-                        <button @click="addGroup" class="text-[11px] text-muted tracking-widest mt-2 border border-dashed border-border py-2 text-center hover:bg-bg transition-colors">+ 新建分组</button>
+                        <button @click="addGroup" class="text-[10px] text-muted tracking-widest mt-1 border border-dashed border-border py-1.5 text-center hover:bg-bg transition-colors rounded">+ 新建分组</button>
                     </div>
 
-                    <div class="flex-1 p-4 flex flex-col overflow-hidden bg-surface relative">
-                        <div class="flex gap-2 mb-4 shrink-0">
-                            <i data-lucide="search" class="w-4 h-4 text-muted absolute left-7 top-6 stroke-[1.5]"></i>
-                            <input type="text" v-model="searchQuery" placeholder="搜索此组内容..." class="w-full bg-bg/50 border border-transparent focus:border-border rounded px-9 py-2 text-[13px] outline-none transition-colors">
+                    <!-- 右：字卡列表 -->
+                    <div class="flex-1 flex flex-col overflow-hidden bg-surface">
+                        <!-- 搜索栏 + 操作按钮行 -->
+                        <div class="px-4 pt-3 pb-2 shrink-0 flex flex-col gap-2">
+                            <div class="flex gap-2 items-center">
+                                <div class="relative flex-1">
+                                    <i data-lucide="search" class="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2 stroke-[1.5]"></i>
+                                    <input type="text" v-model="searchQuery" placeholder="搜索字卡..." class="w-full bg-bg/50 border border-transparent focus:border-border rounded px-8 py-1.5 text-[12px] outline-none transition-colors">
+                                </div>
+                                <!-- 多选按钮 -->
+                                <button @click="multiSelectMode = !multiSelectMode; selectedReplies = []"
+                                        class="text-[10px] tracking-widest border px-2 py-1.5 rounded transition-colors shrink-0"
+                                        :class="multiSelectMode ? 'bg-text text-bg border-text' : 'border-border hover:bg-border'">多选</button>
+                                <!-- 去重按钮 -->
+                                <button @click="dedupReplies" class="text-[10px] tracking-widest border border-border px-2 py-1.5 rounded hover:bg-border transition-colors shrink-0">去重</button>
+                            </div>
+                            <!-- 多选操作栏，只在多选模式且有选中时显示 -->
+                            <div v-if="multiSelectMode && selectedReplies.length > 0" class="flex items-center gap-2 text-[11px] bg-bg/50 rounded px-2 py-1.5">
+                                <span class="text-muted shrink-0">已选 {{ selectedReplies.length }}</span>
+                                <select v-model="moveTargetGroupId" class="bg-bg border border-border rounded px-2 py-1 text-[11px] outline-none flex-1 min-w-0">
+                                    <option value="" disabled>移动到...</option>
+                                    <option v-for="g in replyGroups" :key="g.id" :value="g.id" :disabled="g.id === currentGroupId">{{ g.name }}</option>
+                                </select>
+                                <button @click="moveSelected" class="border border-border px-2 py-1 rounded hover:bg-border transition-colors shrink-0">移动</button>
+                                <button @click="deleteSelected" class="text-red-900/60 border border-red-900/20 px-2 py-1 rounded hover:bg-red-900/5 transition-colors shrink-0">删除</button>
+                            </div>
                         </div>
 
-                        <div class="flex-1 overflow-y-auto space-y-1 pb-4 px-2" ref="replyList">
-                            <div v-for="(reply, idx) in filteredReplies" :key="idx" class="flex items-center group py-1.5 border-b border-border/30 gap-2">
-                                <span class="text-[9px] text-muted/30 w-5 font-mono shrink-0">{{ idx + 1 }}</span>
+                        <!-- 字卡列表 -->
+                        <div class="flex-1 overflow-y-auto pb-2 px-3">
+                            <div v-for="(reply, idx) in filteredReplies" :key="idx"
+                                 class="flex items-center py-1.5 border-b border-border/20 gap-2 group/item"
+                                 :class="selectedReplies.includes(reply) ? 'bg-bg/60 rounded px-1' : ''">
+                                <!-- 多选模式下才显示勾选框 -->
+                                <div v-if="multiSelectMode"
+                                     @click="toggleSelect(reply)"
+                                     class="w-4 h-4 rounded border shrink-0 cursor-pointer flex items-center justify-center transition-all"
+                                     :class="selectedReplies.includes(reply) ? 'bg-text border-text' : 'border-border/50 hover:border-muted'">
+                                    <span v-if="selectedReplies.includes(reply)" class="text-bg text-[9px] leading-none">✓</span>
+                                </div>
                                 <template v-if="reply.type === 'image'">
-                                    <div class="flex items-center gap-2 flex-1 px-2">
-                                        <img :src="reply.img" class="w-12 h-12 object-cover rounded cursor-pointer" @click="previewImg = reply.img">
-                                        <span class="text-[11px] text-muted/60 tracking-wide">表情包</span>
+                                    <div class="flex items-center gap-2 flex-1">
+                                        <img :src="reply.img" class="w-10 h-10 object-cover rounded cursor-pointer shrink-0" @click="previewImg = reply.img">
+                                        <span class="text-[11px] text-muted/60">表情包</span>
                                     </div>
                                 </template>
                                 <template v-else>
-                                    <input type="text" v-model="reply.text" @change="saveData" class="flex-1 bg-transparent px-2 text-[13px] text-text outline-none border border-transparent focus:border-border/50 rounded transition-colors">
+                                    <span @click="!multiSelectMode && startEditReply(reply)"
+                                          class="flex-1 text-[12px] text-text px-1 truncate"
+                                          :class="!multiSelectMode ? 'cursor-pointer hover:text-muted transition-colors' : ''">{{ reply.text }}</span>
                                 </template>
-                                <button @click="removeReply(reply)" class="text-muted/30 hover:text-red-900/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><i data-lucide="minus" class="w-3.5 h-3.5"></i></button>
+                                <button @click="removeReply(reply)" class="text-muted/20 hover:text-red-900/50 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0"><i data-lucide="minus" class="w-3 h-3"></i></button>
                             </div>
                             <div v-if="filteredReplies.length === 0" class="text-[11px] text-muted tracking-widest pt-8 text-center">空无一物</div>
                         </div>
 
-                        <div class="pt-3 border-t border-border/50 flex flex-col gap-2 shrink-0">
+                        <!-- 底部添加区 -->
+                        <div class="px-4 pt-2 pb-3 border-t border-border/50 flex flex-col gap-2 shrink-0">
                             <div class="flex gap-2">
-                                <input type="text" v-model="newReplyText" @keydown.enter="addReply" placeholder="增加新文字回复..." class="flex-1 bg-bg border border-border rounded px-4 py-2 text-[13px] outline-none">
-                                <button @click="addReply" class="px-4 bg-text text-bg text-[11px] tracking-widest rounded hover:opacity-80 transition-opacity shrink-0">添加</button>
+                                <input type="text" v-model="newReplyText" @keydown.enter="addReply" placeholder="添加新字卡..." class="flex-1 bg-bg border border-border rounded px-3 py-1.5 text-[12px] outline-none">
+                                <button @click="addReply" class="px-3 bg-text text-bg text-[11px] tracking-widest rounded hover:opacity-80 transition-opacity shrink-0">添加</button>
                             </div>
-                            <label class="flex items-center gap-2 cursor-pointer border border-dashed border-border/60 rounded px-4 py-2 hover:bg-bg/50 transition-colors">
+                            <label class="flex items-center gap-2 cursor-pointer border border-dashed border-border/60 rounded px-3 py-1.5 hover:bg-bg/50 transition-colors">
                                 <i data-lucide="image-plus" class="w-3.5 h-3.5 text-muted stroke-[1.5] shrink-0"></i>
-                                <span class="text-[11px] text-muted tracking-wider">上传表情包图片（可多选）</span>
+                                <span class="text-[11px] text-muted tracking-wider">上传表情包（可多选）</span>
                                 <input type="file" accept="image/*" multiple class="hidden" @change="addImageReplies">
                             </label>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- 编辑字卡弹窗 -->
+    <transition name="fade">
+        <div v-if="editingReply" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+            <div class="bg-white dark:bg-surface w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+                <div class="px-6 pt-6 pb-4">
+                    <p class="text-[13px] tracking-widest text-text mb-4">确认编辑这条字卡？</p>
+                    <div class="bg-bg rounded-lg px-4 py-2 text-[12px] text-muted mb-4 line-clamp-2">{{ editingReply.original }}</div>
+                    <div class="flex gap-3">
+                        <button @click="confirmEditReply" class="flex-1 bg-text text-bg text-[12px] tracking-widest py-2 rounded-lg hover:opacity-80 transition-opacity">确认编辑</button>
+                        <button @click="editingReply = null" class="flex-1 border border-border text-muted text-[12px] tracking-widest py-2 rounded-lg hover:bg-bg transition-colors">取消</button>
+                    </div>
+                </div>
+                <div v-if="editingReply.confirmed" class="px-6 pb-6">
+                    <textarea v-model="editingReply.text" rows="3" class="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none resize-none focus:border-muted transition-colors"></textarea>
+                    <button @click="saveEditReply" class="w-full mt-2 bg-text text-bg text-[12px] tracking-widest py-2 rounded-lg hover:opacity-80 transition-opacity">保存</button>
                 </div>
             </div>
         </div>
@@ -924,13 +1033,14 @@ createApp({
         };
 
         const sendSystemNotif = (name, text) => {
-            if (Notification.permission === 'granted' && document.visibilityState === 'hidden') {
-                new Notification('静语 · ' + name, {
-                    body: text.length > 60 ? text.slice(0, 60) + '…' : text,
-                    tag: 'jingyu-msg',
-                    renotify: true
-                });
-            }
+            if (Notification.permission !== 'granted') return;
+            const body = text.length > 60 ? text.slice(0, 60) + '…' : text;
+            new Notification('静语 · ' + name, {
+                body,
+                tag: 'jingyu-msg',
+                renotify: true,
+                silent: false
+            });
         };
 
         let audioCtx;
@@ -988,7 +1098,9 @@ const scrollToBottom = async () => {
             }
             if(!txt) return;
             const msgId = Date.now().toString();
-            messages.value.push({ id: msgId, sender, type, content: txt, timestamp: Date.now(), status: 'sent' });
+            const q = quoteMsg.value ? { ...quoteMsg.value } : null;
+            quoteMsg.value = null;
+            messages.value.push({ id: msgId, sender, type, content: txt, timestamp: Date.now(), status: 'sent', quote: q });
             playSound(sender);
             scrollToBottom();
             if (sender === 'them') {
@@ -1000,8 +1112,9 @@ const scrollToBottom = async () => {
                 setTimeout(() => {
                     const m = messages.value.find(x => x.id === msgId);
                     if(m) m.status = 'read';
+                    // 已读后再等 0.5~2s 才开始「输入中」
+                    setTimeout(() => triggerAutoReply(), Math.random() * 1500 + 500);
                 }, readDelay);
-                triggerAutoReply();
             }
         };
 
@@ -1018,12 +1131,22 @@ const scrollToBottom = async () => {
         timerWorker.terminate();
         isTyping.value = false;
         const all = replyGroups.value.flatMap(g => g.replies);
+        // 纯随机引用：每次掷一次骰子，完全随机决定是否引用
+        const myMsgs = messages.value.filter(m => m.sender === 'me');
+        if (Math.random() < Math.random() && myMsgs.length > 0) {
+            const target = myMsgs[Math.floor(Math.random() * myMsgs.length)];
+            quoteMsg.value = {
+                id: target.id, type: target.type,
+                content: target.content, senderName: profiles.me.name
+            };
+        }
         if(all.length > 0) {
             const pick = all[Math.floor(Math.random() * all.length)];
             sendMsg('them', pick.type || 'text', pick.type === 'image' ? pick.img : pick.text);
         } else {
             sendMsg('them', 'text', "......");
         }
+        quoteMsg.value = null;
     };
 };
         
@@ -1066,6 +1189,31 @@ const scrollToBottom = async () => {
         };
 
         const deleteMsg = id => messages.value = messages.value.filter(m => m.id !== id);
+
+        // ── 引用功能 ──
+        const quoteMsg = ref(null);
+        let touchTimer = null;
+
+        const setQuote = (msg) => {
+            quoteMsg.value = {
+                id: msg.id,
+                type: msg.type,
+                content: msg.content,
+                senderName: profiles[msg.sender].name
+            };
+        };
+
+        const onTouchStart = (msg) => {
+            touchTimer = setTimeout(() => setQuote(msg), 500);
+        };
+        const onTouchEnd = () => {
+            clearTimeout(touchTimer);
+        };
+
+        const scrollToMsg = (id) => {
+            const el = document.getElementById('msg-' + id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
 
         const popRandomEmoji = () => {
             const all = replyGroups.value.flatMap(g => g.replies);
@@ -1214,6 +1362,65 @@ const bgPreview = ref('');
         const addReply = () => { if(newReplyText.value.trim()){currentGroup.value.replies.push({text:newReplyText.value.trim()});newReplyText.value='';} };
         const removeReply = reply => { const i=currentGroup.value.replies.indexOf(reply); if(i>-1)currentGroup.value.replies.splice(i,1); };
 
+        // ── 多选 ──
+        const selectedReplies = ref([]);
+        const multiSelectMode = ref(false);
+        const moveTargetGroupId = ref('');
+        const toggleSelect = (reply) => {
+            const i = selectedReplies.value.indexOf(reply);
+            if (i > -1) selectedReplies.value.splice(i, 1);
+            else selectedReplies.value.push(reply);
+        };
+        const moveSelected = () => {
+            if (!moveTargetGroupId.value) return;
+            const target = replyGroups.value.find(g => g.id === moveTargetGroupId.value);
+            if (!target) return;
+            for (const r of selectedReplies.value) {
+                const i = currentGroup.value.replies.indexOf(r);
+                if (i > -1) currentGroup.value.replies.splice(i, 1);
+                target.replies.push({ ...r });
+            }
+            selectedReplies.value = [];
+            saveData();
+        };
+        const deleteSelected = () => {
+            for (const r of selectedReplies.value) {
+                const i = currentGroup.value.replies.indexOf(r);
+                if (i > -1) currentGroup.value.replies.splice(i, 1);
+            }
+            selectedReplies.value = [];
+            saveData();
+        };
+
+        // ── 去重 ──
+        const dedupReplies = () => {
+            const g = currentGroup.value;
+            const seen = new Set();
+            g.replies = g.replies.filter(r => {
+                const key = r.type === 'image' ? r.img : r.text;
+                if (seen.has(key)) return false;
+                seen.add(key); return true;
+            });
+            saveData();
+            alert('✅ 去重完成！');
+        };
+
+        // ── 编辑字卡 ──
+        const editingReply = ref(null);
+        const startEditReply = (reply) => {
+            editingReply.value = { ref: reply, original: reply.text, text: reply.text, confirmed: false };
+        };
+        const confirmEditReply = () => {
+            editingReply.value.confirmed = true;
+        };
+        const saveEditReply = () => {
+            if (editingReply.value.text.trim()) {
+                editingReply.value.ref.text = editingReply.value.text.trim();
+                saveData();
+            }
+            editingReply.value = null;
+        };
+
         const addImageReplies = (e) => {
             for (const file of e.target.files) {
                 const r = new FileReader();
@@ -1232,33 +1439,30 @@ const bgPreview = ref('');
 
         const exportReplies = () => { const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(replyGroups.value)]));a.download="Replies.json";a.click(); };
         
-        const importReplies = e => { // ✅【修复】增加了成功和失败的提示
+        const importReplies = e => {
             const f = e.target.files[0];
             if(!f) return;
             const r = new FileReader();
             r.onload = ev => {
                 try {
                     const parsed = JSON.parse(ev.target.result);
-                    let newRepliesCount = 0;
+                    let count = 0;
                     if (parsed.customReplies && Array.isArray(parsed.customReplies)) {
+                        // 旧格式：追加到当前分组
                         const newReplies = parsed.customReplies.filter(t => typeof t === 'string' && t.trim()).map(t => ({ text: t.trim() }));
-                        if (newReplies.length > 0) {
-                            const groupName = f.name.replace(/\.json$/i, '') || '导入的字卡';
-                            replyGroups.value.push({ id: 'g_' + Date.now(), name: groupName, replies: newReplies });
-                            currentGroupId.value = replyGroups.value[replyGroups.value.length - 1].id;
-                            newRepliesCount = newReplies.length;
-                        }
+                        currentGroup.value.replies.push(...newReplies);
+                        count = newReplies.length;
                     } else if (Array.isArray(parsed)) {
-                        const validGroups = parsed.filter(g => g.id && g.name && Array.isArray(g.replies));
-                        if (validGroups.length > 0) {
-                            replyGroups.value.push(...validGroups);
-                            currentGroupId.value = validGroups[validGroups.length - 1].id;
-                            newRepliesCount = validGroups.reduce((sum, g) => sum + g.replies.length, 0);
+                        // 新格式分组数据：所有字卡合并追加到当前分组
+                        const validGroups = parsed.filter(g => Array.isArray(g.replies));
+                        for (const g of validGroups) {
+                            currentGroup.value.replies.push(...g.replies);
+                            count += g.replies.length;
                         }
                     }
-                    if (newRepliesCount > 0) alert(`✅ 成功导入 ${newRepliesCount} 条回复！`);
-                    else alert('🤔 文件中未找到有效回复内容。');
-                } catch(err) { alert(`❌ 导入失败：文件格式错误。\n${err.message}`); }
+                    if (count > 0) { saveData(); alert(`✅ 已追加 ${count} 条到「${currentGroup.value.name}」`); }
+                    else alert('🤔 文件中未找到有效内容。');
+                } catch(err) { alert(`❌ 导入失败：${err.message}`); }
             };
             r.readAsText(f); e.target.value='';
         };
@@ -1293,10 +1497,12 @@ const bgPreview = ref('');
             chatList, messages, inputText, isTyping, previewImg, notifGranted,
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
-            sendMsg, triggerReply, handleImageUpload, deleteMsg,
+            sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg,
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
+            selectedReplies, multiSelectMode, moveTargetGroupId, toggleSelect, moveSelected, deleteSelected,
+            dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,
             addImageReplies, requestNotifPermission, popRandomEmoji
         };
     }

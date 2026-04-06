@@ -743,7 +743,15 @@
                         <button @click="applyCSS" class="text-[10px] tracking-widest text-text border border-border px-3 py-1 mt-2 hover:bg-border">应用</button>
                     </div>
                 </div>
-
+                
+               <!-- 一键备份/还原 -->
+      <div class="pt-4 pb-2 flex justify-between border-t border-border/50">
+    <button @click="exportAllData" class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border">一键导出备份</button>
+    <label class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border cursor-pointer">
+        一键导入备份
+        <input type="file" accept=".json" class="hidden" @change="importAllData">
+    </label>
+</div>
                 <!-- 数据操作 -->
                 <div class="pt-6 pb-2 flex justify-between border-t border-border/50">
                     <button @click="exportChat" class="text-[11px] tracking-widest text-text border border-border px-4 py-1.5 hover:bg-border">导出记录</button>
@@ -1033,15 +1041,24 @@ createApp({
         };
 
         const sendSystemNotif = (name, text) => {
-            if (Notification.permission !== 'granted') return;
-            const body = text.length > 60 ? text.slice(0, 60) + '…' : text;
-            new Notification('静语 · ' + name, {
-                body,
-                tag: 'jingyu-msg',
-                renotify: true,
-                silent: false
+    if (Notification.permission !== 'granted') return;
+    const body = text.length > 60 ? text.slice(0, 60) + '…' : text;
+
+    try {
+        new Notification('静语 · ' + name, {
+            body, tag: 'jingyu-msg', renotify: true, silent: false,
+            vibrate: [200, 100, 200]
+        });
+    } catch (e) {
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification('静语 · ' + name, {
+                    body, tag: 'jingyu-msg', renotify: true, vibrate: [200, 100, 200]
+                });
             });
-        };
+        }
+    }
+};
 
         let audioCtx;
         const playSound = (type) => {
@@ -1124,29 +1141,37 @@ const scrollToBottom = async () => {
     scrollToBottom();
     const delay = (Math.random() * (settings.delayMax - settings.delayMin) + settings.delayMin) * 1000;
 
-    // 用 Web Worker 计时，后台不会被冻住
     const timerCode = `setTimeout(() => self.postMessage('done'), ${delay})`;
     const timerWorker = new Worker(URL.createObjectURL(new Blob([timerCode])));
     timerWorker.onmessage = () => {
         timerWorker.terminate();
         isTyping.value = false;
+
         const all = replyGroups.value.flatMap(g => g.replies);
-        // 纯随机引用：每次掷一次骰子，完全随机决定是否引用
+        if (all.length === 0) { sendMsg('them', 'text', '......'); return; }
+
+        // 基础随机1~6，3句以上再掷一次骰子决定是否截断
+let count = Math.floor(Math.random() * 6) + 1;
+if (count > 3 && Math.random() > Math.random()) count = Math.floor(Math.random() * 3) + 1;
+
         const myMsgs = messages.value.filter(m => m.sender === 'me');
-        if (Math.random() < Math.random() && myMsgs.length > 0) {
+        if (Math.random() < 0.3 && myMsgs.length > 0) {
             const target = myMsgs[Math.floor(Math.random() * myMsgs.length)];
             quoteMsg.value = {
                 id: target.id, type: target.type,
                 content: target.content, senderName: profiles.me.name
             };
         }
-        if(all.length > 0) {
-            const pick = all[Math.floor(Math.random() * all.length)];
-            sendMsg('them', pick.type || 'text', pick.type === 'image' ? pick.img : pick.text);
-        } else {
-            sendMsg('them', 'text', "......");
+
+        for (let i = 0; i < count; i++) {
+            const msgDelay = i * (Math.random() * 1200 + 600);
+            setTimeout(() => {
+                if (i > 0) quoteMsg.value = null;
+                const pick = all[Math.floor(Math.random() * all.length)];
+                sendMsg('them', pick.type || 'text', pick.type === 'image' ? pick.img : pick.text);
+                if (i === count - 1) quoteMsg.value = null;
+            }, msgDelay);
         }
-        quoteMsg.value = null;
     };
 };
         
@@ -1343,6 +1368,41 @@ const bgPreview = ref('');
             settings.bgImage = '';
             saveData();
         };
+        
+        const exportAllData = async () => {
+    const data = await localforage.getItem('jingyu_data');
+    if (!data) { alert('没有数据可导出'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    a.download = `那是我们相爱的证明_${Date.now()}.json`;
+    a.click();
+};
+
+const importAllData = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = async (ev) => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            if (!data.messages && !data.profiles && !data.settings && !data.replyGroups) {
+                alert('❌ 不是有效的静语备份文件'); return;
+            }
+            if (data.messages) messages.value = data.messages;
+            if (data.profiles) Object.assign(profiles, data.profiles);
+            if (data.settings) {
+                Object.assign(settings, data.settings);
+                if (settings.isDark) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                applyCSS(); applyBg();
+            }
+            if (data.replyGroups) replyGroups.value = data.replyGroups;
+            await localforage.setItem('jingyu_data', data);
+            alert('✅ 导入成功！');
+        } catch (err) { alert('❌ 导入失败：' + err.message); }
+    };
+    r.readAsText(f); e.target.value = '';
+};
 
         const clearChat = () => { if(confirm('将彻底清空聊天记录，确认吗？')) { messages.value = []; modals.settings = false; } };
         const exportChat = () => {
@@ -1499,7 +1559,7 @@ const bgPreview = ref('');
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
             sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg,
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
-            toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat,
+            toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
             selectedReplies, multiSelectMode, moveTargetGroupId, toggleSelect, moveSelected, deleteSelected,
             dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,

@@ -949,6 +949,45 @@
         <input type="file" accept=".json" class="hidden" @change="importAllData">
     </label>
 </div>
+
+                <!-- GitHub 云端自动备份 -->
+                <div class="pt-4 pb-2 border-t border-border/50 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-muted/50 tracking-widest uppercase">☁️ GitHub 云端备份</span>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" v-model="githubSettings.enabled" class="accent-text w-3.5 h-3.5">
+                            <span class="text-[10px] tracking-widest text-muted">自动备份</span>
+                        </label>
+                    </div>
+                    <input v-model="githubSettings.token" type="password"
+                           class="w-full bg-bg border border-border rounded px-3 py-1.5 text-[11px] outline-none font-mono"
+                           placeholder="GitHub Token (ghp_xxxxxx...)">
+                    <input v-model="githubSettings.repo"
+                           class="w-full bg-bg border border-border rounded px-3 py-1.5 text-[11px] outline-none font-mono"
+                           placeholder="用户名/仓库名 (如: alice/jingyu-backup)">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] tracking-widest text-muted shrink-0">每隔</span>
+                        <input type="number" v-model.number="githubSettings.interval" min="1" max="720"
+                               class="w-16 bg-bg border border-border rounded px-2 py-1 text-[11px] text-center outline-none">
+                        <span class="text-[10px] tracking-widest text-muted shrink-0">小时自动备份</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="saveGithubSettings" class="flex-1 text-[11px] tracking-widest border border-border py-1.5 hover:bg-border transition-colors">保存设置</button>
+                        <button @click="triggerGithubBackup" class="flex-1 text-[11px] tracking-widest border border-text/30 text-text py-1.5 hover:bg-border transition-colors">立即备份</button>
+                    </div>
+                    <div v-if="githubStatus" class="text-[10px] tracking-wider py-1 text-center"
+                         :class="githubStatus.startsWith('✅') ? 'text-green-700 dark:text-green-400' : githubStatus.startsWith('❌') ? 'text-red-700/70' : 'text-muted'">
+                        {{ githubStatus }}
+                    </div>
+                    <div v-if="githubSettings.lastBackup" class="text-[9px] tracking-widest text-muted/40 text-center">
+                        上次备份：{{ githubSettings.lastBackup }}
+                    </div>
+                    <!-- 教程入口 -->
+                    <button @click="modals.githubGuide = true"
+                            class="w-full text-[10px] tracking-widest text-muted/50 border border-dashed border-border py-1.5 hover:bg-bg transition-colors rounded">
+                        📖 查看详细教程
+                    </button>
+                </div>
                 <!-- 数据操作 -->
                 <div class="pt-6 pb-2 flex justify-end border-t border-border/50">
                     <button @click="clearChat" class="text-[11px] tracking-widest text-red-700/80 border border-red-900/10 px-4 py-1.5 hover:bg-red-900/5">清空所有</button>
@@ -984,7 +1023,7 @@
                              @click="currentGroupId = group.id; selectedReplies = []"
                              class="px-3 py-2 rounded cursor-pointer transition-all text-xs tracking-wider flex justify-between group/item"
                              :class="currentGroupId === group.id ? 'bg-bg text-text font-medium' : 'text-muted hover:bg-bg/50'">
-                            <span>{{ group.name }} <span class="opacity-40">({{ group.replies.length }})</span></span>
+                            <span @click.stop="openGroupEdit(group)" class="hover:underline underline-offset-2 decoration-dotted cursor-pointer">{{ group.name }} <span class="opacity-40">({{ group.replies.length }})</span></span>
                             <button @click.stop="deleteGroup(group.id)" v-if="replyGroups.length>1" class="opacity-0 group-hover/item:opacity-100 text-red-900/50 hover:text-red-900"><i data-lucide="trash" class="w-3 h-3"></i></button>
                         </div>
                         <button @click="addGroup" class="text-[10px] text-muted tracking-widest mt-1 border border-dashed border-border py-1.5 text-center hover:bg-bg transition-colors rounded">+ 新建分组</button>
@@ -1079,6 +1118,109 @@
                 <div v-if="editingReply.confirmed" class="px-6 pb-6">
                     <textarea v-model="editingReply.text" rows="3" class="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none resize-none focus:border-muted transition-colors"></textarea>
                     <button @click="saveEditReply" class="w-full mt-2 bg-text text-bg text-[12px] tracking-widest py-2 rounded-lg hover:opacity-80 transition-opacity">保存</button>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    </transition>
+
+    <!-- 分组名编辑弹窗 -->
+    <transition name="fade">
+        <div v-if="modals.groupEdit && groupEditTarget" @click.self="cancelGroupEdit"
+             class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70] flex items-center justify-center p-6">
+            <div class="bg-surface w-full max-w-xs rounded-2xl shadow-2xl border border-border/50 overflow-hidden">
+                <div class="px-6 pt-6 pb-2">
+                    <p class="text-[13px] tracking-widest text-text mb-1">编辑分组名称</p>
+                    <p class="text-[10px] text-muted tracking-wider mb-5 opacity-60">{{ groupEditTarget.name }}</p>
+                    <input
+                        v-model="groupEditTarget.tempName"
+                        @keydown.enter="confirmGroupEdit"
+                        @keydown.escape="cancelGroupEdit"
+                        class="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-muted transition-colors tracking-wider"
+                        placeholder="输入分组名称..." maxlength="20" autofocus>
+                </div>
+                <div class="px-6 py-5 flex gap-3">
+                    <button @click="confirmGroupEdit" class="flex-1 bg-text text-bg text-[12px] tracking-widest py-2 rounded-lg hover:opacity-80 transition-opacity">保存</button>
+                    <button @click="cancelGroupEdit" class="flex-1 border border-border text-muted text-[12px] tracking-widest py-2 rounded-lg hover:bg-bg transition-colors">取消</button>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- GitHub 备份教程弹窗 -->
+    <transition name="fade">
+        <div v-if="modals.githubGuide" @click.self="modals.githubGuide = false"
+             class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-end md:items-center justify-center p-0 md:p-6">
+            <div class="bg-surface w-full max-w-lg rounded-t-2xl md:rounded-2xl shadow-2xl border border-border/50 overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="px-6 py-4 flex justify-between items-center border-b border-border/50 shrink-0">
+                    <span class="text-[13px] tracking-widest font-medium">☁️ GitHub 云端备份教程</span>
+                    <button @click="modals.githubGuide = false" class="text-muted hover:text-text"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div class="overflow-y-auto px-6 py-5 space-y-5 text-[12px] leading-relaxed tracking-wide">
+
+                    <div class="bg-bg/60 rounded-xl px-4 py-3 border border-border/30">
+                        <p class="text-[10px] text-muted tracking-widest uppercase mb-1">原理说明</p>
+                        <p class="text-text/70">静语会把你的字卡库和聊天数据加密存到你的 GitHub 私人仓库里，完全只有你能看到，免费且安全。</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <p class="text-[11px] tracking-widest text-muted uppercase">第一步 · 创建 GitHub 账号</p>
+                        <p class="text-text/70">如果还没有 GitHub 账号，前往 <span class="font-mono bg-bg px-1.5 py-0.5 rounded text-[11px]">github.com</span> 免费注册一个。</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <p class="text-[11px] tracking-widest text-muted uppercase">第二步 · 创建私密仓库</p>
+                        <ol class="space-y-1.5 text-text/70 list-decimal list-inside">
+                            <li>登录 GitHub，点击右上角 <span class="font-mono bg-bg px-1 rounded text-[11px]">+</span> → <span class="font-mono bg-bg px-1 rounded text-[11px]">New repository</span></li>
+                            <li>Repository name 填写：<span class="font-mono bg-bg px-1.5 py-0.5 rounded text-[11px]">jingyu-backup</span>（或任意名字）</li>
+                            <li>选择 <span class="font-mono bg-bg px-1 rounded text-[11px]">Private</span>（重要！保证私密）</li>
+                            <li>勾选 <span class="font-mono bg-bg px-1 rounded text-[11px]">Add a README file</span></li>
+                            <li>点击 <span class="font-mono bg-bg px-1 rounded text-[11px]">Create repository</span></li>
+                        </ol>
+                        <p class="text-muted/60 text-[11px]">创建后页面地址类似：<span class="font-mono">github.com/你的用户名/jingyu-backup</span></p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <p class="text-[11px] tracking-widest text-muted uppercase">第三步 · 生成访问 Token</p>
+                        <ol class="space-y-1.5 text-text/70 list-decimal list-inside">
+                            <li>点击右上角头像 → <span class="font-mono bg-bg px-1 rounded text-[11px]">Settings</span></li>
+                            <li>左侧最底部找到 <span class="font-mono bg-bg px-1 rounded text-[11px]">Developer settings</span></li>
+                            <li>点击 <span class="font-mono bg-bg px-1 rounded text-[11px]">Personal access tokens</span> → <span class="font-mono bg-bg px-1 rounded text-[11px]">Tokens (classic)</span></li>
+                            <li>点击 <span class="font-mono bg-bg px-1 rounded text-[11px]">Generate new token (classic)</span></li>
+                            <li>Note 随便填，如：<span class="font-mono bg-bg px-1 rounded text-[11px]">静语备份</span></li>
+                            <li>Expiration 建议选 <span class="font-mono bg-bg px-1 rounded text-[11px]">No expiration</span></li>
+                            <li>勾选权限：<span class="font-mono bg-bg px-1 rounded text-[11px]">repo</span>（第一个大选项，全勾上）</li>
+                            <li>拉到最下面点 <span class="font-mono bg-bg px-1 rounded text-[11px]">Generate token</span></li>
+                            <li>⚠️ 页面出现 <span class="font-mono bg-bg px-1 rounded text-[11px]">ghp_xxxxxx...</span> 这串就是你的 Token，<strong>立即复制</strong>，关闭页面就再也看不到了</li>
+                        </ol>
+                    </div>
+
+                    <div class="space-y-3">
+                        <p class="text-[11px] tracking-widest text-muted uppercase">第四步 · 填入静语</p>
+                        <ol class="space-y-1.5 text-text/70 list-decimal list-inside">
+                            <li>回到静语设置页面的「GitHub 云端备份」区域</li>
+                            <li>在 <span class="font-mono bg-bg px-1 rounded text-[11px]">GitHub Token</span> 框粘贴刚复制的 Token</li>
+                            <li>在 <span class="font-mono bg-bg px-1 rounded text-[11px]">用户名/仓库名</span> 框填写，如：<span class="font-mono bg-bg px-1 rounded text-[11px]">alice/jingyu-backup</span></li>
+                            <li>设置自动备份间隔（如 24 小时）</li>
+                            <li>勾选「自动备份」</li>
+                            <li>点击「保存设置」，再点「立即备份」测试一下</li>
+                            <li>看到 ✅ 备份成功即大功告成！</li>
+                        </ol>
+                    </div>
+
+                    <div class="bg-bg/60 rounded-xl px-4 py-3 border border-border/30 space-y-1">
+                        <p class="text-[10px] text-muted tracking-widest uppercase mb-1">恢复备份</p>
+                        <p class="text-text/70">在 GitHub 仓库里找到「静语备份.json」文件，点击下载，然后用设置里的「一键导入备份」导回来即可。</p>
+                    </div>
+
+                    <div class="bg-amber-50 dark:bg-amber-900/10 rounded-xl px-4 py-3 border border-amber-200/30">
+                        <p class="text-[11px] text-amber-700 dark:text-amber-400/70">⚠️ Token 很重要，不要分享给任何人。如果泄露，立刻去 GitHub 删掉该 Token 再重新生成。</p>
+                    </div>
+
+                </div>
+                <div class="px-6 py-4 border-t border-border/50 shrink-0">
+                    <button @click="modals.githubGuide = false" class="w-full text-[12px] tracking-widest border border-border py-2.5 rounded-lg hover:bg-bg transition-colors">我知道了</button>
                 </div>
             </div>
         </div>
@@ -1217,7 +1359,26 @@ const draftLines = computed(() => draftText.value.split('\n').map(l => l.trim())
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-        const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false });
+        const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false });
+        const groupEditTarget = ref(null);
+        const openGroupEdit = (group) => {
+            groupEditTarget.value = { id: group.id, name: group.name, tempName: group.name };
+            modals.groupEdit = true;
+        };
+        const confirmGroupEdit = () => {
+            if (!groupEditTarget.value) return;
+            const g = replyGroups.value.find(g => g.id === groupEditTarget.value.id);
+            if (g && groupEditTarget.value.tempName.trim()) {
+                g.name = groupEditTarget.value.tempName.trim().substring(0, 20);
+                saveData();
+            }
+            modals.groupEdit = false;
+            groupEditTarget.value = null;
+        };
+        const cancelGroupEdit = () => {
+            modals.groupEdit = false;
+            groupEditTarget.value = null;
+        };
         const stickerImages = ref([]);
 
         const generateEmojis = () => {
@@ -1378,12 +1539,15 @@ const scrollToBottom = async () => {
         const all = replyGroups.value.flatMap(g => g.replies);
         if (all.length === 0) { sendMsg('them', 'text', '......'); return; }
 
-        // 基础随机1~6，3句以上再掷一次骰子决定是否截断
-let count = Math.floor(Math.random() * 4) + 1;
-if (count > 3 && Math.random() > Math.random()) count = Math.floor(Math.random() * 3) + 1;
+        // 发送条数：1~4 之间完全随机
+        const count = Math.floor(Math.random() * 4) + 1;
+
+        // 随机概率：引用 10%~50%，表情包概率 10%~60%
+        const quoteChance = 0.1 + Math.random() * 0.4;
+        const emojiChance = 0.1 + Math.random() * 0.5;
 
         const myMsgs = messages.value.filter(m => m.sender === 'me');
-        if (Math.random() < 0.3 && myMsgs.length > 0) {
+        if (Math.random() < quoteChance && myMsgs.length > 0) {
             const target = myMsgs[Math.floor(Math.random() * myMsgs.length)];
             quoteMsg.value = {
                 id: target.id, type: target.type,
@@ -1391,11 +1555,18 @@ if (count > 3 && Math.random() > Math.random()) count = Math.floor(Math.random()
             };
         }
 
+        // 分离文字和图片/表情回复池
+        const textReplies = all.filter(r => !r.type || r.type === 'text');
+        const imgReplies = all.filter(r => r.type === 'image');
+
         for (let i = 0; i < count; i++) {
             const msgDelay = i * (Math.random() * 1200 + 600);
             setTimeout(() => {
                 if (i > 0) quoteMsg.value = null;
-                const pick = all[Math.floor(Math.random() * all.length)];
+                // 决定这条是否发表情包（仅当有图片回复时）
+                const useImg = imgReplies.length > 0 && Math.random() < emojiChance;
+                const pool = useImg ? imgReplies : (textReplies.length > 0 ? textReplies : all);
+                const pick = pool[Math.floor(Math.random() * pool.length)];
                 sendMsg('them', pick.type || 'text', pick.type === 'image' ? pick.img : pick.text);
                 if (i === count - 1) quoteMsg.value = null;
             }, msgDelay);
@@ -1829,6 +2000,91 @@ const importAllData = (e) => {
         };
 
 
+        // ── GitHub 自动备份 ──
+        const githubSettings = reactive({
+            token: '',
+            repo: '',   // 格式: username/reponame
+            interval: 24,  // 小时
+            enabled: false,
+            lastBackup: ''
+        });
+        const githubStatus = ref('');
+        let githubTimer = null;
+
+        // 从 localforage 加载 github 设置
+        (async () => {
+            try {
+                const gs = await localforage.getItem('jingyu_github');
+                if (gs) Object.assign(githubSettings, gs);
+            } catch(e) {}
+        })();
+
+        const saveGithubSettings = async () => {
+            await localforage.setItem('jingyu_github', JSON.parse(JSON.stringify(githubSettings)));
+            setupGithubTimer();
+            githubStatus.value = '✅ 设置已保存';
+            setTimeout(() => githubStatus.value = '', 2000);
+        };
+
+        const triggerGithubBackup = async () => {
+            if (!githubSettings.token || !githubSettings.repo) {
+                githubStatus.value = '❌ 请先填写 Token 和仓库名';
+                return;
+            }
+            githubStatus.value = '⏳ 备份中...';
+            try {
+                const data = await localforage.getItem('jingyu_data');
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+                const filename = '静语备份.json';
+                const apiUrl = `https://api.github.com/repos/${githubSettings.repo}/contents/${encodeURIComponent(filename)}`;
+
+                // 先获取已有文件的 sha（更新时需要）
+                let sha = '';
+                try {
+                    const res = await fetch(apiUrl, {
+                        headers: { Authorization: `token ${githubSettings.token}`, Accept: 'application/vnd.github.v3+json' }
+                    });
+                    if (res.ok) { const j = await res.json(); sha = j.sha || ''; }
+                } catch(e) {}
+
+                const body = {
+                    message: `静语自动备份 ${new Date().toLocaleString('zh-CN')}`,
+                    content,
+                    ...(sha ? { sha } : {})
+                };
+                const putRes = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        Authorization: `token ${githubSettings.token}`,
+                        Accept: 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (putRes.ok) {
+                    githubSettings.lastBackup = new Date().toLocaleString('zh-CN');
+                    await localforage.setItem('jingyu_github', JSON.parse(JSON.stringify(githubSettings)));
+                    githubStatus.value = `✅ 备份成功！${githubSettings.lastBackup}`;
+                } else {
+                    const err = await putRes.json();
+                    githubStatus.value = `❌ 备份失败：${err.message || putRes.status}`;
+                }
+            } catch(e) {
+                githubStatus.value = `❌ 网络错误：${e.message}`;
+            }
+        };
+
+        const setupGithubTimer = () => {
+            if (githubTimer) clearInterval(githubTimer);
+            if (githubSettings.enabled && githubSettings.token && githubSettings.repo) {
+                const ms = githubSettings.interval * 3600 * 1000;
+                githubTimer = setInterval(triggerGithubBackup, ms);
+            }
+        };
+
+        const githubBackup = { githubSettings, githubStatus, saveGithubSettings, triggerGithubBackup };
+        setupGithubTimer();
+
         onMounted(async () => {
             try {
                 const data = await localforage.getItem('jingyu_data');
@@ -1863,6 +2119,8 @@ const importAllData = (e) => {
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
+            openGroupEdit, confirmGroupEdit, cancelGroupEdit, groupEditTarget,
+            githubSettings, saveGithubSettings, triggerGithubBackup, githubStatus,
             selectedReplies, multiSelectMode, moveTargetGroupId, toggleSelect, moveSelected, deleteSelected,
             dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,
             addImageReplies, requestNotifPermission, popRandomEmoji,

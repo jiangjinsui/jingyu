@@ -2153,6 +2153,11 @@ const importAllData = (e) => {
         '仆本恨人，卿须怜我',
         '若是前世未有缘，待重结、来生愿',
         '瘦影自临春水照，卿须怜我我怜卿',
+        '不辞青山，相随与共',
+        '情不知所起，一往而深',
+        '知我意，感君怜，此情须问天',
+        '观我旧往，同我仰春。知我晦暗，许我春朝',
+        '懒烧金，慵篆玉，流水桃花空断续',
     ];
     const poemEl = document.getElementById('sp-poem');
     if(poemEl) poemEl.textContent = poems[Math.floor(Math.random() * poems.length)];
@@ -2175,7 +2180,7 @@ const importAllData = (e) => {
     // ── 汉字雨 ──
     const rainBox = document.getElementById('char-rain');
     if(rainBox) {
-        const chars = '静语传心思念归期入梦相见月光信笺温柔细雪落花时节清风明月山河故人天涯咫尺灯火阑珊';
+        const chars = '静语传心思念归期入梦相见月光信笺温柔细雪落花时节清风明月山河故人天涯咫尺灯火阑珊昭昭云端月此意寄昭昭';
         for(let i = 0; i < 18; i++) {
             const col = document.createElement('div');
             col.className = 'sp-rain-col';

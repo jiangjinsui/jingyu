@@ -19,7 +19,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/localforage@1.10.0/dist/localforage.min.js"></script>
     <script src="https://unpkg.com/@formkit/auto-animate@0.8.0/index.iife.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500&display=swap" rel="stylesheet">
 
     <script>
@@ -414,7 +413,7 @@
     position: absolute; right: 0; top: -2px;
     width: 5px; height: 5px;
     background: var(--color-text);
-    border-radius: 50;
+    border-radius: 50%;
     opacity: 0.6;
     box-shadow: 0 0 8px 2px var(--color-text);
 }
@@ -482,7 +481,7 @@
             border: 1px solid var(--color-border);
             border-radius: 14px;
             padding: 10px 16px;
-            display: flex; align-items: center; gap-10px;
+            display: flex; align-items: center;
             gap: 10px;
             font-size: 12px; letter-spacing: 0.05em;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -643,12 +642,7 @@
     </div>
 </div>
 
-<div id="inapp-toast" style="position:fixed;top:max(env(safe-area-inset-top,0px),16px);left:50%;transform:translateX(-50%);z-index:180;background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;padding:10px 18px;min-width:200px;max-width:80vw;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:none;flex-direction:column;gap:2px;">
-    <div class="inapp-toast-body">
-        <div class="inapp-toast-name" id="toast-name" style="font-size:11px;letter-spacing:0.1em;color:var(--color-text);font-weight:500;">对方</div>
-        <div class="inapp-toast-text" id="toast-text" style="font-size:12px;color:var(--color-muted);letter-spacing:0.05em;">发来了新消息</div>
-    </div>
-</div>
+<div id="toast-stack" style="position:fixed;top:max(env(safe-area-inset-top,0px),16px);left:50%;transform:translateX(-50%);z-index:180;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;"></div>
 
 <!-- ─── PWA 安装横幅 ─── -->
 <div id="install-banner" class="install-banner" style="display:none;">
@@ -682,7 +676,7 @@
 <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
-        <button @click="modals.settings = true" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button @click="modals.settings = true; refreshStorageInfo()" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
     </div>
 
     <!-- 右边：我的头像 + 名字（同高占位） -->
@@ -988,6 +982,54 @@
                         📖 查看详细教程
                     </button>
                 </div>
+                <!-- 存储空间 -->
+                <div class="pt-4 pb-2 border-t border-border/50 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-muted/50 tracking-widest uppercase">📦 本地存储</span>
+                        <span class="text-[10px] font-mono text-muted/60 tracking-widest">{{ storageInfo.totalKB }} KB</span>
+                    </div>
+
+                    <!-- 总进度条 -->
+                    <div class="w-full h-1.5 bg-border/60 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-700"
+                             :style="{ width: Math.min(storageInfo.totalKB / storageInfo.limitKB * 100, 100) + '%',
+                                       background: storageInfo.totalKB > storageInfo.limitKB * 0.8 ? '#c0392b' : storageInfo.totalKB > storageInfo.limitKB * 0.5 ? '#e67e22' : 'var(--color-muted)' }">
+                        </div>
+                    </div>
+
+                    <!-- 分类条 -->
+                    <div class="flex rounded overflow-hidden h-1" style="gap:1px;">
+                        <div v-if="storageInfo.msgKB > 0" class="h-full transition-all duration-700" style="background:#6b8cba;"
+                             :style="{ flex: storageInfo.msgKB }"></div>
+                        <div v-if="storageInfo.repliesKB > 0" class="h-full transition-all duration-700" style="background:#8baa7b;"
+                             :style="{ flex: storageInfo.repliesKB }"></div>
+                        <div v-if="storageInfo.stickersKB > 0" class="h-full transition-all duration-700" style="background:#c4a55a;"
+                             :style="{ flex: storageInfo.stickersKB }"></div>
+                        <div v-if="storageInfo.settingsKB > 0" class="h-full transition-all duration-700" style="background:#a07ab5;"
+                             :style="{ flex: storageInfo.settingsKB }"></div>
+                    </div>
+
+                    <!-- 图例 -->
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-sm shrink-0" style="background:#6b8cba;"></span>
+                            <span class="text-[10px] text-muted/60 tracking-widest">消息 {{ storageInfo.msgKB }} KB</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-sm shrink-0" style="background:#8baa7b;"></span>
+                            <span class="text-[10px] text-muted/60 tracking-widest">字卡 {{ storageInfo.repliesKB }} KB</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-sm shrink-0" style="background:#c4a55a;"></span>
+                            <span class="text-[10px] text-muted/60 tracking-widest">贴纸 {{ storageInfo.stickersKB }} KB</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-sm shrink-0" style="background:#a07ab5;"></span>
+                            <span class="text-[10px] text-muted/60 tracking-widest">设置 {{ storageInfo.settingsKB }} KB</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 数据操作 -->
                 <div class="pt-6 pb-2 flex justify-end border-t border-border/50">
                     <button @click="clearChat" class="text-[11px] tracking-widest text-red-700/80 border border-red-900/10 px-4 py-1.5 hover:bg-red-900/5">清空所有</button>
@@ -1020,7 +1062,7 @@
                     <!-- 左：分组列表 -->
                     <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-border/50 p-3 flex flex-col gap-1.5 overflow-y-auto shrink-0 md:shrink h-[28%] md:h-full">
                         <div v-for="group in replyGroups" :key="group.id"
-                             @click="currentGroupId = group.id; selectedReplies = []"
+                             @click="currentGroupId = group.id; selectedReplies.value = []"
                              class="px-3 py-2 rounded cursor-pointer transition-all text-xs tracking-wider flex justify-between group/item"
                              :class="currentGroupId === group.id ? 'bg-bg text-text font-medium' : 'text-muted hover:bg-bg/50'">
                             <span @click.stop="openGroupEdit(group)" class="hover:underline underline-offset-2 decoration-dotted cursor-pointer">{{ group.name }} <span class="opacity-40">({{ group.replies.length }})</span></span>
@@ -1039,7 +1081,7 @@
                                     <input type="text" v-model="searchQuery" placeholder="搜索字卡..." class="w-full bg-bg/50 border border-transparent focus:border-border rounded px-8 py-1.5 text-[12px] outline-none transition-colors">
                                 </div>
                                 <!-- 多选按钮 -->
-                                <button @click="multiSelectMode = !multiSelectMode; selectedReplies = []"
+                                <button @click="multiSelectMode = !multiSelectMode; selectedReplies.value = []"
                                         class="text-[10px] tracking-widest border px-2 py-1.5 rounded transition-colors shrink-0"
                                         :class="multiSelectMode ? 'bg-text text-bg border-text' : 'border-border hover:bg-border'">多选</button>
                                 <!-- 去重按钮 -->
@@ -1421,18 +1463,52 @@ const draftLines = computed(() => draftText.value.split('\n').map(l => l.trim())
     const body = text.length > 60 ? text.slice(0, 60) + '…' : text;
     const title = '静语 · ' + name;
 
-    // 页面在前台 → 用应用内 toast
+    // 页面在前台 → 用应用内堆叠 toast
     if (document.visibilityState === 'visible') {
-        const toastEl = document.getElementById('inapp-toast');
-        const toastName = document.getElementById('toast-name');
-        const toastText = document.getElementById('toast-text');
-        if (toastEl && toastName && toastText) {
-            toastName.textContent = name;
-            toastText.textContent = body;
-            toastEl.style.display = 'flex';
-            clearTimeout(toastEl._timer);
-            toastEl._timer = setTimeout(() => { toastEl.style.display = 'none'; }, 3000);
-        }
+        const stack = document.getElementById('toast-stack');
+        if (!stack) return;
+        // 最多保留5条
+        while (stack.children.length >= 5) stack.removeChild(stack.firstChild);
+
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            background:var(--color-surface);
+            border:1px solid var(--color-border);
+            border-radius:14px;
+            padding:10px 18px;
+            min-width:200px;
+            max-width:80vw;
+            box-shadow:0 4px 20px rgba(0,0,0,0.12);
+            display:flex;
+            flex-direction:column;
+            gap:2px;
+            pointer-events:auto;
+            opacity:0;
+            transform:translateY(-8px) scale(0.96);
+            transition:opacity 0.25s ease,transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+            cursor:pointer;
+        `;
+        toast.innerHTML = `
+            <div style="font-size:11px;letter-spacing:0.1em;color:var(--color-text);font-weight:500;">${name}</div>
+            <div style="font-size:12px;color:var(--color-muted);letter-spacing:0.05em;">${body}</div>
+        `;
+        stack.appendChild(toast);
+
+        // 进场动画
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        const dismiss = () => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-6px) scale(0.95)';
+            setTimeout(() => toast.remove(), 280);
+        };
+        toast.addEventListener('click', dismiss);
+        toast._timer = setTimeout(dismiss, 3500);
         return;
     }
 
@@ -1480,7 +1556,39 @@ const draftLines = computed(() => draftText.value.split('\n').map(l => l.trim())
                     replyGroups: JSON.parse(JSON.stringify(replyGroups.value)),
                     stickerImages: JSON.parse(JSON.stringify(stickerImages.value))
                 });
+                refreshStorageInfo();
             }, 500);
+        };
+
+        // ── 存储空间可视化 ──
+        const storageInfo = reactive({
+            totalKB: 0,
+            msgKB: 0,
+            repliesKB: 0,
+            stickersKB: 0,
+            settingsKB: 0,
+            limitKB: 50 * 1024 // 估算 50MB 软上限
+        });
+
+        const refreshStorageInfo = async () => {
+            try {
+                const data = await localforage.getItem('jingyu_data');
+                if (!data) return;
+                const full = JSON.stringify(data);
+                storageInfo.totalKB = Math.round(full.length * 2 / 1024); // UTF-16 ~2B/char
+
+                const msgStr = JSON.stringify(data.messages || []);
+                storageInfo.msgKB = Math.round(msgStr.length * 2 / 1024);
+
+                const repliesStr = JSON.stringify(data.replyGroups || []);
+                storageInfo.repliesKB = Math.round(repliesStr.length * 2 / 1024);
+
+                const stickersStr = JSON.stringify(data.stickerImages || []);
+                storageInfo.stickersKB = Math.round(stickersStr.length * 2 / 1024);
+
+                const settingsStr = JSON.stringify({ profiles: data.profiles, settings: data.settings });
+                storageInfo.settingsKB = Math.round(settingsStr.length * 2 / 1024);
+            } catch(e) {}
         };
 
         watch([messages, profiles, settings, replyGroups], saveData, { deep: true });
@@ -1505,7 +1613,7 @@ const scrollToBottom = async () => {
             const q = quoteMsg.value ? { ...quoteMsg.value } : null;
             quoteMsg.value = null;
             messages.value.push({ id: msgId, sender, type, content: txt, timestamp: Date.now(), status: 'sent', quote: q });
-            playSound(sender);
+            playSound(sender === 'me' ? 'send' : 'them');
             scrollToBottom();
             if (sender === 'them') {
                 const displayText = type === 'image' ? '[图片]' : txt;
@@ -1629,11 +1737,12 @@ const scrollToBottom = async () => {
                 const img = new Image();
                 img.onload = () => {
                     const c = document.createElement('canvas');
-                    let w = img.width, h = img.height, MAX = 800;
-                    if(w>MAX) { h*=MAX/w; w=MAX; }
+                    let w = img.width, h = img.height, MAX = 1200;
+                    if(w>MAX) { h=Math.round(h*MAX/w); w=MAX; }
+                    if(h>MAX) { w=Math.round(w*MAX/h); h=MAX; }
                     c.width=w; c.height=h;
                     c.getContext('2d').drawImage(img,0,0,w,h);
-                    sendMsg('me', 'image', c.toDataURL('image/jpeg', 0.8));
+                    sendMsg('me', 'image', c.toDataURL('image/jpeg', 0.75));
                 };
                 img.src = ev.target.result;
             };
@@ -1930,10 +2039,12 @@ const importAllData = (e) => {
                 r.onload = ev => {
                     const img = new Image();
                     img.onload = () => {
-                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 400;
-                        const ratio = w/h; c.width=w>h?MAX:MAX*ratio; c.height=w>h?MAX/ratio:MAX;
+                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 300;
+                        const ratio = w/h;
+                        c.width = w > h ? MAX : Math.round(MAX * ratio);
+                        c.height = w > h ? Math.round(MAX / ratio) : MAX;
                         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-                        currentGroup.value.replies.push({ type:'image', img: c.toDataURL('image/jpeg', 0.85), text:'' });
+                        currentGroup.value.replies.push({ type:'image', img: c.toDataURL('image/jpeg', 0.72), text:'' });
                     }; img.src = ev.target.result;
                 }; r.readAsDataURL(file);
             }
@@ -1946,10 +2057,12 @@ const importAllData = (e) => {
                 r.onload = ev => {
                     const img = new Image();
                     img.onload = () => {
-                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 400;
-                        const ratio = w/h; c.width=w>h?MAX:MAX*ratio; c.height=w>h?MAX/ratio:MAX;
+                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 300;
+                        const ratio = w/h;
+                        c.width = w > h ? MAX : Math.round(MAX * ratio);
+                        c.height = w > h ? Math.round(MAX / ratio) : MAX;
                         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-                        stickerImages.value.push(c.toDataURL('image/jpeg', 0.85));
+                        stickerImages.value.push(c.toDataURL('image/jpeg', 0.72));
                         saveData();
                     }; img.src = ev.target.result;
                 }; r.readAsDataURL(file);
@@ -2095,7 +2208,7 @@ const importAllData = (e) => {
                 }
             } catch(e) {}
             if(settings.isDark) document.documentElement.classList.add('dark');
-            applyCSS(); applyBg(); setupActiveMsg(); checkNotifPermission();
+            applyCSS(); applyBg(); setupActiveMsg(); checkNotifPermission(); refreshStorageInfo();
             document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') nextTick(lucide.createIcons); });
             const ta = document.querySelector('textarea');
             if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
@@ -2123,7 +2236,7 @@ const importAllData = (e) => {
             dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,
             addImageReplies, requestNotifPermission, popRandomEmoji,
             stickerImages, addStickers, sendSticker, deleteSticker,
-            stickerImages, addStickers, sendSticker, deleteSticker
+            storageInfo, refreshStorageInfo
         };
     }
 }).mount('#app');

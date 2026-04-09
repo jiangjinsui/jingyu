@@ -21,8 +21,7 @@ self.addEventListener('push', e => {
         self.registration.showNotification(data.title || '静语', {
             body: data.body || '你有新消息',
             vibrate: [200, 100, 200],
-            tag: 'jingyu-msg',
-            renotify: true
+            tag: 'jingyu-' + Date.now()
         })
     );
 });
@@ -44,8 +43,7 @@ self.addEventListener('message', e => {
         self.registration.showNotification(e.data.title, {
             body: e.data.body,
             vibrate: [200, 100, 200],
-            tag: 'jingyu-msg',
-            renotify: true
+            tag: 'jingyu-' + Date.now()
         });
     }
 });

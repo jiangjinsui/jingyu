@@ -2064,12 +2064,12 @@ const importAllData = (e) => {
                 r.onload = ev => {
                     const img = new Image();
                     img.onload = () => {
-                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 300;
+                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 160;
                         const ratio = w/h;
                         c.width = w > h ? MAX : Math.round(MAX * ratio);
                         c.height = w > h ? Math.round(MAX / ratio) : MAX;
                         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-                        currentGroup.value.replies.push({ type:'image', img: c.toDataURL('image/jpeg', 0.72), text:'' });
+                        currentGroup.value.replies.push({ type:'image', img: c.toDataURL('image/jpeg', 0.55), text:'' });
                     }; img.src = ev.target.result;
                 }; r.readAsDataURL(file);
             }
@@ -2082,12 +2082,12 @@ const importAllData = (e) => {
                 r.onload = ev => {
                     const img = new Image();
                     img.onload = () => {
-                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 300;
+                        const c = document.createElement('canvas'), w = img.width, h = img.height, MAX = 160;
                         const ratio = w/h;
                         c.width = w > h ? MAX : Math.round(MAX * ratio);
                         c.height = w > h ? Math.round(MAX / ratio) : MAX;
                         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-                        stickerImages.value.push(c.toDataURL('image/jpeg', 0.72));
+                        stickerImages.value.push(c.toDataURL('image/jpeg', 0.55));
                         saveData();
                     }; img.src = ev.target.result;
                 }; r.readAsDataURL(file);

@@ -1709,7 +1709,14 @@
                         <div class="px-4 py-3 bg-bg/30">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">我的信</span>
-                                <span class="text-[9px] tracking-[0.15em] text-muted/30">{{ pair.sentTime }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] tracking-[0.15em] text-muted/30">{{ pair.sentTime }}</span>
+                                    <button @click="deleteLetter(idx)"
+                                        class="text-muted/20 hover:text-red-400 transition-colors"
+                                        title="删除这封信">
+                                        <i data-lucide="trash-2" class="w-3 h-3 stroke-[1.5]"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="text-[12px] leading-[1.9] tracking-wide text-text/80 font-light">
                                 <p v-for="(line, li) in pair.sentContent.split('\n')" :key="li" class="m-0">{{ line }}</p>
@@ -1752,6 +1759,41 @@
     </div>
 </transition>
     
+    <!-- 删除信件确认弹窗 -->
+<transition name="fade">
+    <div v-if="modals.confirmDeleteLetter" @click.self="cancelDeleteLetter"
+         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-center justify-center px-8">
+        <div class="bg-surface w-full max-w-[280px] rounded-sm shadow-2xl overflow-hidden"
+             style="border: 1px solid var(--color-border);">
+            <!-- 顶部装饰线 -->
+            <div class="h-[1px] w-full" style="background: linear-gradient(90deg, transparent, var(--color-muted), transparent); opacity: 0.3;"></div>
+            <div class="px-7 py-6 flex flex-col items-center gap-4">
+                <!-- 图标 -->
+                <div class="w-8 h-8 flex items-center justify-center opacity-30">
+                    <i data-lucide="trash-2" class="w-5 h-5 stroke-[1]"></i>
+                </div>
+                <!-- 文字 -->
+                <div class="text-center flex flex-col gap-1.5">
+                    <p class="text-[12px] tracking-[0.2em] text-text font-light">焚毁这封信件？</p>
+                    <p class="text-[10px] tracking-[0.15em] text-muted/50 italic">往来文字将化为尘烟，无法复原</p>
+                </div>
+                <!-- 按钮组 -->
+                <div class="w-full flex flex-col gap-2 mt-1">
+                    <button @click="confirmDeleteLetter"
+                        class="w-full py-2 text-[11px] tracking-[0.25em] border border-border/60 text-muted/60 hover:border-muted/40 hover:text-text transition-all rounded-sm">
+                        付之一炬
+                    </button>
+                    <button @click="cancelDeleteLetter"
+                        class="w-full py-2 text-[11px] tracking-[0.25em] text-muted/30 hover:text-muted transition-colors">
+                        留存此信
+                    </button>
+                </div>
+            </div>
+            <div class="h-[1px] w-full" style="background: linear-gradient(90deg, transparent, var(--color-muted), transparent); opacity: 0.15;"></div>
+        </div>
+    </div>
+</transition>
+
     <!-- 多条草稿弹窗 -->
 <transition name="fade">
     <div v-if="modals.multiDraft" @click.self="modals.multiDraft = false"
@@ -1960,6 +2002,23 @@ const saveLetterHistory = async () => {
     await localforage.setItem('jingyu_letter_history', JSON.parse(JSON.stringify(letterHistory.value)));
 };
 
+const deleteLetter = (idx) => {
+    pendingDeleteIdx.value = idx;
+    modals.confirmDeleteLetter = true;
+};
+const confirmDeleteLetter = () => {
+    if (pendingDeleteIdx.value !== null) {
+        letterHistory.value.splice(pendingDeleteIdx.value, 1);
+        saveLetterHistory();
+        pendingDeleteIdx.value = null;
+    }
+    modals.confirmDeleteLetter = false;
+};
+const cancelDeleteLetter = () => {
+    pendingDeleteIdx.value = null;
+    modals.confirmDeleteLetter = false;
+};
+
 // 计算剩余时间文本
 const updateLetterRemainText = () => {
     const now = Date.now();
@@ -2132,7 +2191,8 @@ setInterval(() => {
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false });
+const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false });
+const pendingDeleteIdx = ref(null);
         
         const groupEditTarget = ref(null);
         const openGroupEdit = (group) => {
@@ -2246,13 +2306,16 @@ const modals = reactive({ settings: false, replyManager: false, stickerPanel: fa
         return;
     }
 
-    // 页面在后台 → 通过 SW 发通知
+    // 页面在后台 → 优先通过 SW 发通知，SW 未就绪时直接发
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
             type: 'SHOW_NOTIF',
             title: title,
             body: body
         });
+    } else {
+        // SW 首次安装尚未接管页面，直接用 Notification API
+        try { new Notification(title, { body, tag: 'jingyu-' + Date.now() }); } catch(e) {}
     }
 };
 
@@ -2989,6 +3052,13 @@ updateLetterRemainText();
                 nextTick(() => { scrollToBottom(); if(window.formkit && chatList.value) formkit.autoAnimate(chatList.value, {duration: 300}); });
             }, 4800);
             lucide.createIcons();
+
+            // 注册 Service Worker（后台通知必须）
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.warn('SW 注册失败:', err);
+                });
+            }
         });
 
         watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
@@ -2998,7 +3068,7 @@ updateLetterRemainText();
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
             sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg, didLongPress, selectedMsgId, draftText, draftLines, sendDraft,
-letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToast,
+letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToast, deleteLetter, confirmDeleteLetter, cancelDeleteLetter, pendingDeleteIdx,
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,

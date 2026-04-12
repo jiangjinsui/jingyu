@@ -599,6 +599,269 @@
     80%  { opacity: 0.45; }
     100% { opacity: 0; }
 }
+
+/* ─── 信笺气泡 ─── */
+.letter-bubble {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 16px 20px;
+    max-width: 280px;
+    position: relative;
+    font-size: 12px;
+    line-height: 2;
+    letter-spacing: 0.15em;
+    color: var(--color-text);
+}
+.letter-bubble::before {
+    content: '';
+    position: absolute;
+    top: 12px; bottom: 12px; left: 14px;
+    width: 1px;
+    background: var(--color-border);
+    opacity: 0.5;
+}
+.letter-bubble .letter-header {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--color-muted);
+    opacity: 0.5;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+.letter-bubble .letter-body {
+    padding-left: 8px;
+}
+.letter-bubble .letter-body p {
+    margin: 0;
+    text-indent: 0;
+}
+.letter-bubble .letter-footer {
+    text-align: right;
+    font-size: 10px;
+    color: var(--color-muted);
+    opacity: 0.4;
+    margin-top: 10px;
+    letter-spacing: 0.2em;
+    font-style: italic;
+}
+
+/* 信件在途提示 */
+.letter-transit {
+    text-align: center;
+    padding: 12px 0;
+}
+.letter-transit-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--color-muted);
+    opacity: 0.6;
+}
+.letter-transit-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--color-muted);
+    animation: transitPulse 2s ease infinite;
+}
+@keyframes transitPulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ─── 寄信状态弹窗 ─── */
+.letter-status-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    opacity: 0;
+    animation: lsOverlayIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    overflow: hidden;
+}
+.letter-status-overlay.fade-out {
+    animation: lsOverlayOut 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes lsOverlayIn {
+    0%   { opacity: 0; backdrop-filter: blur(0); }
+    100% { opacity: 1; backdrop-filter: blur(8px); }
+}
+@keyframes lsOverlayOut {
+    0%   { opacity: 1; transform: scale(1); }
+    60%  { opacity: 0.5; transform: scale(1.02); }
+    100% { opacity: 0; transform: scale(1.06); filter: blur(8px); }
+}
+
+/* 背景装饰圆环 */
+.ls-bg-ring {
+    position: absolute;
+    width: min(300px, 70vw); height: min(300px, 70vw);
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    opacity: 0;
+    animation: lsRingIn 2s ease 0.3s forwards;
+}
+.ls-bg-ring::before {
+    content: '';
+    position: absolute; inset: -15px;
+    border: 1px dashed var(--color-border);
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: ringSpin 25s linear infinite;
+}
+.ls-bg-ring::after {
+    content: '';
+    position: absolute; inset: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    opacity: 0.2;
+    animation: ringSpin 18s linear infinite reverse;
+}
+@keyframes lsRingIn {
+    0%   { opacity: 0; transform: scale(0.6); }
+    50%  { opacity: 0.08; transform: scale(1); }
+    100% { opacity: 0.05; transform: scale(1.05); }
+}
+
+/* 信封图标 */
+.ls-icon {
+    font-size: 2.8rem;
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    animation: lsIconIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.06));
+}
+.ls-icon.float {
+    animation: lsIconIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards,
+               lsIconFloat 4s ease-in-out 1s infinite;
+}
+@keyframes lsIconIn {
+    0%   { opacity: 0; transform: translateY(20px) scale(0.7); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes lsIconFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    30% { transform: translateY(-10px) rotate(-4deg); }
+    60% { transform: translateY(-6px) rotate(3deg); }
+}
+/* 信封飞走 */
+.ls-icon.fly-away {
+    animation: lsIconFly 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+@keyframes lsIconFly {
+    0%   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+    40%  { opacity: 1; transform: translateY(-30px) scale(1.1) rotate(-8deg); }
+    100% { opacity: 0; transform: translateY(-200px) scale(0.3) rotate(15deg); }
+}
+
+/* 横线装饰 */
+.ls-line {
+    width: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-border), transparent);
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+    opacity: 0;
+    z-index: 2;
+}
+.ls-line.show {
+    opacity: 1;
+    width: min(120px, 30vw);
+}
+
+/* 状态文字 */
+.ls-text {
+    font-size: 13px;
+    letter-spacing: 0.4em;
+    color: var(--color-text);
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(10px);
+    font-weight: 300;
+    z-index: 2;
+    text-align: center;
+}
+.ls-text.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+.ls-text.hide {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+/* 副文字 */
+.ls-sub {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--color-muted);
+    opacity: 0;
+    transition: opacity 0.8s ease, transform 0.6s ease;
+    transform: translateY(6px);
+    z-index: 2;
+    text-align: center;
+}
+.ls-sub.show {
+    opacity: 0.45;
+    transform: translateY(0);
+}
+
+/* 进度点 */
+.ls-dots {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+    z-index: 2;
+}
+.ls-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--color-muted);
+    opacity: 0.15;
+    animation: lsDotPulse 1.8s ease infinite;
+}
+.ls-dot:nth-child(2) { animation-delay: 0.35s; }
+.ls-dot:nth-child(3) { animation-delay: 0.7s; }
+@keyframes lsDotPulse {
+    0%, 80%, 100% { opacity: 0.12; transform: scale(0.7); }
+    40% { opacity: 0.5; transform: scale(1.4); }
+}
+
+/* 底部时间戳 */
+.ls-timestamp {
+    position: absolute;
+    bottom: max(28px, 5vh);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--color-muted);
+    opacity: 0;
+    font-family: monospace;
+    text-transform: uppercase;
+    transition: opacity 0.6s ease;
+    z-index: 2;
+}
+.ls-timestamp.show { opacity: 0.25; }
+
+/* 写信弹窗信笺纸背景 */
+.letter-paper {
+    background-image: repeating-linear-gradient(
+        transparent,
+        transparent 31px,
+        var(--color-border) 31px,
+        var(--color-border) 32px
+    );
+    background-position-y: 8px;
+}
         
     </style>
     <style id="custom-bubble-css"></style>
@@ -722,6 +985,9 @@
     <div class="flex gap-2 md:gap-3 text-muted items-center">
 <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
+        
+       <button @click="modals.letter = true" class="hover:text-text transition-colors" title="写信"><i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i></button>
+       
         <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.settings = true; refreshStorageInfo()" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
     </div>
@@ -869,6 +1135,7 @@
         <i data-lucide="image" class="w-5 h-5 stroke-[1.5]"></i>
         <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
     </label>
+    
     <button @click="modals.multiDraft = true" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300 text-muted/80 shrink-0">
         <i data-lucide="layout-list" class="w-5 h-5 stroke-[1.5]"></i>
     </button>
@@ -1348,6 +1615,143 @@
             <img :src="previewImg" class="max-w-full max-h-full object-contain">
         </div>
     </transition>
+    
+    <!-- 信箱弹窗 -->
+<transition name="fade">
+    <div v-if="modals.letter" @click.self="modals.letter = false"
+         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex justify-center items-center px-5">
+        <div class="bg-surface w-full max-w-sm flex flex-col overflow-hidden shadow-2xl rounded-sm max-h-[85vh]"
+             style="border: 1px solid var(--color-border);">
+
+            <!-- 顶栏 + 标签切换 -->
+            <div class="px-6 pt-5 pb-0 flex justify-between items-start">
+                <div class="flex flex-col gap-1">
+                    <span class="text-[13px] tracking-[0.35em] text-text font-light">信 箱</span>
+                    <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">MAILBOX · {{ profiles.them.name }}</span>
+                </div>
+                <button @click="modals.letter = false" class="text-muted/30 hover:text-muted transition-colors mt-0.5">
+                    <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+                </button>
+            </div>
+
+            <!-- 写信 / 信件 切换 -->
+            <div class="flex px-6 pt-3 pb-0 gap-4">
+                <button @click="letterTab = 'write'"
+                        class="text-[11px] tracking-[0.2em] pb-2 border-b-2 transition-all"
+                        :class="letterTab === 'write' ? 'border-text text-text' : 'border-transparent text-muted/40 hover:text-muted'">
+                    写 信
+                </button>
+                <button @click="letterTab = 'inbox'"
+                        class="text-[11px] tracking-[0.2em] pb-2 border-b-2 transition-all relative"
+                        :class="letterTab === 'inbox' ? 'border-text text-text' : 'border-transparent text-muted/40 hover:text-muted'">
+                    往来信件
+                    <span v-if="letterHistory.length > 0" class="ml-1 text-[9px] text-muted/30">({{ letterHistory.length }})</span>
+                </button>
+            </div>
+
+            <div class="mx-6 h-[1px] bg-border/60"></div>
+
+            <!-- 写信面板 -->
+            <template v-if="letterTab === 'write'">
+                <div class="px-6 py-4 flex-1 overflow-y-auto">
+                    <div class="text-[10px] text-muted/40 tracking-[0.2em] mb-2 italic">致 {{ profiles.them.name }}：</div>
+                    <textarea v-model="letterText" rows="8"
+                        class="w-full bg-transparent text-[13px] resize-none outline-none leading-[2] tracking-wide placeholder-muted/20 border-none font-light letter-paper"
+                        placeholder="见字如面...&#10;&#10;落笔写下想对TA说的话"></textarea>
+                </div>
+
+                <div class="mx-6 h-[1px] bg-border/60"></div>
+
+                <!-- 在途状态 + 寄出 -->
+                <div class="px-6 py-4 flex justify-between items-center shrink-0">
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[9px] tracking-[0.2em] text-muted/30 uppercase">预计送达</span>
+                        <span class="text-[11px] tracking-[0.15em] text-muted/50">1 ~ 6 小时后</span>
+                        <span v-if="pendingLetters.length > 0" class="text-[9px] tracking-[0.15em] text-muted/30 mt-1 flex items-center gap-1">
+                            <span class="letter-transit-dot" style="width:3px;height:3px;"></span>
+                            {{ pendingLetters.length }}封信件在途中
+                        </span>
+                    </div>
+                    <button @click="sendLetter"
+                            class="text-[11px] tracking-[0.3em] transition-all px-5 py-2 border uppercase flex items-center gap-2"
+                            :class="letterText.trim()
+                                ? 'text-text border-text/30 hover:bg-text hover:text-bg'
+                                : 'text-muted/20 border-border/30 pointer-events-none'">
+                        <span>寄 出</span>
+                        <span style="font-size:14px;">✉</span>
+                    </button>
+                </div>
+            </template>
+
+            <!-- 信件历史面板 -->
+            <template v-if="letterTab === 'inbox'">
+                <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+                    <!-- 在途信件 -->
+                    <div v-for="pl in pendingLetters" :key="pl.id" class="letter-transit">
+                        <div class="letter-transit-inner">
+                            <div class="letter-transit-dot"></div>
+                            <span>回信途中 · 约 {{ pl.remainText }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 已完成的信件 -->
+                    <div v-if="letterHistory.length === 0 && pendingLetters.length === 0"
+                         class="flex flex-col items-center justify-center py-12 text-muted/30 text-[10px] tracking-[0.25em] gap-2">
+                        <i data-lucide="mail" class="w-5 h-5 stroke-[1]"></i>
+                        <span>尚无信件往来</span>
+                    </div>
+
+                    <div v-for="(pair, idx) in letterHistory" :key="idx"
+                         class="border border-border/40 rounded-sm overflow-hidden">
+
+                        <!-- 我寄出的信 -->
+                        <div class="px-4 py-3 bg-bg/30">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">我的信</span>
+                                <span class="text-[9px] tracking-[0.15em] text-muted/30">{{ pair.sentTime }}</span>
+                            </div>
+                            <div class="text-[12px] leading-[1.9] tracking-wide text-text/80 font-light">
+                                <p v-for="(line, li) in pair.sentContent.split('\n')" :key="li" class="m-0">{{ line }}</p>
+                            </div>
+                            <div class="text-right text-[10px] text-muted/30 italic mt-2 tracking-[0.15em]">{{ profiles.me.name }} 落笔</div>
+                        </div>
+
+                        <!-- 分隔 -->
+                        <div class="h-[1px] bg-border/40"></div>
+
+                        <!-- 对方的回信 -->
+                        <div class="px-4 py-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">{{ profiles.them.name }} 的回信</span>
+                                <span class="text-[9px] tracking-[0.15em] text-muted/30">{{ pair.replyTime }}</span>
+                            </div>
+                            <div class="text-[12px] leading-[1.9] tracking-wide text-text/80 font-light">
+                                <p v-for="(line, li) in pair.replyContent.split('\n')" :key="li" class="m-0">{{ line }}</p>
+                            </div>
+                            <div class="text-right text-[10px] text-muted/30 italic mt-2 tracking-[0.15em]">{{ profiles.them.name }} 亲启</div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+    </div>
+</transition>
+
+<!-- 信件在途提示（3秒自动消失） -->
+<transition name="fade">
+    <div v-if="showLetterToast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-30">
+        <div class="letter-transit">
+            <div class="letter-transit-inner">
+                <div class="letter-transit-dot"></div>
+                <span>信件途中 · {{ pendingLetters.length }}封</span>
+                <span style="font-size:12px;">✉</span>
+            </div>
+        </div>
+    </div>
+</transition>
+    
     <!-- 多条草稿弹窗 -->
 <transition name="fade">
     <div v-if="modals.multiDraft" @click.self="modals.multiDraft = false"
@@ -1527,6 +1931,195 @@ createApp({
         const draftText = ref('');
 const draftLines = computed(() => draftText.value.split('\n').map(l => l.trim()).filter(l => l));
 
+// ── 回信功能 ──
+const letterText = ref('');
+const letterTab = ref('write');
+const letterHistory = ref([]);
+const showLetterToast = ref(false);
+const pendingLetters = ref([]);
+
+// 从 localforage 恢复待送达的信件
+(async () => {
+    try {
+        const saved = await localforage.getItem('jingyu_pending_letters');
+        if (saved && Array.isArray(saved)) {
+            pendingLetters.value = saved;
+        }
+        const hist = await localforage.getItem('jingyu_letter_history');
+        if (hist && Array.isArray(hist)) {
+            letterHistory.value = hist;
+        }
+    } catch(e) {}
+})();
+
+const savePendingLetters = async () => {
+    await localforage.setItem('jingyu_pending_letters', JSON.parse(JSON.stringify(pendingLetters.value)));
+};
+
+const saveLetterHistory = async () => {
+    await localforage.setItem('jingyu_letter_history', JSON.parse(JSON.stringify(letterHistory.value)));
+};
+
+// 计算剩余时间文本
+const updateLetterRemainText = () => {
+    const now = Date.now();
+    pendingLetters.value.forEach(pl => {
+        const remain = Math.max(0, pl.deliverAt - now);
+        if (remain <= 0) {
+            pl.remainText = '即将送达';
+        } else {
+            const h = Math.floor(remain / 3600000);
+            const m = Math.floor((remain % 3600000) / 60000);
+            if (h > 0) pl.remainText = `${h}小时${m}分`;
+            else pl.remainText = `${m}分钟`;
+        }
+    });
+};
+
+const sendLetter = () => {
+    if (!letterText.value.trim()) return;
+    const content = letterText.value.trim();
+    letterText.value = '';
+
+ // 寄信状态弹窗动画
+const overlay = document.createElement('div');
+overlay.className = 'letter-status-overlay';
+overlay.innerHTML = `
+    <div class="ls-bg-ring"></div>
+    <div class="ls-icon" id="ls-icon">✉️</div>
+    <div class="ls-line"></div>
+    <div class="ls-text" id="ls-text"></div>
+    <div class="ls-dots"><div class="ls-dot"></div><div class="ls-dot"></div><div class="ls-dot"></div></div>
+    <div class="ls-sub" id="ls-sub"></div>
+    <div class="ls-timestamp" id="ls-ts"></div>
+`;
+document.body.appendChild(overlay);
+
+const lsIcon = overlay.querySelector('#ls-icon');
+const lsText = overlay.querySelector('#ls-text');
+const lsSub = overlay.querySelector('#ls-sub');
+const lsLine = overlay.querySelector('.ls-line');
+const lsTs = overlay.querySelector('#ls-ts');
+
+// 第一步：信件正在封装
+setTimeout(() => {
+    lsLine.classList.add('show');
+    lsText.textContent = '信件正在封装...';
+    lsText.classList.add('show');
+    lsIcon.classList.add('float');
+}, 400);
+
+// 第二步：信件已寄出
+setTimeout(() => { lsText.classList.remove('show'); lsText.classList.add('hide'); }, 2200);
+setTimeout(() => {
+    lsText.classList.remove('hide');
+    lsText.textContent = '信件已寄出';
+    lsText.classList.add('show');
+    lsIcon.classList.add('fly-away');
+}, 2800);
+
+// 第三步：等待回信
+setTimeout(() => { lsText.classList.remove('show'); lsText.classList.add('hide'); }, 4500);
+setTimeout(() => {
+    lsText.classList.remove('hide');
+    lsText.textContent = '等待对方回信...';
+    lsText.classList.add('show');
+    lsSub.textContent = '信件正在途中，请耐心等待';
+    lsSub.classList.add('show');
+    lsTs.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false }) + ' 寄出';
+    lsTs.classList.add('show');
+}, 5100);
+
+// 淡出
+setTimeout(() => {
+    overlay.classList.add('fade-out');
+    setTimeout(() => overlay.remove(), 1300);
+}, 7200);
+
+    // 随机延迟 1~6 小时（毫秒）
+    const delayMs = (Math.random() * 5 + 1) * 3600 * 1000;
+    const deliverAt = Date.now() + delayMs;
+    const letterId = 'letter_' + Date.now();
+
+    // 从字卡里挑 5~6 句组成回信
+    const allText = replyGroups.value.flatMap(g => g.replies).filter(r => !r.type || r.type === 'text');
+    const pickCount = Math.floor(Math.random() * 2) + 5;
+    let replyLines = [];
+    if (allText.length > 0) {
+        const shuffled = [...allText].sort(() => Math.random() - 0.5);
+        replyLines = shuffled.slice(0, Math.min(pickCount, shuffled.length)).map(r => r.text);
+    } else {
+        replyLines = ['......'];
+    }
+
+    const pending = {
+        id: letterId,
+        deliverAt: deliverAt,
+        replyContent: replyLines.join('\n'),
+        sentContent: content,
+        sentTime: new Date().toLocaleString('zh-CN'),
+        remainText: ''
+    };
+
+    pendingLetters.value.push(pending);
+    updateLetterRemainText();
+    savePendingLetters();
+
+    // 3秒 toast 提示
+    showLetterToast.value = true;
+    setTimeout(() => { showLetterToast.value = false; }, 3000);
+
+    // 设置定时器
+    scheduleLetterDelivery(pending);
+
+    // 切换到信件列表查看
+    letterTab.value = 'inbox';
+};
+
+// 送达回信
+const deliverLetter = (pending) => {
+    // 存入历史
+    letterHistory.value.unshift({
+        id: pending.id,
+        sentContent: pending.sentContent,
+        sentTime: pending.sentTime,
+        replyContent: pending.replyContent,
+        replyTime: new Date().toLocaleString('zh-CN')
+    });
+    saveLetterHistory();
+
+    playSound('them');
+    sendSystemNotif(profiles.them.name, '✉ 你收到了一封回信');
+
+    // 3秒 toast
+    showLetterToast.value = true;
+    setTimeout(() => { showLetterToast.value = false; }, 3000);
+
+    // 从待送达列表中移除
+    pendingLetters.value = pendingLetters.value.filter(p => p.id !== pending.id);
+    savePendingLetters();
+};
+
+// 用 Worker 定时，后台也能触发
+const scheduleLetterDelivery = (pending) => {
+    const remain = Math.max(0, pending.deliverAt - Date.now());
+    if (remain <= 0) {
+        deliverLetter(pending);
+        return;
+    }
+    const code = `setTimeout(() => self.postMessage('deliver'), ${remain})`;
+    const w = new Worker(URL.createObjectURL(new Blob([code])));
+    w.onmessage = () => {
+        w.terminate();
+        deliverLetter(pending);
+    };
+};
+
+// 每分钟更新倒计时文本
+setInterval(() => {
+    updateLetterRemainText();
+}, 60000);
+
         const profiles = reactive({
             me: { name: '我', avatar: '' },
             them: { name: '对方', avatar: '' }
@@ -1539,7 +2132,8 @@ const draftLines = computed(() => draftText.value.split('\n').map(l => l.trim())
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-        const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false });
+const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false });
+        
         const groupEditTarget = ref(null);
         const openGroupEdit = (group) => {
             groupEditTarget.value = { id: group.id, name: group.name, tempName: group.name };
@@ -2377,6 +2971,11 @@ const importAllData = (e) => {
             } catch(e) {}
             if(settings.isDark) document.documentElement.classList.add('dark');
             applyCSS(); applyBg(); setupActiveMsg(); checkNotifPermission(); refreshStorageInfo();
+            
+           // 恢复待送达信件的定时器
+pendingLetters.value.forEach(p => scheduleLetterDelivery(p));
+updateLetterRemainText();
+
             document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') nextTick(lucide.createIcons); });
             // 监听保活唤醒事件，重启后台定时器
             window.addEventListener('jingyu-wakeup', () => {
@@ -2399,6 +2998,7 @@ const importAllData = (e) => {
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
             sendMsg, triggerReply, handleImageUpload, deleteMsg, quoteMsg, setQuote, onTouchStart, onTouchEnd, scrollToMsg, didLongPress, selectedMsgId, draftText, draftLines, sendDraft,
+letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToast,
             shouldShowDate, formatDateSeparator, formatTime, shouldShowAvatar,
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,

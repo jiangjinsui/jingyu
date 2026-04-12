@@ -553,6 +553,53 @@
             color: var(--color-text);
             opacity: 0.6;
         }
+        
+        /* ─── 撤回动画 · 墨散烟消 ─── */
+.msg-withdraw {
+    animation: inkDissolve 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    position: relative;
+    pointer-events: none;
+}
+.msg-withdraw::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at center, var(--color-text) 0%, transparent 70%);
+    opacity: 0;
+    animation: inkSpread 0.6s ease 0.1s forwards;
+    pointer-events: none;
+}
+@keyframes inkDissolve {
+    0%   { opacity: 1; transform: scale(1); filter: blur(0); }
+    40%  { opacity: 0.7; transform: scale(1.03); filter: blur(1px); }
+    70%  { opacity: 0.3; transform: scale(0.97) translateY(-4px); filter: blur(3px); }
+    100% { opacity: 0; transform: scale(0.9) translateY(-12px); filter: blur(8px); height: 0; margin: 0; padding: 0; overflow: hidden; }
+}
+@keyframes inkSpread {
+    0%   { opacity: 0; transform: scale(0.8); }
+    50%  { opacity: 0.06; transform: scale(1.1); }
+    100% { opacity: 0; transform: scale(1.4); }
+}
+
+/* 撤回提示语 */
+.withdraw-hint {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    color: var(--color-muted);
+    opacity: 0;
+    animation: hintFade 2s ease 0.3s forwards;
+    padding: 8px 0;
+    font-style: italic;
+}
+@keyframes hintFade {
+    0%   { opacity: 0; transform: translateY(6px); }
+    30%  { opacity: 0.45; transform: translateY(0); }
+    80%  { opacity: 0.45; }
+    100% { opacity: 0; }
+}
+        
     </style>
     <style id="custom-bubble-css"></style>
 </head>
@@ -1386,14 +1433,78 @@
 
 // ─── Service Worker ───
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(reg => {
-            console.log('SW 注册成功');
-        })
-        .catch(err => {
-            console.log('SW 注册失败', err);
-        });
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
+
+// ─── 后台保活（多重策略）───
+(function() {
+    // 策略1：两个 Worker 互相交替 ping，5s 一次
+    // 浏览器很难同时冻结两个独立线程
+    const makeWorker = (intervalMs) => {
+        const code = `
+let t = setInterval(() => self.postMessage('ping'), ${intervalMs});
+self.onmessage = e => { if(e.data === 'stop') clearInterval(t); };
+        `;
+        return new Worker(URL.createObjectURL(new Blob([code], { type: 'application/javascript' })));
+    };
+
+    const w1 = makeWorker(5000);
+    const w2 = makeWorker(8000); // 错开间隔，不同步
+
+    const onPing = () => {
+        // 顺手 ping SW 保持激活
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage('keepalive');
+        }
+    };
+    w1.onmessage = onPing;
+    w2.onmessage = onPing;
+
+    // 策略2：Screen Wake Lock API（Chrome/Android 支持，防止锁屏）
+    let wakeLock = null;
+    const requestWakeLock = async () => {
+        if (!('wakeLock' in navigator)) return;
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch(e) {}
+    };
+    requestWakeLock();
+
+    // 页面重新可见时重新申请 wakeLock（切屏回来会自动释放需重新申请）
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            requestWakeLock();
+            // 强制唤醒两个 worker
+            w1.postMessage('ping');
+            w2.postMessage('ping');
+        }
+    });
+
+    // 策略3：页面隐藏前记录时间戳，回来时检测是否被冻结太久
+    // 如果冻结超过60s，重新初始化计时器
+    let lastPingTime = Date.now();
+    w1.onmessage = () => {
+        onPing();
+        lastPingTime = Date.now();
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const gap = Date.now() - lastPingTime;
+            if (gap > 60000) {
+                // 被冻结太久了，通知 Vue app 重新触发
+                window.dispatchEvent(new CustomEvent('jingyu-wakeup', { detail: { gap } }));
+            }
+            requestWakeLock();
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        w1.postMessage('stop');
+        w2.postMessage('stop');
+        if (wakeLock) wakeLock.release();
+    });
+})();
 </script>
 
 <script>
@@ -1783,7 +1894,39 @@ const scrollToBottom = async () => {
             reader.readAsDataURL(file); e.target.value = '';
         };
 
-        const deleteMsg = id => messages.value = messages.value.filter(m => m.id !== id);
+        const withdrawHints = [
+    '墨已散，言已隐',
+    '此句化烟，不曾落笔',
+    '覆水难收，唯余空白',
+    '笔墨收回，恍若未书',
+    '风过无痕，字隐无踪',
+    '落笔未干，已随风去',
+    '此言如烟，散入山岚',
+];
+
+const deleteMsg = (id) => {
+    selectedMsgId.value = null;
+    const el = document.getElementById('msg-' + id);
+    if (el) {
+        const bubble = el.querySelector('.msg-bubble');
+        const wrapper = el.querySelector('.flex.group');
+        if (bubble) bubble.classList.add('msg-withdraw');
+
+        // 插入古风提示语
+        const hint = document.createElement('div');
+        hint.className = 'withdraw-hint';
+        hint.textContent = withdrawHints[Math.floor(Math.random() * withdrawHints.length)];
+        if (wrapper) wrapper.after(hint);
+
+        // 动画结束后移除
+        setTimeout(() => {
+            messages.value = messages.value.filter(m => m.id !== id);
+            hint.remove();
+        }, 2200);
+    } else {
+        messages.value = messages.value.filter(m => m.id !== id);
+    }
+};
 
         // ── 引用功能 ──
         const quoteMsg = ref(null);
@@ -2235,6 +2378,10 @@ const importAllData = (e) => {
             if(settings.isDark) document.documentElement.classList.add('dark');
             applyCSS(); applyBg(); setupActiveMsg(); checkNotifPermission(); refreshStorageInfo();
             document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') nextTick(lucide.createIcons); });
+            // 监听保活唤醒事件，重启后台定时器
+            window.addEventListener('jingyu-wakeup', () => {
+                setupActiveMsg();
+            });
             const ta = document.querySelector('textarea');
             if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
             setTimeout(() => {

@@ -2745,10 +2745,19 @@ const bgPreview = ref('');
         };
         
         const exportAllData = async () => {
-    const data = await localforage.getItem('jingyu_data');
+    const data            = await localforage.getItem('jingyu_data');
+    const pendingLetters  = await localforage.getItem('jingyu_pending_letters');
+    const letterHistory   = await localforage.getItem('jingyu_letter_history');
+    const github          = await localforage.getItem('jingyu_github');
     if (!data) { alert('没有数据可导出'); return; }
+    const bundle = {
+        jingyu_data: data,
+        jingyu_pending_letters: pendingLetters || [],
+        jingyu_letter_history:  letterHistory  || [],
+        jingyu_github:          github         || {}
+    };
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(bundle)], { type: 'application/json' }));
     a.download = `此刻，我们正相爱_${Date.now()}.json`;
     a.click();
 };
@@ -2759,12 +2768,18 @@ const importAllData = (e) => {
     const r = new FileReader();
     r.onload = async (ev) => {
         try {
-            const data = JSON.parse(ev.target.result);
+            const bundle = JSON.parse(ev.target.result);
+
+            // 兼容旧格式（直接是 jingyu_data 的内容）
+            const data = bundle.jingyu_data || bundle;
+
             if (!data.messages && !data.profiles && !data.settings && !data.replyGroups) {
                 alert('❌ 不是有效的静语备份文件'); return;
             }
-            if (data.messages) messages.value = data.messages;
-            if (data.profiles) Object.assign(profiles, data.profiles);
+
+            // 恢复主数据
+            if (data.messages)    messages.value = data.messages;
+            if (data.profiles)    Object.assign(profiles, data.profiles);
             if (data.settings) {
                 Object.assign(settings, data.settings);
                 if (settings.isDark) document.documentElement.classList.add('dark');
@@ -2773,6 +2788,25 @@ const importAllData = (e) => {
             }
             if (data.replyGroups) replyGroups.value = data.replyGroups;
             await localforage.setItem('jingyu_data', data);
+
+            // 恢复信件
+            if (bundle.jingyu_pending_letters) {
+                pendingLetters.value = bundle.jingyu_pending_letters;
+                await localforage.setItem('jingyu_pending_letters', bundle.jingyu_pending_letters);
+                pendingLetters.value.forEach(p => scheduleLetterDelivery(p));
+                updateLetterRemainText();
+            }
+            if (bundle.jingyu_letter_history) {
+                letterHistory.value = bundle.jingyu_letter_history;
+                await localforage.setItem('jingyu_letter_history', bundle.jingyu_letter_history);
+            }
+
+            // 恢复 GitHub 设置
+            if (bundle.jingyu_github && Object.keys(bundle.jingyu_github).length) {
+                Object.assign(githubSettings, bundle.jingyu_github);
+                await localforage.setItem('jingyu_github', bundle.jingyu_github);
+            }
+
             alert('✅ 导入成功！');
         } catch (err) { alert('❌ 导入失败：' + err.message); }
     };

@@ -970,36 +970,57 @@
 <header class="h-16 flex items-center justify-between px-4 md:px-6 z-10 shrink-0 relative backdrop-blur-md bg-surface" style="padding-top: 6px;">
     <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
 
-    <!-- 左边：对方头像 + 名字 -->
-    <div class="flex flex-col items-center justify-center gap-0 w-14">
+    <!-- 左边：对方头像 + 名字 + 心情 -->
+    <div class="flex flex-col items-center justify-center gap-0 w-14 relative">
         <div v-if="settings.showAvatar" @click="changeAvatar('them')" class="w-9 h-9 overflow-hidden bg-bg flex items-center justify-center text-muted cursor-pointer hover:scale-105 transition-transform shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
             <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
             <span v-else class="text-sm font-light">{{ profiles.them.name.charAt(0) }}</span>
         </div>
         <span @click="changeName('them')" class="text-[9px] tracking-widest text-muted cursor-pointer hover:text-text transition-colors">{{ profiles.them.name }}</span>
-        <span v-show="isTyping" class="text-[8px] text-muted/60 tracking-widest h-3">输入中</span>
-        <span v-show="!isTyping" class="h-3 inline-block"></span>
+        <!-- 名字下方：打字时显示「输入中」，否则显示心情 -->
+        <span v-if="isTyping" class="h-3 inline-block text-[8px] text-muted/60 tracking-widest truncate max-w-[52px]">输入中</span>
+        <span v-else-if="themCurrentMood" class="h-3 inline-block text-[7px] text-muted/50 tracking-widest truncate max-w-[52px]" style="font-style:italic;">{{ themCurrentMood }}</span>
+        <span v-else class="h-3 inline-block"></span>
     </div>
 
     <!-- 中间：功能按钮 -->
     <div class="flex gap-2 md:gap-3 text-muted items-center">
-<button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <!-- Ta说：在月亮旁边 -->
+        <button @click="modals_contactPanel = true" class="hover:text-text transition-colors text-[9px] tracking-widest leading-none" title="切换联系人">Ta说</button>
         <button @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
-        
-       <button @click="modals.letter = true" class="hover:text-text transition-colors" title="写信"><i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i></button>
-       
+        <button @click="modals.letter = true" class="hover:text-text transition-colors" title="写信"><i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <!-- 爱心 → 打开心情语录管理 -->
+        <button @click="modals.moodManager = true" class="hover:text-text transition-colors" title="心情语录">
+            <i data-lucide="heart" class="w-4 h-4 stroke-[1.5]"></i>
+        </button>
         <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.settings = true; refreshStorageInfo()" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
     </div>
 
-    <!-- 右边：我的头像 + 名字（同高占位） -->
-    <div class="flex flex-col items-center justify-center gap-0 w-14">
+    <!-- 右边：我的头像 + 名字 + 可编辑心情 -->
+    <div class="flex flex-col items-center justify-center gap-0 w-14 relative">
         <div v-if="settings.showAvatar" @click="changeAvatar('me')" class="w-9 h-9 overflow-hidden bg-bg flex items-center justify-center text-muted cursor-pointer hover:scale-105 transition-transform shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
             <img v-if="profiles.me.avatar" :src="profiles.me.avatar" class="w-full h-full object-cover">
             <span v-else class="text-sm font-light">{{ profiles.me.name.charAt(0) }}</span>
         </div>
         <span @click="changeName('me')" class="text-[9px] tracking-widest text-muted cursor-pointer hover:text-text transition-colors">{{ profiles.me.name }}</span>
-        <span class="h-3"></span>
+        <!-- 我的心情：点击可编辑，点空白/回车保存 -->
+        <span v-if="!myMoodEditing && !myCurrentMood"
+              @click.stop="startEditMyMood"
+              class="h-3 inline-block text-[7px] text-muted/30 tracking-widest cursor-pointer hover:text-muted/50 transition-colors truncate max-w-[52px]">心情...</span>
+        <span v-else-if="!myMoodEditing && myCurrentMood"
+              @click.stop="startEditMyMood"
+              class="h-3 inline-block text-[7px] text-muted/60 tracking-widest cursor-pointer hover:text-text transition-colors truncate max-w-[52px]" style="font-style:italic;">{{ myCurrentMood }}</span>
+        <input v-else
+               v-model="myMoodDraft"
+               @blur="saveMyMood"
+               @keydown.enter.prevent="saveMyMood"
+               @click.stop
+               ref="myMoodInput"
+               class="h-3 text-[7px] bg-transparent border-none outline-none text-muted tracking-widest w-14 text-center"
+               maxlength="20"
+               placeholder="输入心情">
     </div>
 </header>
 
@@ -1794,6 +1815,210 @@
     </div>
 </transition>
 
+<!-- ── Ta说：联系人全屏页面 ── -->
+<transition name="fade">
+    <div v-if="modals_contactPanel"
+         class="fixed inset-0 bg-bg z-[110] flex flex-col overflow-hidden">
+
+        <!-- 顶栏 -->
+        <div class="h-14 flex items-center justify-between px-5 shrink-0 relative bg-surface"
+             style="padding-top: env(safe-area-inset-top, 0px);">
+            <button @click="modals_contactPanel = false" class="text-muted hover:text-text transition-colors flex items-center gap-1.5">
+                <i data-lucide="arrow-left" class="w-4 h-4 stroke-[1.5]"></i>
+                <span class="text-[11px] tracking-widest">返回</span>
+            </button>
+            <div class="flex flex-col items-center">
+                <span class="text-[13px] tracking-[0.3em] text-text font-light">Ta 说</span>
+                <span class="text-[8px] tracking-[0.25em] text-muted/40 uppercase">SWITCH · CONTACT</span>
+            </div>
+            <div class="w-16"></div>
+            <div class="absolute bottom-0 left-0 right-0 h-[1px] bg-border/60"></div>
+        </div>
+
+        <!-- 内容区 -->
+        <div class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
+
+            <!-- 当前对话 -->
+            <div>
+                <div class="text-[9px] text-muted/40 tracking-[0.3em] uppercase mb-3">当前对话</div>
+                <div class="flex items-center gap-4 bg-surface rounded-2xl p-4 border border-border/40">
+                    <div class="w-12 h-12 overflow-hidden bg-bg flex items-center justify-center text-muted shrink-0 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                        <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+                        <span v-else class="text-lg font-light">{{ profiles.them.name.charAt(0) }}</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <span class="text-[13px] tracking-wider text-text font-light">{{ profiles.them.name }}</span>
+                        <span v-if="themCurrentMood" class="text-[10px] text-muted/50 italic tracking-wide truncate">{{ themCurrentMood }}</span>
+                        <span v-else class="text-[10px] text-muted/30 tracking-widest">无心情</span>
+                    </div>
+                    <div class="w-6 h-6 flex items-center justify-center">
+                        <div class="w-2 h-2 rounded-full bg-text/20"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 联系人列表 -->
+            <div>
+                <div class="text-[9px] text-muted/40 tracking-[0.3em] uppercase mb-3">联系人</div>
+                <div v-if="contactList.length === 0"
+                     class="flex flex-col items-center justify-center py-10 text-muted/25 text-[10px] tracking-widest gap-2">
+                    <i data-lucide="users" class="w-5 h-5 stroke-[1]"></i>
+                    <span>尚无联系人</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <div v-for="c in contactList" :key="c.id"
+                         class="flex items-center gap-4 bg-surface rounded-2xl p-4 border border-border/30 cursor-pointer hover:border-border/60 active:scale-[0.98] transition-all group/contact"
+                         @click="switchContact(c)">
+                        <!-- 头像（可点击换图） -->
+                        <div class="relative shrink-0" @click.stop>
+                            <div class="w-11 h-11 overflow-hidden bg-bg flex items-center justify-center text-muted shadow-sm cursor-pointer"
+                                 :style="{ borderRadius: settings.avatarRadius + '%' }"
+                                 @click="pickContactAvatar(c)">
+                                <img v-if="c.avatar" :src="c.avatar" class="w-full h-full object-cover">
+                                <span v-else class="text-base font-light">{{ c.name.charAt(0) }}</span>
+                            </div>
+                            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-surface border border-border/40 rounded-full flex items-center justify-center pointer-events-none">
+                                <i data-lucide="camera" class="w-2 h-2 text-muted/40 stroke-[1.5]"></i>
+                            </div>
+                        </div>
+                        <!-- 信息 -->
+                        <div class="flex flex-col gap-1 flex-1 min-w-0" @click.stop>
+                            <!-- 名字可编辑 -->
+                            <input :value="c.name" maxlength="12"
+                                   @change="e => { c.name = e.target.value.trim().substring(0,12); saveContactList(); }"
+                                   @click.stop
+                                   class="bg-transparent text-[13px] tracking-wider text-text outline-none border-none w-full font-light"
+                                   placeholder="联系人名字">
+                            <!-- 心情可编辑 -->
+                            <input :value="c.mood || ''" maxlength="30"
+                                   @change="e => { c.mood = e.target.value.trim(); saveContactList(); }"
+                                   @click.stop
+                                   class="bg-transparent text-[10px] text-muted/50 italic tracking-wide outline-none border-none w-full"
+                                   placeholder="心情...">
+                            <!-- 我的名字 -->
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="text-[8px] text-muted/25 tracking-widest shrink-0">我叫</span>
+                                <input :value="c.myName || ''" maxlength="12"
+                                       @change="e => { c.myName = e.target.value.trim().substring(0,12); saveContactList(); }"
+                                       @click.stop
+                                       class="bg-transparent text-[10px] text-muted/40 tracking-wide outline-none border-none flex-1"
+                                       placeholder="我的名字（可选）">
+                            </div>
+                        </div>
+                        <!-- 切换 + 删除 -->
+                        <div class="flex flex-col items-end gap-2 shrink-0">
+                            <button @click.stop="removeContact(c.id)" class="text-muted/15 hover:text-red-400 transition-colors p-1">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5 stroke-[1.5]"></i>
+                            </button>
+                            <button @click="switchContact(c)"
+                                    class="text-[9px] tracking-widest text-muted/40 hover:text-text border border-border/40 hover:border-border px-2 py-0.5 rounded-lg transition-all">
+                                切换
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 添加新联系人 -->
+            <div>
+                <div class="text-[9px] text-muted/40 tracking-[0.3em] uppercase mb-3">添加联系人</div>
+                <div class="bg-surface rounded-2xl p-4 border border-border/30 flex flex-col gap-3">
+                    <div class="flex gap-3 items-center">
+                        <!-- 新头像预览 -->
+                        <div class="w-11 h-11 overflow-hidden bg-bg flex items-center justify-center text-muted/30 shrink-0 border border-dashed border-border/60 cursor-pointer"
+                             :style="{ borderRadius: settings.avatarRadius + '%' }"
+                             @click="pickNewContactAvatar">
+                            <img v-if="newContactAvatar" :src="newContactAvatar" class="w-full h-full object-cover">
+                            <i v-else data-lucide="plus" class="w-4 h-4 stroke-[1]"></i>
+                        </div>
+                        <div class="flex flex-col gap-2 flex-1">
+                            <input v-model="newContactName" @keydown.enter="addContact" type="text" maxlength="12"
+                                   placeholder="对方名字..."
+                                   class="bg-bg border border-border/60 rounded-xl px-3 py-1.5 text-[12px] outline-none tracking-wider w-full">
+                            <input v-model="newContactMyName" type="text" maxlength="12"
+                                   placeholder="我的名字（在这段对话里叫什么）"
+                                   class="bg-bg border border-border/60 rounded-xl px-3 py-1.5 text-[11px] outline-none tracking-wider w-full text-muted">
+                        </div>
+                    </div>
+                    <button @click="addContact"
+                            class="w-full text-[11px] tracking-[0.25em] border border-text/20 text-text py-2.5 rounded-xl hover:bg-text hover:text-bg transition-all">
+                        添 加
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</transition>
+
+<!-- ── 心情语录管理弹窗 ── -->
+<transition name="fade">
+    <div v-if="modals.moodManager" @click.self="modals.moodManager = false"
+         class="fixed inset-0 bg-black/25 backdrop-blur-sm z-[100] flex items-end justify-center">
+        <div class="bg-surface w-full max-w-md rounded-t-2xl shadow-2xl flex flex-col overflow-hidden"
+             style="border: 1px solid var(--color-border); border-bottom: none; max-height: 75vh;">
+
+            <!-- 把手 -->
+            <div class="flex justify-center pt-3 pb-1 shrink-0">
+                <div class="w-8 h-1 rounded-full bg-border/60"></div>
+            </div>
+
+            <!-- 顶栏 -->
+            <div class="px-5 pt-1 pb-3 flex justify-between items-center shrink-0">
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[13px] tracking-[0.3em] text-text font-light">心情语录</span>
+                    <span class="text-[8px] tracking-[0.25em] text-muted/40 uppercase">TA'S · MOOD</span>
+                </div>
+                <button @click="modals.moodManager = false" class="text-muted/30 hover:text-muted transition-colors">
+                    <i data-lucide="x" class="w-4 h-4 stroke-[1]"></i>
+                </button>
+            </div>
+
+            <div class="h-[1px] mx-5 bg-border/50 shrink-0"></div>
+
+            <!-- 当前心情 -->
+            <div v-if="themCurrentMood" class="mx-5 my-3 px-4 py-2.5 bg-bg border border-border/40 rounded-xl flex items-center justify-between shrink-0">
+                <span class="text-[11px] text-muted/70 italic tracking-wide flex-1 mr-2">{{ themCurrentMood }}</span>
+                <button @click="pickRandomMood(); saveMoodData()"
+                        class="text-[9px] text-muted/30 hover:text-muted tracking-widest transition-colors shrink-0">换一个</button>
+            </div>
+            <div v-else class="mx-5 my-3 px-4 py-2.5 bg-bg/50 border border-dashed border-border/30 rounded-xl shrink-0">
+                <span class="text-[10px] text-muted/25 tracking-widest">还没有心情语录，在下方添加～</span>
+            </div>
+
+            <!-- 语录列表 -->
+            <div class="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-1.5">
+                <div v-for="(mood, mi) in themMoodList" :key="mi"
+                     class="flex items-center gap-3 group/mood py-1.5 px-3 rounded-xl hover:bg-bg/60 transition-colors cursor-pointer"
+                     @click="themCurrentMood = mood; saveMoodData()">
+                    <span class="flex-1 text-[11px] text-text/70 tracking-wide leading-relaxed">{{ mood }}</span>
+                    <div class="flex items-center gap-1 opacity-0 group-hover/mood:opacity-100 transition-opacity">
+                        <span class="text-[8px] text-muted/30 tracking-widest">点击使用</span>
+                        <button @click.stop="themMoodList.splice(mi,1); if(themCurrentMood===mood) pickRandomMood(); saveMoodData()"
+                                class="text-muted/20 hover:text-red-400 transition-colors p-0.5">
+                            <i data-lucide="x" class="w-3 h-3 stroke-[1.5]"></i>
+                        </button>
+                    </div>
+                </div>
+                <div v-if="themMoodList.length === 0" class="text-center text-[10px] text-muted/20 tracking-widest py-4">暂无语录</div>
+            </div>
+
+            <div class="h-[1px] mx-5 bg-border/40 shrink-0"></div>
+
+            <!-- 添加输入框（响应式变量，不用 getElementById） -->
+            <div class="px-5 py-3 flex gap-2 shrink-0" style="padding-bottom: max(env(safe-area-inset-bottom, 12px), 14px);">
+                <input v-model="newMoodText"
+                       @keydown.enter="addMood"
+                       type="text" maxlength="30"
+                       placeholder="添加心情语录..."
+                       class="flex-1 bg-bg border border-border rounded-xl px-4 py-2 text-[12px] outline-none tracking-wider">
+                <button @click="addMood"
+                        class="px-4 bg-text text-bg text-[11px] tracking-widest rounded-xl hover:opacity-80 transition-opacity shrink-0">加</button>
+            </div>
+        </div>
+    </div>
+</transition>
+
     <!-- 多条草稿弹窗 -->
 <transition name="fade">
     <div v-if="modals.multiDraft" @click.self="modals.multiDraft = false"
@@ -1882,10 +2107,9 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// ─── 后台保活（多重策略）───
+// ─── 后台保活（多重策略 · 增强版）───
 (function() {
-    // 策略1：两个 Worker 互相交替 ping，5s 一次
-    // 浏览器很难同时冻结两个独立线程
+    // ── 策略1：两个 Worker 互相交替 ping，防止单线程被冻结 ──
     const makeWorker = (intervalMs) => {
         const code = `
 let t = setInterval(() => self.postMessage('ping'), ${intervalMs});
@@ -1893,57 +2117,50 @@ self.onmessage = e => { if(e.data === 'stop') clearInterval(t); };
         `;
         return new Worker(URL.createObjectURL(new Blob([code], { type: 'application/javascript' })));
     };
+    const w1 = makeWorker(4000);
+    const w2 = makeWorker(7000);
 
-    const w1 = makeWorker(5000);
-    const w2 = makeWorker(8000); // 错开间隔，不同步
+    let lastPingTime = Date.now();
 
     const onPing = () => {
-        // 顺手 ping SW 保持激活
+        lastPingTime = Date.now();
         if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage('keepalive');
+            navigator.serviceWorker.controller.postMessage({ type: 'keepalive' });
         }
     };
     w1.onmessage = onPing;
     w2.onmessage = onPing;
 
-    // 策略2：Screen Wake Lock API（Chrome/Android 支持，防止锁屏）
+    // ── 策略2：Screen Wake Lock API ──
     let wakeLock = null;
     const requestWakeLock = async () => {
         if (!('wakeLock' in navigator)) return;
-        try {
-            wakeLock = await navigator.wakeLock.request('screen');
-        } catch(e) {}
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
     };
     requestWakeLock();
 
-    // 页面重新可见时重新申请 wakeLock（切屏回来会自动释放需重新申请）
+    // ── 策略3：visibilitychange 检测冻结 + 重激活 ──
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             requestWakeLock();
-            // 强制唤醒两个 worker
             w1.postMessage('ping');
             w2.postMessage('ping');
-        }
-    });
-
-    // 策略3：页面隐藏前记录时间戳，回来时检测是否被冻结太久
-    // 如果冻结超过60s，重新初始化计时器
-    let lastPingTime = Date.now();
-    w1.onmessage = () => {
-        onPing();
-        lastPingTime = Date.now();
-    };
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
             const gap = Date.now() - lastPingTime;
-            if (gap > 60000) {
-                // 被冻结太久了，通知 Vue app 重新触发
+            if (gap > 45000) {
+                // 被冻结超过45s，通知 Vue app 重建定时器
                 window.dispatchEvent(new CustomEvent('jingyu-wakeup', { detail: { gap } }));
             }
-            requestWakeLock();
         }
     });
+
+    // ── 策略4：监听 SW 的后台计时触发，转发给 Vue app ──
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', e => {
+            if (e.data && e.data.type === 'SW_FIRE') {
+                window.dispatchEvent(new CustomEvent('jingyu-sw-fire', { detail: e.data }));
+            }
+        });
+    }
 
     window.addEventListener('beforeunload', () => {
         w1.postMessage('stop');
@@ -2159,20 +2376,55 @@ const deliverLetter = (pending) => {
     savePendingLetters();
 };
 
-// 用 Worker 定时，后台也能触发
+// 用 SW 委托计时（页面关闭/切走后依然能触发），Worker 作备份
 const scheduleLetterDelivery = (pending) => {
     const remain = Math.max(0, pending.deliverAt - Date.now());
     if (remain <= 0) {
         deliverLetter(pending);
         return;
     }
+
+    // 优先委托给 SW
+    const swReady = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (swReady) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'SCHEDULE',
+            id: 'letter_' + pending.id,
+            fireAt: pending.deliverAt,
+            notifTitle: '静语',
+            notifBody: `✉ 你收到了一封来自 ${profiles.them.name} 的回信`,
+            clientEvent: 'deliver_letter'
+        });
+        // SW 触发时通过 jingyu-sw-fire 事件回调
+    }
+
+    // 同时用 Worker 计时作备份（页面在前台时更可靠）
     const code = `setTimeout(() => self.postMessage('deliver'), ${remain})`;
     const w = new Worker(URL.createObjectURL(new Blob([code])));
     w.onmessage = () => {
         w.terminate();
+        // 取消 SW 的备份
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'UNSCHEDULE', id: 'letter_' + pending.id });
+        }
         deliverLetter(pending);
     };
 };
+
+// 监听 SW 后台触发的信件送达
+window.addEventListener('jingyu-sw-fire', (e) => {
+    const { id, clientEvent } = e.detail || {};
+    if (clientEvent === 'deliver_letter') {
+        const letterId = id.replace('letter_', '');
+        const pending = pendingLetters.value.find(p => p.id === letterId);
+        if (pending) deliverLetter(pending);
+    }
+    if (clientEvent === 'active_msg_tick') {
+        triggerAutoReply();
+        // 重新注册下一次
+        if (window._scheduleSWActiveTick) window._scheduleSWActiveTick();
+    }
+});
 
 // 每分钟更新倒计时文本
 setInterval(() => {
@@ -2184,6 +2436,186 @@ setInterval(() => {
             them: { name: '对方', avatar: '' }
         });
 
+        // ── 心情功能 ──
+        // 每个 profile 有一个 mood 字段
+        // themMoods: 自定义心情语录池（随机切换）
+        // moodVisible: 控制对方头像下方心情气泡显示
+        const moodVisible = ref(false);
+        const themCurrentMood = ref('');
+        const myCurrentMood = ref('');
+        const themMoodList = ref([]); // 自定义对方心情语录
+        let moodTimer = null;
+
+        const pickRandomMood = () => {
+            if (themMoodList.value.length === 0) return;
+            const pool = themMoodList.value;
+            themCurrentMood.value = pool[Math.floor(Math.random() * pool.length)];
+        };
+
+        const scheduleMoodChange = () => {
+            if (moodTimer) clearTimeout(moodTimer);
+            // 0.5~8h 随机
+            const delay = (0.5 + Math.random() * 7.5) * 3600 * 1000;
+            moodTimer = setTimeout(() => {
+                pickRandomMood();
+                scheduleMoodChange();
+            }, delay);
+        };
+
+        // 我的心情：点空白处自动保存（通过 contenteditable 失焦）
+        const myMoodEditing = ref(false);
+        const myMoodDraft = ref('');
+        const myMoodInput = ref(null);
+        const newMoodText = ref('');
+
+        const addMood = () => {
+            const v = newMoodText.value.trim();
+            if (!v) return;
+            themMoodList.value.push(v);
+            if (!themCurrentMood.value) themCurrentMood.value = v;
+            newMoodText.value = '';
+            saveMoodData();
+        };
+
+        const startEditMyMood = () => {
+            myMoodDraft.value = myCurrentMood.value;
+            myMoodEditing.value = true;
+            nextTick(() => { if (myMoodInput.value) myMoodInput.value.focus(); });
+        };
+        const saveMyMood = () => {
+            if (myMoodDraft.value.trim() !== undefined) {
+                myCurrentMood.value = myMoodDraft.value.trim();
+            }
+            myMoodEditing.value = false;
+            saveMoodData();
+        };
+
+        const saveMoodData = async () => {
+            await localforage.setItem('jingyu_mood', {
+                themCurrentMood: themCurrentMood.value,
+                myCurrentMood: myCurrentMood.value,
+                themMoodList: JSON.parse(JSON.stringify(themMoodList.value))
+            });
+        };
+
+        // ── 联系人切换（Ta说）──
+        const contactList = ref([]); // [{id, name, avatar, mood, myName, myAvatar}]
+        const modals_contactPanel = ref(false);
+        const newContactName = ref('');
+        const newContactMyName = ref('');
+        const newContactAvatar = ref('');
+
+        // 切换联系人：同时刷新我和对方的 profile
+        const switchContact = (contact) => {
+            profiles.them.name = contact.name;
+            profiles.them.avatar = contact.avatar || '';
+            themCurrentMood.value = contact.mood || '';
+            if (contact.myName) profiles.me.name = contact.myName;
+            if (contact.myAvatar) profiles.me.avatar = contact.myAvatar;
+            modals_contactPanel.value = false;
+            saveData();
+            saveMoodData();
+        };
+
+        // 给已有联系人选头像
+        const pickContactAvatar = (contact) => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*';
+            input.onchange = e => {
+                const f = e.target.files[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const c = document.createElement('canvas'), MAX = 200;
+                        const ratio = img.width / img.height;
+                        c.width = ratio >= 1 ? MAX : MAX * ratio;
+                        c.height = ratio >= 1 ? MAX / ratio : MAX;
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                        contact.avatar = c.toDataURL('image/jpeg', 0.85);
+                        saveContactList();
+                    };
+                    img.src = ev.target.result;
+                };
+                r.readAsDataURL(f);
+            };
+            input.click();
+        };
+
+        // 给新联系人选头像
+        const pickNewContactAvatar = () => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*';
+            input.onchange = e => {
+                const f = e.target.files[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const c = document.createElement('canvas'), MAX = 200;
+                        const ratio = img.width / img.height;
+                        c.width = ratio >= 1 ? MAX : MAX * ratio;
+                        c.height = ratio >= 1 ? MAX / ratio : MAX;
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                        newContactAvatar.value = c.toDataURL('image/jpeg', 0.85);
+                    };
+                    img.src = ev.target.result;
+                };
+                r.readAsDataURL(f);
+            };
+            input.click();
+        };
+
+        const addContact = () => {
+            if (!newContactName.value.trim()) return;
+            const newC = {
+                id: 'c_' + Date.now(),
+                name: newContactName.value.trim().substring(0, 12),
+                avatar: newContactAvatar.value || '',
+                mood: '',
+                myName: newContactMyName.value.trim().substring(0, 12) || '',
+                myAvatar: ''
+            };
+            contactList.value.push(newC);
+            newContactName.value = '';
+            newContactMyName.value = '';
+            newContactAvatar.value = '';
+            saveContactList();
+        };
+
+        const removeContact = (id) => {
+            contactList.value = contactList.value.filter(c => c.id !== id);
+            saveContactList();
+        };
+
+        const saveContactList = async () => {
+            try {
+                await localforage.setItem('jingyu_contacts', JSON.parse(JSON.stringify(contactList.value)));
+            } catch(e) { console.warn('保存联系人失败', e); }
+        };
+
+        // 联系人列表深度监听，有变化自动保存
+        watch(contactList, saveContactList, { deep: true });
+
+        // 加载心情 + 联系人
+        (async () => {
+            try {
+                const md = await localforage.getItem('jingyu_mood');
+                if (md) {
+                    if (md.themCurrentMood) themCurrentMood.value = md.themCurrentMood;
+                    if (md.myCurrentMood) myCurrentMood.value = md.myCurrentMood;
+                    if (md.themMoodList) themMoodList.value = md.themMoodList;
+                }
+                const cl = await localforage.getItem('jingyu_contacts');
+                if (cl && Array.isArray(cl)) contactList.value = cl;
+            } catch(e) {}
+            // 启动心情轮换
+            if (themMoodList.value.length > 0 && !themCurrentMood.value) pickRandomMood();
+            scheduleMoodChange();
+        })();
+
         const settings = reactive({
             isDark: false, showAvatar: true, showNickname: false,
             sound: true, delayMin: 1, delayMax: 3,
@@ -2191,7 +2623,7 @@ setInterval(() => {
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false });
+const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, moodManager: false });
 const pendingDeleteIdx = ref(null);
         
         const groupEditTarget = ref(null);
@@ -2389,6 +2821,7 @@ const pendingDeleteIdx = ref(null);
         };
 
         watch([messages, profiles, settings, replyGroups], saveData, { deep: true });
+        watch([themCurrentMood, myCurrentMood, themMoodList], saveMoodData, { deep: true });
 
 const scrollToBottom = async () => {
     await nextTick();
@@ -2482,14 +2915,42 @@ const scrollToBottom = async () => {
 };
         
         let bgWorker = null;
+        let bgSwInterval = null;
         const setupActiveMsg = () => {
+            // 清理旧的
             if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
+            if (bgSwInterval) { clearInterval(bgSwInterval); bgSwInterval = null; }
+
             if (settings.activeMsg) {
                 const interval = (settings.activeInterval || 30) * 1000;
+
+                // Worker 计时（页面在前台时最可靠）
                 const workerCode = `let t=null;self.onmessage=e=>{if(e.data==='s'){clearInterval(t);t=setInterval(()=>self.postMessage('t'),${interval})}else if(e.data==='x')clearInterval(t)}`;
                 bgWorker = new Worker(URL.createObjectURL(new Blob([workerCode])));
                 bgWorker.onmessage = triggerAutoReply;
                 bgWorker.postMessage('s');
+
+                // 同时通过 SW 委托（页面在后台时的备援）
+                // 用 setInterval 形式：每隔 interval 重新向 SW 注册下一次
+                const scheduleSWTick = () => {
+                    if (!settings.activeMsg) return;
+                    const swCtl = navigator.serviceWorker && navigator.serviceWorker.controller;
+                    if (swCtl) {
+                        swCtl.postMessage({
+                            type: 'SCHEDULE',
+                            id: 'active_msg_tick',
+                            fireAt: Date.now() + interval,
+                            clientEvent: 'active_msg_tick'
+                        });
+                    }
+                };
+                scheduleSWTick();
+                // 每次 SW 触发后重新注册（在 jingyu-sw-fire 监听器里调用）
+                window._scheduleSWActiveTick = scheduleSWTick;
+            } else {
+                // 关闭时取消 SW 委托
+                const swCtl = navigator.serviceWorker && navigator.serviceWorker.controller;
+                if (swCtl) swCtl.postMessage({ type: 'UNSCHEDULE', id: 'active_msg_tick' });
             }
         };
 
@@ -3077,6 +3538,7 @@ updateLetterRemainText();
             // 监听保活唤醒事件，重启后台定时器
             window.addEventListener('jingyu-wakeup', () => {
                 setupActiveMsg();
+                scheduleMoodChange();
             });
             const ta = document.querySelector('textarea');
             if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
@@ -3112,7 +3574,14 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,
             addImageReplies, requestNotifPermission, popRandomEmoji,
             stickerImages, addStickers, sendSticker, deleteSticker,
-            storageInfo, refreshStorageInfo
+            storageInfo, refreshStorageInfo,
+            // 心情
+            moodVisible, themCurrentMood, myCurrentMood, themMoodList, myMoodEditing, myMoodDraft, myMoodInput,
+            newMoodText, addMood,
+            startEditMyMood, saveMyMood, pickRandomMood, saveMoodData,
+            // 联系人
+            contactList, modals_contactPanel, newContactName, newContactMyName, newContactAvatar,
+            switchContact, addContact, removeContact, saveContactList, pickContactAvatar, pickNewContactAvatar
         };
     }
 }).mount('#app');

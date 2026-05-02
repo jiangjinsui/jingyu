@@ -983,19 +983,41 @@
         <span v-else class="h-3 inline-block"></span>
     </div>
 
-    <!-- 中间：功能按钮 -->
-    <div class="flex gap-2 md:gap-3 text-muted items-center">
-        <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
-        <!-- Ta说：在月亮旁边 -->
+    <!-- 中间：功能按钮（折叠式） -->
+    <div class="flex gap-2 md:gap-3 text-muted items-center relative">
+
+        <!-- 常驻：Ta说 · 月亮 · 图片 · 折叠按钮 -->
+        <!-- Ta说 在月亮左边 -->
         <button @click="modals_contactPanel = true" class="hover:text-text transition-colors text-[9px] tracking-widest leading-none" title="切换联系人">Ta说</button>
+        <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
-        <button @click="modals.letter = true" class="hover:text-text transition-colors" title="写信"><i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i></button>
-        <!-- 爱心 → 打开心情语录管理 -->
-        <button @click="modals.moodManager = true" class="hover:text-text transition-colors" title="心情语录">
-            <i data-lucide="heart" class="w-4 h-4 stroke-[1.5]"></i>
+
+        <!-- 折叠按钮 -->
+        <button @click="headerExpanded = !headerExpanded"
+                class="hover:text-text transition-colors"
+                :class="headerExpanded ? 'text-text' : ''">
+            <i :data-lucide="headerExpanded ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
-        <button @click="modals.replyManager = true" class="hover:text-text transition-colors"><i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i></button>
-        <button @click="modals.settings = true; refreshStorageInfo()" class="hover:text-text transition-colors"><i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i></button>
+
+        <!-- 折叠栏（向下展开，绝对定位） -->
+        <transition name="fade">
+            <div v-if="headerExpanded"
+                 class="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-surface border border-border/60 rounded-2xl shadow-lg px-4 py-3 flex gap-3 items-center z-40"
+                 style="backdrop-filter: blur(12px);">
+                <button @click="modals.letter = true; headerExpanded = false" class="hover:text-text transition-colors" title="写信">
+                    <i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i>
+                </button>
+                <button @click="modals.moodManager = true; headerExpanded = false" class="hover:text-text transition-colors" title="心情语录">
+                    <i data-lucide="heart" class="w-4 h-4 stroke-[1.5]"></i>
+                </button>
+                <button @click="modals.replyManager = true; headerExpanded = false" class="hover:text-text transition-colors">
+                    <i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i>
+                </button>
+                <button @click="modals.settings = true; refreshStorageInfo(); headerExpanded = false" class="hover:text-text transition-colors">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i>
+                </button>
+            </div>
+        </transition>
     </div>
 
     <!-- 右边：我的头像 + 名字 + 可编辑心情 -->
@@ -1050,7 +1072,7 @@
     </div>
 </transition>
 
-        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col-reverse gap-6 md:gap-8 scroll-smooth pb-20">
+        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col-reverse gap-6 md:gap-8 scroll-smooth pb-20" @click="headerExpanded = false">
 
             <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-muted/40 tracking-widest text-sm space-y-4">
                 <i data-lucide="wind" class="w-6 h-6 stroke-[1]"></i>
@@ -1977,10 +1999,8 @@
             <div class="h-[1px] mx-5 bg-border/50 shrink-0"></div>
 
             <!-- 当前心情 -->
-            <div v-if="themCurrentMood" class="mx-5 my-3 px-4 py-2.5 bg-bg border border-border/40 rounded-xl flex items-center justify-between shrink-0">
-                <span class="text-[11px] text-muted/70 italic tracking-wide flex-1 mr-2">{{ themCurrentMood }}</span>
-                <button @click="pickRandomMood(); saveMoodData()"
-                        class="text-[9px] text-muted/30 hover:text-muted tracking-widest transition-colors shrink-0">换一个</button>
+            <div v-if="themCurrentMood" class="mx-5 my-3 px-4 py-2.5 bg-bg border border-border/40 rounded-xl shrink-0">
+                <span class="text-[11px] text-muted/70 italic tracking-wide">{{ themCurrentMood }}</span>
             </div>
             <div v-else class="mx-5 my-3 px-4 py-2.5 bg-bg/50 border border-dashed border-border/30 rounded-xl shrink-0">
                 <span class="text-[10px] text-muted/25 tracking-widest">还没有心情语录，在下方添加～</span>
@@ -1989,18 +2009,14 @@
             <!-- 语录列表 -->
             <div class="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-1.5">
                 <div v-for="(mood, mi) in themMoodList" :key="mi"
-                     class="flex items-center gap-3 group/mood py-1.5 px-3 rounded-xl hover:bg-bg/60 transition-colors cursor-pointer"
-                     @click="themCurrentMood = mood; saveMoodData()">
+                     class="flex items-center gap-3 group/mood py-1.5 px-3 rounded-xl hover:bg-bg/60 transition-colors">
                     <span class="flex-1 text-[11px] text-text/70 tracking-wide leading-relaxed">{{ mood }}</span>
-                    <div class="flex items-center gap-1 opacity-0 group-hover/mood:opacity-100 transition-opacity">
-                        <span class="text-[8px] text-muted/30 tracking-widest">点击使用</span>
-                        <button @click.stop="themMoodList.splice(mi,1); if(themCurrentMood===mood) pickRandomMood(); saveMoodData()"
-                                class="text-muted/20 hover:text-red-400 transition-colors p-0.5">
-                            <i data-lucide="x" class="w-3 h-3 stroke-[1.5]"></i>
-                        </button>
-                    </div>
+                    <button @click.stop="themMoodList.splice(mi,1); if(themCurrentMood===mood) pickRandomMood(); saveMoodData()"
+                            class="opacity-0 group-hover/mood:opacity-100 text-muted/20 hover:text-red-400 transition-all p-0.5 shrink-0">
+                        <i data-lucide="x" class="w-3 h-3 stroke-[1.5]"></i>
+                    </button>
                 </div>
-                <div v-if="themMoodList.length === 0" class="text-center text-[10px] text-muted/20 tracking-widest py-4">暂无语录</div>
+                <div v-if="themMoodList.length === 0" class="text-center text-[10px] text-muted/20 tracking-widest py-4">暂无语录，在下方添加～</div>
             </div>
 
             <div class="h-[1px] mx-5 bg-border/40 shrink-0"></div>
@@ -2624,6 +2640,7 @@ setInterval(() => {
         });
 
 const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, moodManager: false });
+        const headerExpanded = ref(false);
 const pendingDeleteIdx = ref(null);
         
         const groupEditTarget = ref(null);
@@ -3558,8 +3575,10 @@ updateLetterRemainText();
         });
 
         watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
+        watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
 
         return {
+            headerExpanded,
             chatList, messages, inputText, isTyping, previewImg, notifGranted,
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,

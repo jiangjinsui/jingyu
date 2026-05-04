@@ -86,8 +86,13 @@
             40% { transform: scale(1); opacity: 1; }
         }
 
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease; }
+        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(0.92); opacity: 0.5; }
+            50% { transform: scale(1.08); opacity: 1; }
+        }
 
         input, textarea, button { outline: none !important; box-shadow: none !important; }
         .msg-bubble { line-height: 1.6; letter-spacing: 0.3px; word-break: break-word; }
@@ -970,79 +975,57 @@
 <header class="h-16 flex items-center justify-between px-4 md:px-6 z-10 shrink-0 relative backdrop-blur-md bg-surface" style="padding-top: 6px;">
     <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
 
-    <!-- 左边：对方头像 + 名字 + 心情 -->
-    <div class="flex flex-col items-center justify-center gap-0 w-14 relative">
+    <!-- 左边：对方头像 + 名字 -->
+    <div class="flex flex-col items-center justify-center gap-0 w-14">
         <div v-if="settings.showAvatar" @click="changeAvatar('them')" class="w-9 h-9 overflow-hidden bg-bg flex items-center justify-center text-muted cursor-pointer hover:scale-105 transition-transform shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
             <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
             <span v-else class="text-sm font-light">{{ profiles.them.name.charAt(0) }}</span>
         </div>
         <span @click="changeName('them')" class="text-[9px] tracking-widest text-muted cursor-pointer hover:text-text transition-colors">{{ profiles.them.name }}</span>
-        <!-- 名字下方：打字时显示「输入中」，否则显示心情 -->
-        <span v-if="isTyping" class="h-3 inline-block text-[8px] text-muted/60 tracking-widest truncate max-w-[52px]">输入中</span>
-        <span v-else-if="themCurrentMood" class="h-3 inline-block text-[7px] text-muted/50 tracking-widest truncate max-w-[52px]" style="font-style:italic;">{{ themCurrentMood }}</span>
-        <span v-else class="h-3 inline-block"></span>
+        <span v-show="isTyping" class="text-[8px] text-muted/60 tracking-widest h-3">输入中</span>
+        <span v-show="!isTyping" class="h-3 inline-block"></span>
     </div>
 
-    <!-- 中间：功能按钮（折叠式） -->
-    <div class="flex gap-2 md:gap-3 text-muted items-center relative">
-
-        <!-- 常驻：Ta说 · 月亮 · 图片 · 折叠按钮 -->
+    <!-- 中间：功能按钮 -->
+    <div class="flex gap-3 text-muted items-center relative">
         <!-- Ta说 在月亮左边 -->
-        <button @click="modals_contactPanel = true" class="hover:text-text transition-colors text-[9px] tracking-widest leading-none" title="切换联系人">Ta说</button>
+        <button @click="modals_contactPanel = true" class="hover:text-text transition-colors text-[9px] tracking-widest leading-none">Ta说</button>
         <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button @click="startCall" class="hover:text-text transition-colors" title="通话"><i data-lucide="phone" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
-
-        <!-- 折叠按钮 -->
-        <button @click="headerExpanded = !headerExpanded"
-                class="hover:text-text transition-colors"
-                :class="headerExpanded ? 'text-text' : ''">
-            <i :data-lucide="headerExpanded ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 stroke-[1.5]"></i>
+        <!-- 更多 -->
+        <button @click="headerExpanded = !headerExpanded" class="hover:text-text transition-colors" :class="headerExpanded ? 'text-text' : ''">
+            <i data-lucide="more-horizontal" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
-
-        <!-- 折叠栏（向下展开，绝对定位） -->
+        <!-- 折叠浮层 -->
         <transition name="fade">
             <div v-if="headerExpanded"
-                 class="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-surface border border-border/60 rounded-2xl shadow-lg px-4 py-3 flex gap-3 items-center z-40"
-                 style="backdrop-filter: blur(12px);">
-                <button @click="modals.letter = true; headerExpanded = false" class="hover:text-text transition-colors" title="写信">
+                 class="absolute top-full mt-3 left-1/2 -translate-x-1/2 bg-surface border border-border/50 rounded-2xl shadow-lg px-5 py-3 flex gap-5 items-center z-40"
+                 style="backdrop-filter: blur(16px);">
+                <button @click="modals.letter = true; headerExpanded = false" class="hover:text-text transition-colors flex flex-col items-center gap-1">
                     <i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i>
+                    <span class="text-[8px] tracking-widest">写信</span>
                 </button>
-                <button @click="modals.moodManager = true; headerExpanded = false" class="hover:text-text transition-colors" title="心情语录">
-                    <i data-lucide="heart" class="w-4 h-4 stroke-[1.5]"></i>
-                </button>
-                <button @click="modals.replyManager = true; headerExpanded = false" class="hover:text-text transition-colors">
+                <button @click="modals.replyManager = true; headerExpanded = false" class="hover:text-text transition-colors flex flex-col items-center gap-1">
                     <i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i>
+                    <span class="text-[8px] tracking-widest">字卡库</span>
                 </button>
-                <button @click="modals.settings = true; refreshStorageInfo(); headerExpanded = false" class="hover:text-text transition-colors">
+                <button @click="modals.settings = true; refreshStorageInfo(); headerExpanded = false" class="hover:text-text transition-colors flex flex-col items-center gap-1">
                     <i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i>
+                    <span class="text-[8px] tracking-widest">设置</span>
                 </button>
             </div>
         </transition>
     </div>
 
-    <!-- 右边：我的头像 + 名字 + 可编辑心情 -->
-    <div class="flex flex-col items-center justify-center gap-0 w-14 relative">
+    <!-- 右边：我的头像 + 名字 -->
+    <div class="flex flex-col items-center justify-center gap-0 w-14">
         <div v-if="settings.showAvatar" @click="changeAvatar('me')" class="w-9 h-9 overflow-hidden bg-bg flex items-center justify-center text-muted cursor-pointer hover:scale-105 transition-transform shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
             <img v-if="profiles.me.avatar" :src="profiles.me.avatar" class="w-full h-full object-cover">
             <span v-else class="text-sm font-light">{{ profiles.me.name.charAt(0) }}</span>
         </div>
         <span @click="changeName('me')" class="text-[9px] tracking-widest text-muted cursor-pointer hover:text-text transition-colors">{{ profiles.me.name }}</span>
-        <!-- 我的心情：点击可编辑，点空白/回车保存 -->
-        <span v-if="!myMoodEditing && !myCurrentMood"
-              @click.stop="startEditMyMood"
-              class="h-3 inline-block text-[7px] text-muted/30 tracking-widest cursor-pointer hover:text-muted/50 transition-colors truncate max-w-[52px]">心情...</span>
-        <span v-else-if="!myMoodEditing && myCurrentMood"
-              @click.stop="startEditMyMood"
-              class="h-3 inline-block text-[7px] text-muted/60 tracking-widest cursor-pointer hover:text-text transition-colors truncate max-w-[52px]" style="font-style:italic;">{{ myCurrentMood }}</span>
-        <input v-else
-               v-model="myMoodDraft"
-               @blur="saveMyMood"
-               @keydown.enter.prevent="saveMyMood"
-               @click.stop
-               ref="myMoodInput"
-               class="h-3 text-[7px] bg-transparent border-none outline-none text-muted tracking-widest w-14 text-center"
-               maxlength="20"
-               placeholder="输入心情">
+        <span class="h-3"></span>
     </div>
 </header>
 
@@ -1072,14 +1055,14 @@
     </div>
 </transition>
 
-        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col-reverse gap-6 md:gap-8 scroll-smooth pb-20" @click="headerExpanded = false">
+        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-4 flex flex-col-reverse gap-3 md:gap-4 scroll-smooth pb-20" @click="headerExpanded = false">
 
             <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-muted/40 tracking-widest text-sm space-y-4">
                 <i data-lucide="wind" class="w-6 h-6 stroke-[1]"></i>
                 <span>留 白</span>
             </div>
 
-            <div ref="chatList" class="flex flex-col gap-6 md:gap-8">
+            <div ref="chatList" class="flex flex-col gap-3 md:gap-4">
                 <div v-for="(msg, index) in messages" :key="msg.id" :id="'msg-' + msg.id">
 
                     <div v-if="shouldShowDate(index)" class="flex justify-center my-6 md:my-8">
@@ -1870,8 +1853,6 @@
                     </div>
                     <div class="flex flex-col gap-0.5 flex-1 min-w-0">
                         <span class="text-[13px] tracking-wider text-text font-light">{{ profiles.them.name }}</span>
-                        <span v-if="themCurrentMood" class="text-[10px] text-muted/50 italic tracking-wide truncate">{{ themCurrentMood }}</span>
-                        <span v-else class="text-[10px] text-muted/30 tracking-widest">无心情</span>
                     </div>
                     <div class="w-6 h-6 flex items-center justify-center">
                         <div class="w-2 h-2 rounded-full bg-text/20"></div>
@@ -1973,66 +1954,177 @@
     </div>
 </transition>
 
-<!-- ── 心情语录管理弹窗 ── -->
+<!-- ── 通话 UI ── -->
+
+<!-- 来电：全屏，符合静语风格 -->
 <transition name="fade">
-    <div v-if="modals.moodManager" @click.self="modals.moodManager = false"
-         class="fixed inset-0 bg-black/25 backdrop-blur-sm z-[100] flex items-end justify-center">
-        <div class="bg-surface w-full max-w-md rounded-t-2xl shadow-2xl flex flex-col overflow-hidden"
-             style="border: 1px solid var(--color-border); border-bottom: none; max-height: 75vh;">
+<div v-if="callState === 'incoming'"
+     class="fixed inset-0 z-[300] flex flex-col"
+     :style="callBg ? `background:url('${callBg}') center/cover no-repeat` : 'background: var(--color-bg)'">
 
-            <!-- 把手 -->
-            <div class="flex justify-center pt-3 pb-1 shrink-0">
-                <div class="w-8 h-1 rounded-full bg-border/60"></div>
+    <!-- 背景纹理蒙层（有自定义背景时加深） -->
+    <div v-if="callBg" class="absolute inset-0" style="background:rgba(0,0,0,0.35)"></div>
+
+    <!-- 换背景 -->
+    <label class="absolute top-14 right-5 z-10 cursor-pointer">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center border border-border/60 bg-surface/60" style="backdrop-filter:blur(8px)">
+            <i data-lucide="image" class="w-3 h-3 text-muted stroke-[1.5]"></i>
+        </div>
+        <input type="file" accept="image/*" class="hidden" @change="setCallBg">
+    </label>
+
+    <!-- 主体 -->
+    <div class="relative flex-1 flex flex-col items-center justify-center gap-8">
+        <!-- 头像 + 呼吸光晕 -->
+        <div class="relative flex items-center justify-center">
+            <div class="absolute rounded-full"
+                 :class="callBg ? '' : 'bg-border/40'"
+                 style="width:120px;height:120px;animation:breathe 3s ease-in-out infinite"
+                 :style="callBg ? 'background:rgba(255,255,255,0.06)' : ''"></div>
+            <div class="absolute rounded-full"
+                 :class="callBg ? '' : 'bg-border/20'"
+                 style="width:150px;height:150px;animation:breathe 3s ease-in-out infinite;animation-delay:0.8s"
+                 :style="callBg ? 'background:rgba(255,255,255,0.03)' : ''"></div>
+            <div class="w-20 h-20 overflow-hidden flex items-center justify-center relative z-10 shadow-sm"
+                 :style="`border-radius:${settings.avatarRadius}%;background:var(--color-surface);border:1px solid var(--color-border)`">
+                <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+                <span v-else class="text-3xl font-light text-muted">{{ profiles.them.name.charAt(0) }}</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-2">
+            <span class="text-[22px] font-light tracking-[0.2em]"
+                  :style="callBg ? 'color:rgba(255,255,255,0.9)' : 'color:var(--color-text)'">{{ profiles.them.name }}</span>
+            <span class="text-[10px] tracking-[0.4em]"
+                  :style="callBg ? 'color:rgba(255,255,255,0.35)' : 'color:var(--color-muted)'">来 电</span>
+        </div>
+    </div>
+
+    <!-- 底部按钮 -->
+    <div class="relative pb-20 flex justify-center gap-24">
+        <div class="flex flex-col items-center gap-3">
+            <button @click="hangUp"
+                    class="w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform shadow-sm border"
+                    :style="callBg ? 'background:rgba(239,68,68,0.75);border-color:rgba(239,68,68,0.3)' : 'background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.25)'">
+                <i data-lucide="phone-off" class="w-5 h-5 stroke-[1.5]" :style="callBg ? 'color:white' : 'color:rgb(239,68,68)'"></i>
+            </button>
+            <span class="text-[9px] tracking-[0.35em]" :style="callBg ? 'color:rgba(255,255,255,0.3)' : 'color:var(--color-muted)'">拒 绝</span>
+        </div>
+        <div class="flex flex-col items-center gap-3">
+            <button @click="answerCall"
+                    class="w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform shadow-sm border"
+                    :style="callBg ? 'background:rgba(34,197,94,0.75);border-color:rgba(34,197,94,0.3)' : 'background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.2)'">
+                <i data-lucide="phone" class="w-5 h-5 stroke-[1.5]" :style="callBg ? 'color:white' : 'color:rgb(34,197,94)'"></i>
+            </button>
+            <span class="text-[9px] tracking-[0.35em]" :style="callBg ? 'color:rgba(255,255,255,0.3)' : 'color:var(--color-muted)'">接 听</span>
+        </div>
+    </div>
+</div>
+</transition>
+
+<!-- 通话中 / 拨出 / 拒接：底部悬浮条 -->
+<transition name="slide-up">
+<div v-if="(callState==='outgoing'||callState==='active'||callState==='rejected') && !callMinimized"
+     class="fixed bottom-0 left-0 right-0 z-[300]"
+     style="padding-bottom:env(safe-area-inset-bottom,0px)">
+    <div class="mx-3 mb-3 rounded-2xl shadow-lg overflow-hidden"
+         :style="callBg ? `background:url('${callBg}') center/cover no-repeat` : 'background:var(--color-surface);border:1px solid var(--color-border)'">
+        <!-- 背景蒙层 -->
+        <div v-if="callBg" class="absolute inset-0" style="background:rgba(0,0,0,0.5)"></div>
+
+        <div class="relative flex items-center gap-3 px-4 py-3">
+            <!-- 头像 -->
+            <div class="w-10 h-10 overflow-hidden flex items-center justify-center shrink-0 shadow-sm"
+                 :style="`border-radius:${settings.avatarRadius}%;background:var(--color-bg);border:1px solid var(--color-border)`">
+                <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+                <span v-else class="text-base font-light text-muted">{{ profiles.them.name.charAt(0) }}</span>
             </div>
 
-            <!-- 顶栏 -->
-            <div class="px-5 pt-1 pb-3 flex justify-between items-center shrink-0">
-                <div class="flex flex-col gap-0.5">
-                    <span class="text-[13px] tracking-[0.3em] text-text font-light">心情语录</span>
-                    <span class="text-[8px] tracking-[0.25em] text-muted/40 uppercase">TA'S · MOOD</span>
-                </div>
-                <button @click="modals.moodManager = false" class="text-muted/30 hover:text-muted transition-colors">
-                    <i data-lucide="x" class="w-4 h-4 stroke-[1]"></i>
+            <!-- 名字 + 状态 -->
+            <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+                <span class="text-sm font-light tracking-wider truncate"
+                      :style="callBg ? 'color:rgba(255,255,255,0.85)' : 'color:var(--color-text)'">{{ profiles.them.name }}</span>
+                <span v-if="callState==='outgoing'"
+                      class="text-[10px] tracking-widest"
+                      :style="callBg ? 'color:rgba(255,255,255,0.35)' : 'color:var(--color-muted)'">等待接听…</span>
+                <span v-if="callState==='active'"
+                      class="text-[10px] tracking-widest font-mono"
+                      style="color:rgb(74,222,128)">{{ callDurationStr }}</span>
+                <span v-if="callState==='rejected'"
+                      class="text-[10px] tracking-widest"
+                      :style="callBg ? 'color:rgba(255,255,255,0.3)' : 'color:var(--color-muted)'">未接听</span>
+            </div>
+
+            <!-- 按钮组 -->
+            <div class="flex items-center gap-2 shrink-0">
+                <!-- 换背景 -->
+                <label class="cursor-pointer">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center border active:scale-95 transition-transform"
+                         :style="callBg ? 'background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.1)' : 'background:var(--color-bg);border-color:var(--color-border)'">
+                        <i data-lucide="image" class="w-3 h-3 stroke-[1.5]"
+                           :style="callBg ? 'color:rgba(255,255,255,0.4)' : 'color:var(--color-muted)'"></i>
+                    </div>
+                    <input type="file" accept="image/*" class="hidden" @change="setCallBg">
+                </label>
+                <!-- 缩小 -->
+                <button v-if="callState!=='rejected'"
+                        @click="callMinimized=true"
+                        class="w-8 h-8 rounded-full flex items-center justify-center border active:scale-95 transition-transform"
+                        :style="callBg ? 'background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.1)' : 'background:var(--color-bg);border-color:var(--color-border)'">
+                    <i data-lucide="minimize-2" class="w-3 h-3 stroke-[1.5]"
+                       :style="callBg ? 'color:rgba(255,255,255,0.4)' : 'color:var(--color-muted)'"></i>
                 </button>
-            </div>
-
-            <div class="h-[1px] mx-5 bg-border/50 shrink-0"></div>
-
-            <!-- 当前心情 -->
-            <div v-if="themCurrentMood" class="mx-5 my-3 px-4 py-2.5 bg-bg border border-border/40 rounded-xl shrink-0">
-                <span class="text-[11px] text-muted/70 italic tracking-wide">{{ themCurrentMood }}</span>
-            </div>
-            <div v-else class="mx-5 my-3 px-4 py-2.5 bg-bg/50 border border-dashed border-border/30 rounded-xl shrink-0">
-                <span class="text-[10px] text-muted/25 tracking-widest">还没有心情语录，在下方添加～</span>
-            </div>
-
-            <!-- 语录列表 -->
-            <div class="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-1.5">
-                <div v-for="(mood, mi) in themMoodList" :key="mi"
-                     class="flex items-center gap-3 group/mood py-1.5 px-3 rounded-xl hover:bg-bg/60 transition-colors">
-                    <span class="flex-1 text-[11px] text-text/70 tracking-wide leading-relaxed">{{ mood }}</span>
-                    <button @click.stop="themMoodList.splice(mi,1); if(themCurrentMood===mood) pickRandomMood(); saveMoodData()"
-                            class="opacity-0 group-hover/mood:opacity-100 text-muted/20 hover:text-red-400 transition-all p-0.5 shrink-0">
-                        <i data-lucide="x" class="w-3 h-3 stroke-[1.5]"></i>
-                    </button>
-                </div>
-                <div v-if="themMoodList.length === 0" class="text-center text-[10px] text-muted/20 tracking-widest py-4">暂无语录，在下方添加～</div>
-            </div>
-
-            <div class="h-[1px] mx-5 bg-border/40 shrink-0"></div>
-
-            <!-- 添加输入框（响应式变量，不用 getElementById） -->
-            <div class="px-5 py-3 flex gap-2 shrink-0" style="padding-bottom: max(env(safe-area-inset-bottom, 12px), 14px);">
-                <input v-model="newMoodText"
-                       @keydown.enter="addMood"
-                       type="text" maxlength="30"
-                       placeholder="添加心情语录..."
-                       class="flex-1 bg-bg border border-border rounded-xl px-4 py-2 text-[12px] outline-none tracking-wider">
-                <button @click="addMood"
-                        class="px-4 bg-text text-bg text-[11px] tracking-widest rounded-xl hover:opacity-80 transition-opacity shrink-0">加</button>
+                <!-- 挂断/关闭 -->
+                <button @click="callState==='rejected' ? callState='idle' : hangUp()"
+                        class="w-8 h-8 rounded-full flex items-center justify-center border active:scale-95 transition-transform"
+                        :style="callBg ? 'background:rgba(239,68,68,0.6);border-color:rgba(239,68,68,0.3)' : 'background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2)'">
+                    <i :data-lucide="callState==='rejected'?'x':'phone-off'" class="w-3 h-3 stroke-[1.5]" style="color:rgb(239,68,68)"></i>
+                </button>
             </div>
         </div>
     </div>
+</div>
+</transition>
+
+<!-- 缩小后：右下角小条，可拖动 -->
+<transition name="fade">
+<div v-if="callMinimized && (callState==='outgoing'||callState==='active'||callState==='rejected')"
+     class="fixed z-[300] select-none"
+     :style="`top:${bubbleY}px;left:${bubbleX}px`"
+     @mousedown="startDrag" @touchstart.prevent="startDrag">
+    <div class="flex items-center gap-2 px-3 py-2 rounded-2xl shadow-md cursor-pointer"
+         :style="callBg ? `background:url('${callBg}') center/cover no-repeat` : 'background:var(--color-surface);border:1px solid var(--color-border)'"
+         style="min-width:120px;max-width:180px"
+         @click.stop="!wasDragging && (callMinimized = false)">
+        <div v-if="callBg" class="absolute inset-0 rounded-2xl" style="background:rgba(0,0,0,0.45)"></div>
+        <!-- 头像小 -->
+        <div class="w-7 h-7 overflow-hidden flex items-center justify-center shrink-0 relative z-10"
+             :style="`border-radius:${settings.avatarRadius}%;background:var(--color-bg);border:1px solid var(--color-border)`">
+            <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+            <span v-else class="text-xs font-light text-muted">{{ profiles.them.name.charAt(0) }}</span>
+        </div>
+        <!-- 名字 + 时间 -->
+        <div class="flex flex-col flex-1 min-w-0 relative z-10">
+            <span class="text-[10px] tracking-wider truncate"
+                  :style="callBg ? 'color:rgba(255,255,255,0.8)' : 'color:var(--color-text)'">{{ profiles.them.name }}</span>
+            <span v-if="callState==='active'" class="text-[9px] font-mono tracking-widest" style="color:rgb(74,222,128)">{{ callDurationStr }}</span>
+            <span v-else class="text-[9px] tracking-widest" :style="callBg ? 'color:rgba(255,255,255,0.3)' : 'color:var(--color-muted)'">
+                {{ callState==='outgoing' ? '呼叫中…' : '未接听' }}
+            </span>
+        </div>
+        <!-- 挂断小按钮 -->
+        <button v-if="callState!=='rejected'"
+                @click.stop="hangUp"
+                class="w-6 h-6 rounded-full flex items-center justify-center shrink-0 relative z-10 active:scale-95"
+                style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2)">
+            <i data-lucide="phone-off" class="w-2.5 h-2.5 stroke-[1.5]" style="color:rgb(239,68,68)"></i>
+        </button>
+        <button v-else @click.stop="callState='idle'"
+                class="w-6 h-6 rounded-full flex items-center justify-center shrink-0 relative z-10 active:scale-95 border border-border">
+            <i data-lucide="x" class="w-2.5 h-2.5 stroke-[1.5] text-muted"></i>
+        </button>
+    </div>
+</div>
 </transition>
 
     <!-- 多条草稿弹窗 -->
@@ -2452,66 +2544,117 @@ setInterval(() => {
             them: { name: '对方', avatar: '' }
         });
 
-        // ── 心情功能 ──
-        // 每个 profile 有一个 mood 字段
-        // themMoods: 自定义心情语录池（随机切换）
-        // moodVisible: 控制对方头像下方心情气泡显示
-        const moodVisible = ref(false);
-        const themCurrentMood = ref('');
-        const myCurrentMood = ref('');
-        const themMoodList = ref([]); // 自定义对方心情语录
-        let moodTimer = null;
+        // ── 通话功能 ──
+        const callState = ref('idle');
+        const callMinimized = ref(false);
+        const callBg = ref('');
+        const callDuration = ref(0);
+        const bubbleX = ref(window.innerWidth - 60);
+        const bubbleY = ref(80);
+        const bubbleSize = ref(44);
+        const wasDragging = ref(false);
+        const showBubbleSizer = ref(false);
+        let callDurationTimer = null;
+        let incomingCallTimer = null;
 
-        const pickRandomMood = () => {
-            if (themMoodList.value.length === 0) return;
-            const pool = themMoodList.value;
-            themCurrentMood.value = pool[Math.floor(Math.random() * pool.length)];
+        const callDurationStr = computed(() => {
+            const m = String(Math.floor(callDuration.value / 60)).padStart(2, '0');
+            const s = String(callDuration.value % 60).padStart(2, '0');
+            return `${m}:${s}`;
+        });
+
+        const setCallBg = (e) => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => { callBg.value = ev.target.result; };
+            r.readAsDataURL(f);
         };
 
-        const scheduleMoodChange = () => {
-            if (moodTimer) clearTimeout(moodTimer);
-            // 0.5~8h 随机
-            const delay = (0.5 + Math.random() * 7.5) * 3600 * 1000;
-            moodTimer = setTimeout(() => {
-                pickRandomMood();
-                scheduleMoodChange();
-            }, delay);
+        // 浮球拖拽（拖拽和点击分离）
+        const startDrag = (e) => {
+            const isTouch = !!e.touches;
+            const startX = isTouch ? e.touches[0].clientX : e.clientX;
+            const startY = isTouch ? e.touches[0].clientY : e.clientY;
+            const origX = bubbleX.value;
+            const origY = bubbleY.value;
+            wasDragging.value = false;
+
+            const onMove = (ev) => {
+                const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                const dx = cx - startX, dy = cy - startY;
+                if (Math.abs(dx) > 4 || Math.abs(dy) > 4) wasDragging.value = true;
+                if (wasDragging.value) {
+                    bubbleX.value = Math.max(0, Math.min(window.innerWidth - bubbleSize.value, origX + dx));
+                    bubbleY.value = Math.max(0, Math.min(window.innerHeight - bubbleSize.value, origY + dy));
+                }
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
+                // 没有拖动 → 视为点击，展开回小条
+                if (!wasDragging.value) {
+                    callMinimized.value = false;
+                }
+                setTimeout(() => { wasDragging.value = false; }, 50);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove, { passive: true });
+            document.addEventListener('touchend', onUp);
         };
 
-        // 我的心情：点空白处自动保存（通过 contenteditable 失焦）
-        const myMoodEditing = ref(false);
-        const myMoodDraft = ref('');
-        const myMoodInput = ref(null);
-        const newMoodText = ref('');
-
-        const addMood = () => {
-            const v = newMoodText.value.trim();
-            if (!v) return;
-            themMoodList.value.push(v);
-            if (!themCurrentMood.value) themCurrentMood.value = v;
-            newMoodText.value = '';
-            saveMoodData();
+        const startCall = () => {
+            if (callState.value !== 'idle') return;
+            callMinimized.value = false;
+            callState.value = 'outgoing';
+            nextTick(() => lucide.createIcons());
+            setTimeout(() => {
+                if (callState.value !== 'outgoing') return;
+                if (Math.random() < 0.4) {
+                    callState.value = 'rejected';
+                    nextTick(() => lucide.createIcons());
+                    setTimeout(() => { if (callState.value === 'rejected') callState.value = 'idle'; }, 2500);
+                } else {
+                    callState.value = 'active';
+                    startCallTimer();
+                    nextTick(() => lucide.createIcons());
+                }
+            }, 2000 + Math.random() * 3000);
         };
 
-        const startEditMyMood = () => {
-            myMoodDraft.value = myCurrentMood.value;
-            myMoodEditing.value = true;
-            nextTick(() => { if (myMoodInput.value) myMoodInput.value.focus(); });
-        };
-        const saveMyMood = () => {
-            if (myMoodDraft.value.trim() !== undefined) {
-                myCurrentMood.value = myMoodDraft.value.trim();
-            }
-            myMoodEditing.value = false;
-            saveMoodData();
+        const receiveIncomingCall = () => {
+            if (callState.value !== 'idle') return;
+            callMinimized.value = false;
+            callState.value = 'incoming';
+            nextTick(() => lucide.createIcons());
+            incomingCallTimer = setTimeout(() => {
+                if (callState.value === 'incoming') callState.value = 'idle';
+            }, 30000);
         };
 
-        const saveMoodData = async () => {
-            await localforage.setItem('jingyu_mood', {
-                themCurrentMood: themCurrentMood.value,
-                myCurrentMood: myCurrentMood.value,
-                themMoodList: JSON.parse(JSON.stringify(themMoodList.value))
-            });
+        const answerCall = () => {
+            clearTimeout(incomingCallTimer);
+            callState.value = 'active';
+            startCallTimer();
+            nextTick(() => lucide.createIcons());
+        };
+
+        const hangUp = () => {
+            clearTimeout(incomingCallTimer);
+            clearInterval(callDurationTimer);
+            callDuration.value = 0;
+            callMinimized.value = false;
+            callState.value = 'idle';
+        };
+
+        const startCallTimer = () => {
+            callDuration.value = 0;
+            clearInterval(callDurationTimer);
+            callDurationTimer = setInterval(() => { callDuration.value++; }, 1000);
         };
 
         // ── 联系人切换（Ta说）──
@@ -2525,12 +2668,10 @@ setInterval(() => {
         const switchContact = (contact) => {
             profiles.them.name = contact.name;
             profiles.them.avatar = contact.avatar || '';
-            themCurrentMood.value = contact.mood || '';
             if (contact.myName) profiles.me.name = contact.myName;
             if (contact.myAvatar) profiles.me.avatar = contact.myAvatar;
             modals_contactPanel.value = false;
             saveData();
-            saveMoodData();
         };
 
         // 给已有联系人选头像
@@ -2615,21 +2756,12 @@ setInterval(() => {
         // 联系人列表深度监听，有变化自动保存
         watch(contactList, saveContactList, { deep: true });
 
-        // 加载心情 + 联系人
+        // 加载联系人
         (async () => {
             try {
-                const md = await localforage.getItem('jingyu_mood');
-                if (md) {
-                    if (md.themCurrentMood) themCurrentMood.value = md.themCurrentMood;
-                    if (md.myCurrentMood) myCurrentMood.value = md.myCurrentMood;
-                    if (md.themMoodList) themMoodList.value = md.themMoodList;
-                }
                 const cl = await localforage.getItem('jingyu_contacts');
                 if (cl && Array.isArray(cl)) contactList.value = cl;
             } catch(e) {}
-            // 启动心情轮换
-            if (themMoodList.value.length > 0 && !themCurrentMood.value) pickRandomMood();
-            scheduleMoodChange();
         })();
 
         const settings = reactive({
@@ -2639,8 +2771,9 @@ setInterval(() => {
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, moodManager: false });
+const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false });
         const headerExpanded = ref(false);
+        const appReady = ref(false);
 const pendingDeleteIdx = ref(null);
         
         const groupEditTarget = ref(null);
@@ -2838,7 +2971,6 @@ const pendingDeleteIdx = ref(null);
         };
 
         watch([messages, profiles, settings, replyGroups], saveData, { deep: true });
-        watch([themCurrentMood, myCurrentMood, themMoodList], saveMoodData, { deep: true });
 
 const scrollToBottom = async () => {
     await nextTick();
@@ -2878,6 +3010,13 @@ const scrollToBottom = async () => {
         };
 
         const triggerAutoReply = () => {
+    // 开场动画未结束前不触发任何回复/来电
+    if (!appReady.value) return;
+    // 30% 概率对方主动来电（优先于发消息）
+    if (callState.value === 'idle' && Math.random() < 0.30) {
+        receiveIncomingCall();
+        return;
+    }
     if (isTyping.value) return;
     isTyping.value = true;
     scrollToBottom();
@@ -3555,7 +3694,6 @@ updateLetterRemainText();
             // 监听保活唤醒事件，重启后台定时器
             window.addEventListener('jingyu-wakeup', () => {
                 setupActiveMsg();
-                scheduleMoodChange();
             });
             const ta = document.querySelector('textarea');
             if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
@@ -3563,6 +3701,7 @@ updateLetterRemainText();
                 const splash = document.getElementById('splash-screen');
                 if(splash) { splash.classList.add('hide'); setTimeout(() => splash.remove(), 1300); }
                 nextTick(() => { scrollToBottom(); if(window.formkit && chatList.value) formkit.autoAnimate(chatList.value, {duration: 300}); });
+                appReady.value = true;
             }, 4800);
             lucide.createIcons();
 
@@ -3578,7 +3717,7 @@ updateLetterRemainText();
         watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
 
         return {
-            headerExpanded,
+            headerExpanded, appReady,
             chatList, messages, inputText, isTyping, previewImg, notifGranted,
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
@@ -3594,10 +3733,9 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             addImageReplies, requestNotifPermission, popRandomEmoji,
             stickerImages, addStickers, sendSticker, deleteSticker,
             storageInfo, refreshStorageInfo,
-            // 心情
-            moodVisible, themCurrentMood, myCurrentMood, themMoodList, myMoodEditing, myMoodDraft, myMoodInput,
-            newMoodText, addMood,
-            startEditMyMood, saveMyMood, pickRandomMood, saveMoodData,
+            // 通话
+            callState, callDurationStr, callMinimized, callBg, bubbleX, bubbleY, bubbleSize, wasDragging, showBubbleSizer,
+            startCall, answerCall, hangUp, setCallBg, startDrag,
             // 联系人
             contactList, modals_contactPanel, newContactName, newContactMyName, newContactAvatar,
             switchContact, addContact, removeContact, saveContactList, pickContactAvatar, pickNewContactAvatar

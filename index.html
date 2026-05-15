@@ -86,13 +86,8 @@
             40% { transform: scale(1); opacity: 1; }
         }
 
-        .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease; }
-        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
-
-        @keyframes breathe {
-            0%, 100% { transform: scale(0.92); opacity: 0.5; }
-            50% { transform: scale(1.08); opacity: 1; }
-        }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
 
         input, textarea, button { outline: none !important; box-shadow: none !important; }
         .msg-bubble { line-height: 1.6; letter-spacing: 0.3px; word-break: break-word; }
@@ -867,7 +862,24 @@
     );
     background-position-y: 8px;
 }
-        
+        /* ─── 缺失的动画补充 ─── */
+@keyframes barBounce {
+    0%, 100% { transform: scaleY(0.5); }
+    50% { transform: scaleY(1); }
+}
+
+@keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.08); opacity: 0.9; }
+}
+
+.slide-up-enter-active, .slide-up-leave-active {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.slide-up-enter-from, .slide-up-leave-to {
+    transform: translateY(100%);
+    opacity: 0;
+}
     </style>
     <style id="custom-bubble-css"></style>
 </head>
@@ -1005,6 +1017,9 @@
                 <button @click="modals.letter = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5">
                     <i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i>
                 </button>
+                <button @click="modals.music = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5" :class="musicPlaying ? 'text-text' : ''">
+                    <i data-lucide="music" class="w-4 h-4 stroke-[1.5]"></i>
+                </button>
                 <button @click="modals.replyManager = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5">
                     <i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i>
                 </button>
@@ -1059,14 +1074,14 @@
     </div>
 </transition>
 
-        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-4 flex flex-col-reverse gap-3 md:gap-4 scroll-smooth pb-20" @click="headerExpanded = false">
+        <main id="chat-container" class="flex-1 overflow-y-auto px-5 md:px-8 py-6 flex flex-col-reverse gap-6 md:gap-8 scroll-smooth pb-20">
 
             <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-muted/40 tracking-widest text-sm space-y-4">
                 <i data-lucide="wind" class="w-6 h-6 stroke-[1]"></i>
                 <span>留 白</span>
             </div>
 
-            <div ref="chatList" class="flex flex-col gap-3 md:gap-4">
+            <div ref="chatList" class="flex flex-col gap-6 md:gap-8">
                 <div v-for="(msg, index) in messages" :key="msg.id" :id="'msg-' + msg.id">
 
                     <div v-if="shouldShowDate(index)" class="flex justify-center my-6 md:my-8">
@@ -1102,13 +1117,25 @@
 
     <div class="msg-bubble px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[12px] md:text-[13px] transition-all select-none"
          :class="[
-            msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text',
+            msg.recalled ? 'border border-dashed border-border/60 bg-transparent' : (msg.sender === 'me' ? 'bg-bubbleSend text-text' : 'bg-surface border border-border text-text'),
             'bubble-custom-class'
          ]"
          @click="!didLongPress && (selectedMsgId = selectedMsgId === msg.id ? null : msg.id)"
          @contextmenu.prevent="setQuote(msg)"
          @touchstart="onTouchStart(msg)"
          @touchend="onTouchEnd">
+        <!-- 撤回状态 -->
+        <template v-if="msg.recalled">
+            <span class="text-[11px] text-muted/40 tracking-wider italic">
+                {{ msg.sender === 'them' ? profiles.them.name : '你' }}撤回了一条消息
+            </span>
+            <button v-if="msg.sender === 'them' && msg.recalledContent"
+                    @click.stop="peekRecalled(msg)"
+                    class="ml-2 text-[10px] text-muted/50 hover:text-text transition-colors tracking-wider underline underline-offset-2">
+                查看
+            </button>
+        </template>
+     <template v-else>
         <div v-if="msg.quote" class="quote-block" @click.stop="scrollToMsg(msg.quote.id)">
             <span class="text-[10px] opacity-70">{{ msg.quote.senderName }}：</span>
             <template v-if="msg.quote.type === 'image'">图片</template>
@@ -1118,7 +1145,8 @@
         <template v-else-if="msg.type === 'image'">
             <img :src="msg.content" class="max-w-[75px] md:max-w-[160px] rounded-lg cursor-pointer" @click.stop="previewImg = msg.content">
         </template>
-    </div>
+    </template>
+</div>
 
     <div class="text-[9px] md:text-[10px] text-muted/40 mt-1.5 flex items-center gap-1 tracking-wider px-1 font-sans">
         <span>{{ formatTime(msg.timestamp) }}</span>
@@ -1824,58 +1852,142 @@
     </div>
 </transition>
 
+
+
 <!-- ── 存钱计划 ── -->
 <transition name="fade">
 <div v-if="modals.savings" @click.self="modals.savings = false"
      class="fixed inset-0 bg-black/15 backdrop-blur-sm z-[100] flex items-end justify-center">
     <div class="bg-surface w-full max-w-md flex flex-col overflow-hidden shadow-xl"
-         style="border:1px solid var(--color-border);border-bottom:none;border-radius:20px 20px 0 0;max-height:88vh">
+         style="border:1px solid var(--color-border);border-bottom:none;border-radius:20px 20px 0 0;max-height:92vh">
 
         <div class="flex justify-center pt-3 pb-1 shrink-0">
             <div class="w-7 h-[3px] rounded-full bg-border/60"></div>
         </div>
 
-        <!-- 顶栏 -->
-        <div class="px-6 pt-2 pb-4 flex justify-between items-end shrink-0">
-            <div>
-                <p class="text-[18px] font-light tracking-[0.2em] text-text">{{ savings.goalName || '存钱计划' }}</p>
-                <p class="text-[9px] tracking-[0.3em] text-muted/40 mt-0.5 uppercase">saving · goal</p>
+        <!-- 顶栏 + 目标切换 -->
+        <div class="px-6 pt-2 pb-3 flex justify-between items-start shrink-0">
+            <div class="flex flex-col gap-1">
+                <p class="text-[18px] font-light tracking-[0.2em] text-text">
+                    {{ activeSaving ? activeSaving.name : '存钱计划' }}
+                </p>
+                <p class="text-[9px] tracking-[0.3em] text-muted/40 uppercase">saving · goal</p>
             </div>
-            <button @click="modals.savings = false" class="text-muted/30 hover:text-muted transition-colors mb-1">
-                <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+            <div class="flex items-center gap-2 mt-1">
+                <!-- 新建目标 -->
+                <button @click="addSavingGoal"
+                        class="w-7 h-7 rounded-full border border-border/60 flex items-center justify-center hover:border-border transition-colors text-muted/50 hover:text-text">
+                    <i data-lucide="plus" class="w-3 h-3 stroke-[1.5]"></i>
+                </button>
+                <button @click="modals.savings = false" class="text-muted/30 hover:text-muted transition-colors">
+                    <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 目标列表 tab -->
+        <div v-if="savingGoals.length > 1" class="px-6 pb-2 flex gap-2 overflow-x-auto shrink-0">
+            <button v-for="g in savingGoals" :key="g.id"
+                    @click="activeSavingId = g.id"
+                    class="px-3 py-1 rounded-full text-[10px] tracking-wider border transition-all shrink-0"
+                    :class="activeSavingId === g.id
+                        ? 'border-text/40 text-text bg-text/5'
+                        : 'border-border/40 text-muted/50 hover:border-border'">
+                {{ g.name }}
             </button>
         </div>
 
         <div class="h-[1px] mx-6 bg-border/60 shrink-0"></div>
 
-        <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6">
+        <div v-if="activeSaving" class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
 
-            <!-- 大进度展示 -->
-            <div class="flex flex-col items-center gap-3 py-4">
-                <!-- 圆形进度 -->
-                <div class="relative w-32 h-32 flex items-center justify-center">
+            <!-- 圆形进度 + 统计 -->
+            <div class="flex items-center gap-6">
+                <!-- 进度环 -->
+                <div class="relative w-24 h-24 flex items-center justify-center shrink-0">
                     <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--color-border)" stroke-width="3"/>
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--color-text)" stroke-width="3"
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-border)" stroke-width="4"/>
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-text)" stroke-width="4"
                                 stroke-linecap="round"
-                                :stroke-dasharray="`${savingsProgress * 2.638} 263.8`"
+                                :stroke-dasharray="`${activeSavingProgress * 2.513} 251.3`"
                                 style="transition:stroke-dasharray 0.8s ease"/>
                     </svg>
-                    <div class="flex flex-col items-center">
-                        <span class="text-2xl font-light tracking-wider text-text">{{ savingsProgress }}%</span>
-                        <span class="text-[8px] tracking-[0.3em] text-muted/40 uppercase">reached</span>
+                    <!-- 达成庆祝 -->
+                    <transition name="fade">
+                        <div v-if="activeSavingProgress >= 100" class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-xl">🎉</span>
+                        </div>
+                        <div v-else class="flex flex-col items-center">
+                            <span class="text-lg font-light tracking-wider text-text">{{ activeSavingProgress }}%</span>
+                        </div>
+                    </transition>
+                </div>
+
+                <!-- 右侧统计 -->
+                <div class="flex flex-col gap-2 flex-1">
+                    <div class="flex flex-col">
+                        <span class="text-[9px] text-muted/35 tracking-[0.25em] uppercase">已存</span>
+                        <span class="text-[15px] font-light tracking-wider text-text">¥ {{ savingsFormatNum(activeSaving.current) }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[9px] text-muted/35 tracking-[0.25em] uppercase">目标</span>
+                        <span class="text-[13px] font-light tracking-wider text-text/60">¥ {{ savingsFormatNum(activeSaving.goal) }}</span>
+                    </div>
+                    <div v-if="activeSaving.goal > activeSaving.current" class="flex flex-col">
+                        <span class="text-[9px] text-muted/35 tracking-[0.25em] uppercase">还差</span>
+                        <span class="text-[12px] font-light tracking-wider text-text/50">¥ {{ savingsFormatNum(activeSaving.goal - activeSaving.current) }}</span>
+                    </div>
+                    <div v-else-if="activeSaving.goal > 0">
+                        <span class="text-[10px] text-text/60 tracking-widest">目标达成 ✦</span>
                     </div>
                 </div>
-                <div class="flex flex-col items-center gap-1">
-                    <span class="text-[13px] font-light tracking-wider text-text/80">
-                        ¥ {{ savingsFormatNum(savings.current) }}
-                        <span class="text-muted/40 text-[10px]"> / ¥ {{ savingsFormatNum(savings.goal) }}</span>
+            </div>
+
+            <!-- 里程碑进度条 -->
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between">
+                    <span v-for="m in [25,50,75,100]" :key="m"
+                          class="text-[8px] tracking-widest transition-colors"
+                          :class="activeSavingProgress >= m ? 'text-text/60' : 'text-muted/25'">
+                        {{ m === 100 ? '达成' : m + '%' }}
                     </span>
-                    <span v-if="savings.goal > savings.current" class="text-[9px] text-muted/35 tracking-widest">
-                        还差 ¥ {{ savingsFormatNum(savings.goal - savings.current) }}
-                    </span>
-                    <span v-else-if="savings.goal > 0" class="text-[9px] text-muted/50 tracking-widest">目标达成 ✦</span>
                 </div>
+                <div class="w-full h-[2px] bg-border/50 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-700"
+                         :style="`width:${activeSavingProgress}%;background:var(--color-text)`"></div>
+                </div>
+                <!-- 里程碑标记 -->
+                <div class="relative h-1">
+                    <div v-for="m in [25,50,75]" :key="m"
+                         class="absolute top-0 w-[2px] h-2 rounded-full -translate-y-1/2 transition-colors"
+                         :style="`left:${m}%`"
+                         :class="activeSavingProgress >= m ? 'bg-text/40' : 'bg-border/60'"></div>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-3 gap-2">
+                <div class="flex flex-col items-center gap-1 py-3 border border-border/40 rounded-xl">
+                    <span class="text-[9px] text-muted/35 tracking-widest uppercase">打卡</span>
+                    <span class="text-[15px] font-light text-text">{{ activeSaving.streak }}</span>
+                    <span class="text-[8px] text-muted/30 tracking-widest">天连续</span>
+                </div>
+                <div class="flex flex-col items-center gap-1 py-3 border border-border/40 rounded-xl">
+                    <span class="text-[9px] text-muted/35 tracking-widest uppercase">日均</span>
+                    <span class="text-[15px] font-light text-text">{{ savingsDailyAvg(activeSaving) }}</span>
+                    <span class="text-[8px] text-muted/30 tracking-widest">元/天</span>
+                </div>
+                <div class="flex flex-col items-center gap-1 py-3 border border-border/40 rounded-xl">
+                    <span class="text-[9px] text-muted/35 tracking-widest uppercase">预计</span>
+                    <span class="text-[15px] font-light text-text">{{ savingsDaysLeft(activeSaving) }}</span>
+                    <span class="text-[8px] text-muted/30 tracking-widest">天后达成</span>
+                </div>
+            </div>
+
+            <!-- 截止日期 -->
+            <div v-if="activeSaving.deadline" class="flex items-center justify-between px-4 py-2.5 border border-border/40 rounded-xl">
+                <span class="text-[10px] text-muted/40 tracking-widest">截止日期</span>
+                <span class="text-[11px] text-text/60 tracking-wider">{{ activeSaving.deadline }}</span>
             </div>
 
             <div class="h-[1px] bg-border/40"></div>
@@ -1883,86 +1995,123 @@
             <!-- 目标设置 -->
             <div class="flex flex-col gap-3">
                 <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">目标设置</p>
-                <div class="flex gap-3">
-                    <div class="flex-1 flex flex-col gap-1.5">
-                        <span class="text-[9px] text-muted/40 tracking-widest">目标名称</span>
-                        <input v-model="savings.goalName" type="text" maxlength="20"
-                               placeholder="为了什么在存钱…"
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[9px] text-muted/35 tracking-widest">名称</span>
+                        <input v-model="activeSaving.name" type="text" maxlength="12"
+                               placeholder="存钱目标…"
                                @blur="saveSavings"
-                               class="w-full bg-bg border border-border/60 px-3 py-2 text-[12px] outline-none tracking-wider"
+                               class="bg-bg border border-border/60 px-3 py-2 text-[12px] outline-none tracking-wider w-full"
                                style="border-radius:10px">
                     </div>
-                    <div class="flex-1 flex flex-col gap-1.5">
-                        <span class="text-[9px] text-muted/40 tracking-widest">目标金额 (¥)</span>
-                        <input v-model.number="savings.goalInput" type="number" min="0"
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[9px] text-muted/35 tracking-widest">目标金额 ¥</span>
+                        <input v-model.number="activeSaving.goal" type="number" min="0"
                                placeholder="0"
-                               @blur="savings.goal = savings.goalInput || 0; saveSavings()"
-                               class="w-full bg-bg border border-border/60 px-3 py-2 text-[12px] outline-none tracking-wider font-mono"
+                               @blur="saveSavings"
+                               class="bg-bg border border-border/60 px-3 py-2 text-[12px] outline-none tracking-wider font-mono w-full"
+                               style="border-radius:10px">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[9px] text-muted/35 tracking-widest">截止日期</span>
+                        <input v-model="activeSaving.deadline" type="date"
+                               @blur="saveSavings"
+                               class="bg-bg border border-border/60 px-3 py-2 text-[11px] outline-none tracking-wider w-full text-muted/60"
+                               style="border-radius:10px">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[9px] text-muted/35 tracking-widest">备注</span>
+                        <input v-model="activeSaving.note" type="text" maxlength="20"
+                               placeholder="为了什么…"
+                               @blur="saveSavings"
+                               class="bg-bg border border-border/60 px-3 py-2 text-[11px] outline-none tracking-wider w-full"
                                style="border-radius:10px">
                     </div>
                 </div>
+                <!-- 删除目标 -->
+                <button v-if="savingGoals.length > 1" @click="deleteSavingGoal(activeSaving.id)"
+                        class="text-[9px] text-muted/25 hover:text-red-400/60 tracking-widest transition-colors text-right">
+                    删除此目标
+                </button>
             </div>
 
-            <!-- 今日存入 -->
+            <div class="h-[1px] bg-border/40"></div>
+
+            <!-- 存入 / 取出 -->
             <div class="flex flex-col gap-3">
-                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">存入</p>
-                <div class="flex gap-2 items-center">
-                    <div class="flex-1 flex items-center gap-2 bg-bg border border-border/60 px-3 py-2" style="border-radius:10px">
+                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">记录</p>
+                <div class="flex gap-2">
+                    <div class="flex-1 flex items-center gap-2 bg-bg border border-border/60 px-3 py-2.5" style="border-radius:10px">
                         <span class="text-[10px] text-muted/40">¥</span>
-                        <input v-model.number="savings.addInput" type="number" min="0"
-                               placeholder="输入金额"
-                               @keydown.enter="addSavings"
+                        <input v-model.number="activeSaving.addInput" type="number" min="0"
+                               placeholder="金额"
+                               @keydown.enter="addRecord(true)"
                                class="flex-1 bg-transparent text-[12px] outline-none tracking-wider font-mono">
                     </div>
-                    <button @click="addSavings"
-                            class="px-5 py-2 border border-border/60 text-[11px] tracking-[0.2em] hover:bg-border/30 transition-colors text-text/70"
-                            style="border-radius:10px">
-                        存入
-                    </button>
+                    <input v-model="activeSaving.addNote" type="text" maxlength="15"
+                           placeholder="备注（可选）"
+                           @keydown.enter="addRecord(true)"
+                           class="flex-1 bg-bg border border-border/60 px-3 py-2.5 text-[11px] outline-none tracking-wider"
+                           style="border-radius:10px">
+                </div>
+                <div class="flex gap-2">
+                    <button @click="addRecord(true)"
+                            class="flex-1 py-2.5 border border-border/60 text-[11px] tracking-[0.2em] hover:bg-border/30 transition-colors text-text/70"
+                            style="border-radius:10px">+ 存入</button>
+                    <button @click="addRecord(false)"
+                            class="flex-1 py-2.5 border border-border/40 text-[11px] tracking-[0.2em] hover:bg-border/20 transition-colors text-muted/50"
+                            style="border-radius:10px">− 取出</button>
                 </div>
             </div>
 
-            <!-- 记录 -->
-            <div class="flex flex-col gap-2">
-                <div class="flex justify-between items-center">
-                    <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">记录</p>
-                    <button v-if="savings.records.length" @click="savings.records=[]; savings.current=0; saveSavings()"
-                            class="text-[8px] text-muted/25 hover:text-red-400/60 tracking-widest transition-colors">清空</button>
+            <!-- 趋势图（近7条） -->
+            <div v-if="activeSaving.records.length >= 2" class="flex flex-col gap-2">
+                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">趋势</p>
+                <div class="flex items-end gap-1.5 h-12 px-1">
+                    <div v-for="(r, i) in savingsTrend(activeSaving)" :key="i"
+                         class="flex-1 rounded-sm transition-all duration-500"
+                         :style="`height:${r.h}%;background:${r.type==='in' ? 'var(--color-text)' : 'rgba(239,68,68,0.4)'};opacity:${0.3 + i * 0.1}`">
+                    </div>
                 </div>
-                <div v-if="!savings.records.length" class="text-center text-[10px] text-muted/20 tracking-widest py-3 italic">还没有记录</div>
-                <div class="flex flex-col max-h-44 overflow-y-auto gap-0.5">
-                    <div v-for="(r, i) in [...savings.records].map((r,i)=>({...r,_i:i})).reverse()" :key="r._i"
+            </div>
+
+            <!-- 记录列表 -->
+            <div class="flex flex-col gap-1.5">
+                <div class="flex justify-between items-center">
+                    <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">明细</p>
+                    <button v-if="activeSaving.records.length"
+                            @click="activeSaving.records=[]; activeSaving.current=0; activeSaving.streak=0; saveSavings()"
+                            class="text-[8px] text-muted/20 hover:text-red-400/60 tracking-widest transition-colors">清空</button>
+                </div>
+                <div v-if="!activeSaving.records.length" class="text-center text-[10px] text-muted/20 tracking-widest py-4 italic">暂无记录</div>
+                <div class="flex flex-col max-h-48 overflow-y-auto gap-0.5">
+                    <div v-for="(r, ri) in [...activeSaving.records].reverse()" :key="ri"
                          class="flex items-center gap-2 py-2 px-3 hover:bg-bg/60 transition-colors group/rec"
                          style="border-radius:8px">
-                        <span class="text-[10px] text-muted/40 tracking-wider w-16 shrink-0">{{ r.date }}</span>
-                        <!-- 金额：可点击编辑 -->
-                        <div class="flex-1 flex items-center">
-                            <span v-if="savings.editingIdx !== r._i"
-                                  @click="savings.editingIdx = r._i; savings.editingVal = r.amount"
-                                  class="text-[11px] text-text/60 font-mono cursor-pointer hover:text-text transition-colors">
-                                ＋¥ {{ savingsFormatNum(r.amount) }}
-                            </span>
-                            <div v-else class="flex items-center gap-1">
-                                <span class="text-[10px] text-muted/40">¥</span>
-                                <input v-model.number="savings.editingVal" type="number" min="0"
-                                       @blur="confirmEditRecord(r._i)"
-                                       @keydown.enter="confirmEditRecord(r._i)"
-                                       @keydown.esc="savings.editingIdx = -1"
-                                       class="w-20 bg-bg border border-border/60 px-2 py-0.5 text-[11px] font-mono outline-none"
-                                       style="border-radius:6px"
-                                       ref="editRecordInput">
-                            </div>
-                        </div>
-                        <!-- 删除 -->
-                        <button @click="deleteRecord(r._i)"
-                                class="opacity-0 group-hover/rec:opacity-100 transition-opacity text-muted/20 hover:text-red-400/70 p-0.5 shrink-0">
-                            <i data-lucide="minus" class="w-3 h-3 stroke-[1.5]"></i>
+                        <span class="text-[9px] text-muted/35 tracking-wider w-14 shrink-0">{{ r.date }}</span>
+                        <span class="flex-1 text-[10px] text-muted/40 tracking-wide truncate italic">{{ r.note }}</span>
+                        <span class="text-[11px] font-mono shrink-0"
+                              :class="r.type === 'in' ? 'text-text/60' : 'text-red-400/60'">
+                            {{ r.type === 'in' ? '＋' : '−' }}¥ {{ savingsFormatNum(r.amount) }}
+                        </span>
+                        <button @click="deleteRecord(activeSaving, activeSaving.records.length - 1 - ri)"
+                                class="opacity-0 group-hover/rec:opacity-100 transition-opacity text-muted/20 hover:text-red-400/60 shrink-0">
+                            <i data-lucide="x" class="w-3 h-3 stroke-[1.5]"></i>
                         </button>
                     </div>
                 </div>
             </div>
 
         </div>
+
+        <!-- 无目标时 -->
+        <div v-else class="flex-1 flex flex-col items-center justify-center gap-4 py-16">
+            <span class="text-muted/20 text-[10px] tracking-widest">还没有存钱目标</span>
+            <button @click="addSavingGoal"
+                    class="px-6 py-2.5 border border-border/60 text-[11px] tracking-[0.2em] text-text/60 hover:border-border transition-colors"
+                    style="border-radius:12px">新建目标</button>
+        </div>
+
     </div>
 </div>
 </transition>
@@ -2094,6 +2243,7 @@
         </div>
     </div>
 </transition>
+
 
 <template v-if="appReady">
 <!-- ── 通话 UI ── -->
@@ -2283,6 +2433,143 @@
 </template>
 
 
+
+<!-- ── 背景音乐 ── -->
+<transition name="fade">
+<div v-if="modals.music" @click.self="modals.music = false"
+     class="fixed inset-0 bg-black/15 backdrop-blur-sm z-[100] flex items-end justify-center">
+    <div class="bg-surface w-full max-w-md flex flex-col overflow-hidden shadow-xl"
+         style="border:1px solid var(--color-border);border-bottom:none;border-radius:20px 20px 0 0;max-height:80vh">
+
+        <div class="flex justify-center pt-3 pb-1 shrink-0">
+            <div class="w-7 h-[3px] rounded-full bg-border/60"></div>
+        </div>
+
+        <div class="px-6 pt-2 pb-4 flex justify-between items-end shrink-0">
+            <div>
+                <p class="text-[18px] font-light tracking-[0.2em] text-text">背景音乐</p>
+                <p class="text-[9px] tracking-[0.3em] text-muted/40 mt-0.5 uppercase">ambient · sound</p>
+            </div>
+            <button @click="modals.music = false" class="text-muted/30 hover:text-muted transition-colors mb-1">
+                <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+            </button>
+        </div>
+
+        <div class="h-[1px] mx-6 bg-border/60 shrink-0"></div>
+
+        <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+
+            <!-- 内置氛围音 -->
+            <div class="flex flex-col gap-3">
+                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">内置氛围</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button v-for="s in builtinSounds" :key="s.id"
+                            @click="selectSound(s.id)"
+                            class="flex items-center gap-3 px-4 py-3 border transition-all"
+                            :class="currentSound === s.id && musicPlaying
+                                ? 'border-text/40 bg-text/5'
+                                : 'border-border/50 hover:border-border'"
+                            style="border-radius:12px">
+                        <span class="text-lg">{{ s.emoji }}</span>
+                        <div class="flex flex-col items-start gap-0.5">
+                            <span class="text-[11px] tracking-wider text-text/80">{{ s.name }}</span>
+                            <span class="text-[8px] text-muted/40 tracking-widest">{{ s.desc }}</span>
+                        </div>
+                        <!-- 播放中波纹 -->
+                        <div v-if="currentSound === s.id && musicPlaying"
+                             class="ml-auto flex gap-0.5 items-end h-3">
+                            <div v-for="b in 3" :key="b" class="w-0.5 bg-text/40 rounded-full"
+                                 :style="`height:${[8,12,6][b-1]}px;animation:barBounce 0.8s ease-in-out infinite;animation-delay:${(b-1)*0.15}s`"></div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="h-[1px] bg-border/40"></div>
+
+            <!-- 上传本地音乐 -->
+            <div class="flex flex-col gap-3">
+                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">本地音乐</p>
+                <label class="flex items-center gap-3 px-4 py-3 border border-dashed border-border/50 hover:border-border transition-colors cursor-pointer" style="border-radius:12px">
+                    <i data-lucide="upload" class="w-4 h-4 text-muted/40 stroke-[1.5] shrink-0"></i>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[11px] tracking-wider text-text/60">{{ uploadedMusicName || '上传音频文件' }}</span>
+                        <span class="text-[8px] text-muted/30 tracking-widest">mp3 · wav · ogg · flac</span>
+                    </div>
+                    <input type="file" accept="audio/*" class="hidden" @change="loadLocalMusic">
+                </label>
+                <button v-if="uploadedMusicName"
+                        @click="selectSound('local')"
+                        class="flex items-center gap-3 px-4 py-3 border transition-all"
+                        :class="currentSound === 'local' && musicPlaying ? 'border-text/40 bg-text/5' : 'border-border/50 hover:border-border'"
+                        style="border-radius:12px">
+                    <span class="text-lg">🎵</span>
+                    <span class="text-[11px] tracking-wider text-text/70 flex-1 truncate">{{ uploadedMusicName }}</span>
+                    <div v-if="currentSound === 'local' && musicPlaying"
+                         class="flex gap-0.5 items-end h-3">
+                        <div v-for="b in 3" :key="b" class="w-0.5 bg-text/40 rounded-full"
+                             :style="`height:${[8,12,6][b-1]}px;animation:barBounce 0.8s ease-in-out infinite;animation-delay:${(b-1)*0.15}s`"></div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="h-[1px] bg-border/40"></div>
+
+            <!-- 音量 + 控制 -->
+            <div class="flex flex-col gap-4">
+                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">音量</p>
+                <div class="flex items-center gap-3">
+                    <i data-lucide="volume" class="w-3.5 h-3.5 text-muted/30 stroke-[1.5] shrink-0"></i>
+                    <input type="range" min="0" max="100" v-model.number="musicVolume"
+                           @input="setMusicVolume"
+                           class="flex-1 accent-text/60 cursor-pointer" style="height:2px">
+                    <i data-lucide="volume-2" class="w-3.5 h-3.5 text-muted/30 stroke-[1.5] shrink-0"></i>
+                </div>
+
+                <!-- 播放/暂停 + 停止 -->
+                <div class="flex gap-3">
+                    <button @click="toggleMusic"
+                            class="flex-1 flex items-center justify-center gap-2 py-3 border border-border/60 hover:border-border transition-colors text-[11px] tracking-[0.2em] text-text/70"
+                            style="border-radius:12px">
+                        <i :data-lucide="musicPlaying ? 'pause' : 'play'" class="w-4 h-4 stroke-[1.5]"></i>
+                        {{ musicPlaying ? '暂停' : '播放' }}
+                    </button>
+                    <button v-if="musicPlaying || currentSound" @click="stopMusic"
+                            class="px-5 py-3 border border-border/40 hover:border-border transition-colors text-muted/40 hover:text-muted"
+                            style="border-radius:12px">
+                        <i data-lucide="square" class="w-3.5 h-3.5 stroke-[1.5]"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+</transition>
+
+<!-- ── 查看撤回消息 ── -->
+<transition name="fade">
+<div v-if="peekMsg" @click.self="peekMsg = null"
+     class="fixed inset-0 bg-black/15 backdrop-blur-sm z-[100] flex items-center justify-center px-8">
+    <div class="bg-surface w-full max-w-xs rounded-2xl shadow-xl overflow-hidden"
+         style="border:1px solid var(--color-border)">
+        <div class="px-5 pt-5 pb-2 flex justify-between items-center">
+            <span class="text-[10px] tracking-[0.3em] text-muted/40 uppercase">撤回的消息</span>
+            <button @click="peekMsg = null" class="text-muted/30 hover:text-muted transition-colors">
+                <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+            </button>
+        </div>
+        <div class="px-5 pb-5 pt-2">
+            <div class="bg-bg border border-border/40 rounded-xl px-4 py-3">
+                <p class="text-[12px] text-text/70 tracking-wide leading-relaxed italic">{{ peekMsg }}</p>
+            </div>
+            <p class="text-[8px] text-muted/25 tracking-widest mt-3 text-center">对方已撤回，此内容仅你可见</p>
+        </div>
+    </div>
+</div>
+</transition>
+
+
     <!-- 多条草稿弹窗 -->
 <transition name="fade">
     <div v-if="modals.multiDraft" @click.self="modals.multiDraft = false"
@@ -2371,9 +2658,10 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// ─── 后台保活（多重策略 · 增强版）───
+// ─── 后台保活（多重策略）───
 (function() {
-    // ── 策略1：两个 Worker 互相交替 ping，防止单线程被冻结 ──
+    // 策略1：两个 Worker 互相交替 ping，5s 一次
+    // 浏览器很难同时冻结两个独立线程
     const makeWorker = (intervalMs) => {
         const code = `
 let t = setInterval(() => self.postMessage('ping'), ${intervalMs});
@@ -2381,50 +2669,57 @@ self.onmessage = e => { if(e.data === 'stop') clearInterval(t); };
         `;
         return new Worker(URL.createObjectURL(new Blob([code], { type: 'application/javascript' })));
     };
-    const w1 = makeWorker(4000);
-    const w2 = makeWorker(7000);
 
-    let lastPingTime = Date.now();
+    const w1 = makeWorker(5000);
+    const w2 = makeWorker(8000); // 错开间隔，不同步
 
     const onPing = () => {
-        lastPingTime = Date.now();
+        // 顺手 ping SW 保持激活
         if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: 'keepalive' });
+            navigator.serviceWorker.controller.postMessage('keepalive');
         }
     };
     w1.onmessage = onPing;
     w2.onmessage = onPing;
 
-    // ── 策略2：Screen Wake Lock API ──
+    // 策略2：Screen Wake Lock API（Chrome/Android 支持，防止锁屏）
     let wakeLock = null;
     const requestWakeLock = async () => {
         if (!('wakeLock' in navigator)) return;
-        try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch(e) {}
     };
     requestWakeLock();
 
-    // ── 策略3：visibilitychange 检测冻结 + 重激活 ──
+    // 页面重新可见时重新申请 wakeLock（切屏回来会自动释放需重新申请）
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             requestWakeLock();
+            // 强制唤醒两个 worker
             w1.postMessage('ping');
             w2.postMessage('ping');
-            const gap = Date.now() - lastPingTime;
-            if (gap > 45000) {
-                // 被冻结超过45s，通知 Vue app 重建定时器
-                window.dispatchEvent(new CustomEvent('jingyu-wakeup', { detail: { gap } }));
-            }
         }
     });
 
-    // ── 策略4：监听 SW 的后台计时触发，转发给 Vue app ──
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('message', e => {
-            if (e.data && e.data.type === 'SW_FIRE') {
-                window.dispatchEvent(new CustomEvent('jingyu-sw-fire', { detail: e.data }));
+    // 策略3：页面隐藏前记录时间戳，回来时检测是否被冻结太久
+    // 如果冻结超过60s，重新初始化计时器
+    let lastPingTime = Date.now();
+    w1.onmessage = () => {
+        onPing();
+        lastPingTime = Date.now();
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const gap = Date.now() - lastPingTime;
+            if (gap > 60000) {
+                // 被冻结太久了，通知 Vue app 重新触发
+                window.dispatchEvent(new CustomEvent('jingyu-wakeup', { detail: { gap } }));
             }
-        });
-    }
+            requestWakeLock();
+        }
+    });
 
     window.addEventListener('beforeunload', () => {
         w1.postMessage('stop');
@@ -2640,55 +2935,20 @@ const deliverLetter = (pending) => {
     savePendingLetters();
 };
 
-// 用 SW 委托计时（页面关闭/切走后依然能触发），Worker 作备份
+// 用 Worker 定时，后台也能触发
 const scheduleLetterDelivery = (pending) => {
     const remain = Math.max(0, pending.deliverAt - Date.now());
     if (remain <= 0) {
         deliverLetter(pending);
         return;
     }
-
-    // 优先委托给 SW
-    const swReady = navigator.serviceWorker && navigator.serviceWorker.controller;
-    if (swReady) {
-        navigator.serviceWorker.controller.postMessage({
-            type: 'SCHEDULE',
-            id: 'letter_' + pending.id,
-            fireAt: pending.deliverAt,
-            notifTitle: '静语',
-            notifBody: `✉ 你收到了一封来自 ${profiles.them.name} 的回信`,
-            clientEvent: 'deliver_letter'
-        });
-        // SW 触发时通过 jingyu-sw-fire 事件回调
-    }
-
-    // 同时用 Worker 计时作备份（页面在前台时更可靠）
     const code = `setTimeout(() => self.postMessage('deliver'), ${remain})`;
     const w = new Worker(URL.createObjectURL(new Blob([code])));
     w.onmessage = () => {
         w.terminate();
-        // 取消 SW 的备份
-        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: 'UNSCHEDULE', id: 'letter_' + pending.id });
-        }
         deliverLetter(pending);
     };
 };
-
-// 监听 SW 后台触发的信件送达
-window.addEventListener('jingyu-sw-fire', (e) => {
-    const { id, clientEvent } = e.detail || {};
-    if (clientEvent === 'deliver_letter') {
-        const letterId = id.replace('letter_', '');
-        const pending = pendingLetters.value.find(p => p.id === letterId);
-        if (pending) deliverLetter(pending);
-    }
-    if (clientEvent === 'active_msg_tick') {
-        triggerAutoReply();
-        // 重新注册下一次
-        if (window._scheduleSWActiveTick) window._scheduleSWActiveTick();
-    }
-});
 
 // 每分钟更新倒计时文本
 setInterval(() => {
@@ -2700,277 +2960,6 @@ setInterval(() => {
             them: { name: '对方', avatar: '' }
         });
 
-        // ── 通话功能 ──
-        const callState = ref('idle');
-        const callMinimized = ref(false);
-        const callBg = ref('');
-        const callDuration = ref(0);
-        const bubbleX = ref(window.innerWidth - 60);
-        const bubbleY = ref(80);
-        const bubbleSize = ref(44);
-        const wasDragging = ref(false);
-        const showBubbleSizer = ref(false);
-        let callDurationTimer = null;
-        let incomingCallTimer = null;
-
-        const callDurationStr = computed(() => {
-            const m = String(Math.floor(callDuration.value / 60)).padStart(2, '0');
-            const s = String(callDuration.value % 60).padStart(2, '0');
-            return `${m}:${s}`;
-        });
-
-        const setCallBg = (e) => {
-            const f = e.target.files[0];
-            if (!f) return;
-            const r = new FileReader();
-            r.onload = ev => { callBg.value = ev.target.result; };
-            r.readAsDataURL(f);
-        };
-
-        // 浮球拖拽（拖拽和点击分离）
-        const startDrag = (e) => {
-            const isTouch = !!e.touches;
-            const startX = isTouch ? e.touches[0].clientX : e.clientX;
-            const startY = isTouch ? e.touches[0].clientY : e.clientY;
-            const origX = bubbleX.value;
-            const origY = bubbleY.value;
-            wasDragging.value = false;
-
-            const onMove = (ev) => {
-                const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
-                const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
-                const dx = cx - startX, dy = cy - startY;
-                if (Math.abs(dx) > 4 || Math.abs(dy) > 4) wasDragging.value = true;
-                if (wasDragging.value) {
-                    bubbleX.value = Math.max(0, Math.min(window.innerWidth - bubbleSize.value, origX + dx));
-                    bubbleY.value = Math.max(0, Math.min(window.innerHeight - bubbleSize.value, origY + dy));
-                }
-            };
-            const onUp = () => {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                document.removeEventListener('touchmove', onMove);
-                document.removeEventListener('touchend', onUp);
-                // 没有拖动 → 视为点击，展开回小条
-                if (!wasDragging.value) {
-                    callMinimized.value = false;
-                }
-                setTimeout(() => { wasDragging.value = false; }, 50);
-            };
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-            document.addEventListener('touchmove', onMove, { passive: true });
-            document.addEventListener('touchend', onUp);
-        };
-
-        const startCall = () => {
-            if (callState.value !== 'idle') return;
-            callMinimized.value = false;
-            callState.value = 'outgoing';
-            nextTick(() => lucide.createIcons());
-            setTimeout(() => {
-                if (callState.value !== 'outgoing') return;
-                if (Math.random() < 0.35) {
-                    callState.value = 'rejected';
-                    nextTick(() => lucide.createIcons());
-                    setTimeout(() => { if (callState.value === 'rejected') callState.value = 'idle'; }, 2500);
-                } else {
-                    callState.value = 'active';
-                    startCallTimer();
-                    nextTick(() => lucide.createIcons());
-                }
-            }, 2000 + Math.random() * 3000);
-        };
-
-        const receiveIncomingCall = () => {
-            if (callState.value !== 'idle') return;
-            callMinimized.value = false;
-            callState.value = 'incoming';
-            nextTick(() => lucide.createIcons());
-            incomingCallTimer = setTimeout(() => {
-                if (callState.value === 'incoming') callState.value = 'idle';
-            }, 30000);
-        };
-
-        const answerCall = () => {
-            clearTimeout(incomingCallTimer);
-            callState.value = 'active';
-            startCallTimer();
-            nextTick(() => lucide.createIcons());
-        };
-
-        const hangUp = () => {
-            clearTimeout(incomingCallTimer);
-            clearInterval(callDurationTimer);
-            callDuration.value = 0;
-            callMinimized.value = false;
-            callState.value = 'idle';
-        };
-
-        const startCallTimer = () => {
-            callDuration.value = 0;
-            clearInterval(callDurationTimer);
-            callDurationTimer = setInterval(() => { callDuration.value++; }, 1000);
-        };
-
-        // ── 存钱功能 ──
-        const savings = reactive({
-            goal: 0, goalInput: 0, goalName: '',
-            current: 0, addInput: null, records: [],
-            editingIdx: -1, editingVal: 0
-        });
-        const savingsProgress = computed(() =>
-            savings.goal > 0 ? Math.min(100, Math.round(savings.current / savings.goal * 100)) : 0
-        );
-        const savingsFormatNum = (n) => n ? Number(n).toLocaleString('zh-CN') : '0';
-        const addSavings = () => {
-            const amt = Number(savings.addInput);
-            if (!amt || amt <= 0) return;
-            savings.current += amt;
-            const now = new Date();
-            savings.records.push({ amount: amt, date: `${now.getMonth()+1}月${now.getDate()}日` });
-            savings.addInput = null;
-            saveSavings();
-        };
-        const deleteRecord = (idx) => {
-            savings.current = Math.max(0, savings.current - savings.records[idx].amount);
-            savings.records.splice(idx, 1);
-            savings.editingIdx = -1;
-            saveSavings();
-        };
-        const confirmEditRecord = (idx) => {
-            const newAmt = Number(savings.editingVal);
-            if (newAmt > 0) {
-                savings.current = savings.current - savings.records[idx].amount + newAmt;
-                savings.records[idx].amount = newAmt;
-            }
-            savings.editingIdx = -1;
-            saveSavings();
-        };
-        const saveSavings = async () => {
-            await localforage.setItem('jingyu_savings', JSON.parse(JSON.stringify({
-                goal: savings.goal, goalName: savings.goalName,
-                current: savings.current, records: savings.records
-            })));
-        };
-        (async () => {
-            try {
-                const sd = await localforage.getItem('jingyu_savings');
-                if (sd) {
-                    savings.goal = sd.goal || 0; savings.goalInput = sd.goal || 0;
-                    savings.goalName = sd.goalName || ''; savings.current = sd.current || 0;
-                    savings.records = sd.records || [];
-                }
-            } catch(e) {}
-        })();
-
-        // ── 联系人切换（Ta说）──
-        const contactList = ref([]); // [{id, name, avatar, mood, myName, myAvatar}]
-        const modals_contactPanel = ref(false);
-        const newContactName = ref('');
-        const newContactMyName = ref('');
-        const newContactAvatar = ref('');
-
-        // 切换联系人：同时刷新我和对方的 profile
-        const switchContact = (contact) => {
-            profiles.them.name = contact.name;
-            profiles.them.avatar = contact.avatar || '';
-            if (contact.myName) profiles.me.name = contact.myName;
-            if (contact.myAvatar) profiles.me.avatar = contact.myAvatar;
-            modals_contactPanel.value = false;
-            saveData();
-        };
-
-        // 给已有联系人选头像
-        const pickContactAvatar = (contact) => {
-            const input = document.createElement('input');
-            input.type = 'file'; input.accept = 'image/*';
-            input.onchange = e => {
-                const f = e.target.files[0];
-                if (!f) return;
-                const r = new FileReader();
-                r.onload = ev => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const c = document.createElement('canvas'), MAX = 200;
-                        const ratio = img.width / img.height;
-                        c.width = ratio >= 1 ? MAX : MAX * ratio;
-                        c.height = ratio >= 1 ? MAX / ratio : MAX;
-                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                        contact.avatar = c.toDataURL('image/jpeg', 0.85);
-                        saveContactList();
-                    };
-                    img.src = ev.target.result;
-                };
-                r.readAsDataURL(f);
-            };
-            input.click();
-        };
-
-        // 给新联系人选头像
-        const pickNewContactAvatar = () => {
-            const input = document.createElement('input');
-            input.type = 'file'; input.accept = 'image/*';
-            input.onchange = e => {
-                const f = e.target.files[0];
-                if (!f) return;
-                const r = new FileReader();
-                r.onload = ev => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const c = document.createElement('canvas'), MAX = 200;
-                        const ratio = img.width / img.height;
-                        c.width = ratio >= 1 ? MAX : MAX * ratio;
-                        c.height = ratio >= 1 ? MAX / ratio : MAX;
-                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                        newContactAvatar.value = c.toDataURL('image/jpeg', 0.85);
-                    };
-                    img.src = ev.target.result;
-                };
-                r.readAsDataURL(f);
-            };
-            input.click();
-        };
-
-        const addContact = () => {
-            if (!newContactName.value.trim()) return;
-            const newC = {
-                id: 'c_' + Date.now(),
-                name: newContactName.value.trim().substring(0, 12),
-                avatar: newContactAvatar.value || '',
-                mood: '',
-                myName: newContactMyName.value.trim().substring(0, 12) || '',
-                myAvatar: ''
-            };
-            contactList.value.push(newC);
-            newContactName.value = '';
-            newContactMyName.value = '';
-            newContactAvatar.value = '';
-            saveContactList();
-        };
-
-        const removeContact = (id) => {
-            contactList.value = contactList.value.filter(c => c.id !== id);
-            saveContactList();
-        };
-
-        const saveContactList = async () => {
-            try {
-                await localforage.setItem('jingyu_contacts', JSON.parse(JSON.stringify(contactList.value)));
-            } catch(e) { console.warn('保存联系人失败', e); }
-        };
-
-        // 联系人列表深度监听，有变化自动保存
-        watch(contactList, saveContactList, { deep: true });
-
-        // 加载联系人
-        (async () => {
-            try {
-                const cl = await localforage.getItem('jingyu_contacts');
-                if (cl && Array.isArray(cl)) contactList.value = cl;
-            } catch(e) {}
-        })();
-
         const settings = reactive({
             isDark: false, showAvatar: true, showNickname: false,
             sound: true, delayMin: 1, delayMax: 3,
@@ -2978,9 +2967,7 @@ setInterval(() => {
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, savings: false });
-        const headerExpanded = ref(false);
-        const appReady = ref(false);
+const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, savings: false, music: false });
 const pendingDeleteIdx = ref(null);
         
         const groupEditTarget = ref(null);
@@ -3204,6 +3191,14 @@ const scrollToBottom = async () => {
             if (sender === 'them') {
                 const displayText = type === 'image' ? '[图片]' : txt;
                 sendSystemNotif(profiles.them.name, displayText);
+                // 15% 概率在 3~8 秒后撤回
+                if (type === 'text' && Math.random() < 0.15) {
+                    const recallDelay = (3 + Math.random() * 5) * 1000;
+                    setTimeout(() => {
+                        const m = messages.value.find(x => x.id === msgId);
+                        if (m && !m.recalled) { m.recalledContent = m.content; m.recalled = true; }
+                    }, recallDelay);
+                }
             }
             if (sender === 'me') {
                 const readDelay = Math.random() * 1500 + 1200;
@@ -3217,8 +3212,6 @@ const scrollToBottom = async () => {
         };
 
         const triggerAutoReply = () => {
-    // 开场动画未结束前不触发任何回复/来电
-    if (!appReady.value) return;
     if (isTyping.value) return;
     isTyping.value = true;
     scrollToBottom();
@@ -3273,42 +3266,14 @@ const scrollToBottom = async () => {
 };
         
         let bgWorker = null;
-        let bgSwInterval = null;
         const setupActiveMsg = () => {
-            // 清理旧的
             if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
-            if (bgSwInterval) { clearInterval(bgSwInterval); bgSwInterval = null; }
-
             if (settings.activeMsg) {
                 const interval = (settings.activeInterval || 30) * 1000;
-
-                // Worker 计时（页面在前台时最可靠）
                 const workerCode = `let t=null;self.onmessage=e=>{if(e.data==='s'){clearInterval(t);t=setInterval(()=>self.postMessage('t'),${interval})}else if(e.data==='x')clearInterval(t)}`;
                 bgWorker = new Worker(URL.createObjectURL(new Blob([workerCode])));
                 bgWorker.onmessage = triggerAutoReply;
                 bgWorker.postMessage('s');
-
-                // 同时通过 SW 委托（页面在后台时的备援）
-                // 用 setInterval 形式：每隔 interval 重新向 SW 注册下一次
-                const scheduleSWTick = () => {
-                    if (!settings.activeMsg) return;
-                    const swCtl = navigator.serviceWorker && navigator.serviceWorker.controller;
-                    if (swCtl) {
-                        swCtl.postMessage({
-                            type: 'SCHEDULE',
-                            id: 'active_msg_tick',
-                            fireAt: Date.now() + interval,
-                            clientEvent: 'active_msg_tick'
-                        });
-                    }
-                };
-                scheduleSWTick();
-                // 每次 SW 触发后重新注册（在 jingyu-sw-fire 监听器里调用）
-                window._scheduleSWActiveTick = scheduleSWTick;
-            } else {
-                // 关闭时取消 SW 委托
-                const swCtl = navigator.serviceWorker && navigator.serviceWorker.controller;
-                if (swCtl) swCtl.postMessage({ type: 'UNSCHEDULE', id: 'active_msg_tick' });
             }
         };
 
@@ -3901,25 +3866,25 @@ updateLetterRemainText();
             if(ta) ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=this.scrollHeight+'px'; });
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
-                if(splash) { splash.classList.add('hide'); setTimeout(() => splash.remove(), 1300); }
-                nextTick(() => { scrollToBottom(); if(window.formkit && chatList.value) formkit.autoAnimate(chatList.value, {duration: 300}); });
-                appReady.value = true;
-
-                // 独立随机来电：和消息完全解耦
-                // 每次通话结束/拒绝后重新调度，间隔完全随机
-                const scheduleRandomCall = () => {
-                    // 基础等待：用一个随机种子决定这次"会不会来电"
-                    // 每隔一段随机等待后掷一次骰子，没中就继续等下一次
-                    const wait = (5 + Math.random() * 85) * 60 * 1000; // 5~90分钟等一次机会
+                if(splash) {
+                    splash.classList.add('hide');
                     setTimeout(() => {
-                        if (!appReady.value) { scheduleRandomCall(); return; }
-                        if (callState.value === 'idle' && Math.random() < 0.18) {
-                            receiveIncomingCall();
-                        }
-                        scheduleRandomCall(); // 无论中没中，继续排下一次
-                    }, wait);
-                };
-                scheduleRandomCall();
+                        splash.remove();
+                        nextTick(() => { scrollToBottom(); if(window.formkit && chatList.value) formkit.autoAnimate(chatList.value, {duration: 300}); });
+                        appReady.value = true;
+                        // 随机来电调度（5~90分钟一次机会，18%概率触发）
+                        const scheduleRandomCall = () => {
+                            const wait = (5 + Math.random() * 85) * 60 * 1000;
+                            setTimeout(() => {
+                                if (callState.value === 'idle' && Math.random() < 0.18) receiveIncomingCall();
+                                scheduleRandomCall();
+                            }, wait);
+                        };
+                        scheduleRandomCall();
+                    }, 1300);
+                } else {
+                    appReady.value = true;
+                }
             }, 4800);
             lucide.createIcons();
 
@@ -3931,11 +3896,432 @@ updateLetterRemainText();
             }
         });
 
+        // ══════════════════════════════════════
+        // 新功能区
+        // ══════════════════════════════════════
+
+        // ── 顶栏折叠 & appReady ──
+        const headerExpanded = ref(false);
+        const appReady = ref(false);
+        watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
+
+        // ── 撤回消息 ──
+        const peekMsg = ref(null);
+        const peekRecalled = (msg) => {
+            peekMsg.value = msg.recalledContent;
+            nextTick(() => lucide.createIcons());
+        };
+
+        // ── 通话功能 ──
+        const callState = ref('idle');
+        const callMinimized = ref(false);
+        const callBg = ref('');
+        const callDuration = ref(0);
+        const bubbleX = ref(window.innerWidth - 60);
+        const bubbleY = ref(80);
+        const bubbleSize = ref(44);
+        const wasDragging = ref(false);
+        const showBubbleSizer = ref(false);
+        let callDurationTimer = null;
+        let incomingCallTimer = null;
+
+        const callDurationStr = computed(() => {
+            const m = String(Math.floor(callDuration.value / 60)).padStart(2,'0');
+            const s = String(callDuration.value % 60).padStart(2,'0');
+            return `${m}:${s}`;
+        });
+
+        const setCallBg = (e) => {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => { callBg.value = ev.target.result; };
+            r.readAsDataURL(f);
+        };
+
+        const startDrag = (e) => {
+            const isTouch = !!e.touches;
+            const startX = isTouch ? e.touches[0].clientX : e.clientX;
+            const startY = isTouch ? e.touches[0].clientY : e.clientY;
+            const origX = bubbleX.value, origY = bubbleY.value;
+            wasDragging.value = false;
+            const onMove = (ev) => {
+                const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                const dx = cx-startX, dy = cy-startY;
+                if (Math.abs(dx)>4||Math.abs(dy)>4) wasDragging.value = true;
+                if (wasDragging.value) {
+                    bubbleX.value = Math.max(0, Math.min(window.innerWidth-bubbleSize.value, origX+dx));
+                    bubbleY.value = Math.max(0, Math.min(window.innerHeight-bubbleSize.value, origY+dy));
+                }
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
+                if (!wasDragging.value) callMinimized.value = false;
+                setTimeout(() => { wasDragging.value = false; }, 50);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove, {passive:true});
+            document.addEventListener('touchend', onUp);
+        };
+
+        const startCallTimer = () => {
+            callDuration.value = 0;
+            clearInterval(callDurationTimer);
+            callDurationTimer = setInterval(() => { callDuration.value++; }, 1000);
+        };
+
+        const receiveIncomingCall = () => {
+            if (callState.value !== 'idle') return;
+            callMinimized.value = false;
+            callState.value = 'incoming';
+            nextTick(() => lucide.createIcons());
+            incomingCallTimer = setTimeout(() => {
+                if (callState.value === 'incoming') callState.value = 'idle';
+            }, 30000);
+        };
+
+        const answerCall = () => {
+            clearTimeout(incomingCallTimer);
+            callState.value = 'active';
+            startCallTimer();
+            nextTick(() => lucide.createIcons());
+        };
+
+        const hangUp = () => {
+            clearTimeout(incomingCallTimer);
+            clearInterval(callDurationTimer);
+            callDuration.value = 0;
+            callMinimized.value = false;
+            callState.value = 'idle';
+        };
+
+        const startCall = () => {
+            if (callState.value !== 'idle') return;
+            callMinimized.value = false;
+            callState.value = 'outgoing';
+            nextTick(() => lucide.createIcons());
+            setTimeout(() => {
+                if (callState.value !== 'outgoing') return;
+                if (Math.random() < 0.35) {
+                    callState.value = 'rejected';
+                    nextTick(() => lucide.createIcons());
+                    setTimeout(() => { if (callState.value==='rejected') callState.value='idle'; }, 2500);
+                } else {
+                    callState.value = 'active';
+                    startCallTimer();
+                    nextTick(() => lucide.createIcons());
+                }
+            }, 2000 + Math.random() * 3000);
+        };
+
+        // ── 联系人切换（Ta说）──
+        const contactList = ref([]);
+        const modals_contactPanel = ref(false);
+        const newContactName = ref('');
+        const newContactMyName = ref('');
+        const newContactAvatar = ref('');
+
+        const switchContact = (contact) => {
+            profiles.them.name = contact.name;
+            profiles.them.avatar = contact.avatar || '';
+            if (contact.myName) profiles.me.name = contact.myName;
+            if (contact.myAvatar) profiles.me.avatar = contact.myAvatar;
+            modals_contactPanel.value = false;
+            saveData();
+        };
+
+        const pickContactAvatar = (contact) => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*';
+            input.onchange = e => {
+                const f = e.target.files[0]; if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const cv = document.createElement('canvas'), MAX=200;
+                        const ratio = img.width/img.height;
+                        cv.width = ratio>=1?MAX:MAX*ratio; cv.height = ratio>=1?MAX/ratio:MAX;
+                        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+                        contact.avatar = cv.toDataURL('image/jpeg',0.85);
+                        saveContactList();
+                    };
+                    img.src = ev.target.result;
+                };
+                r.readAsDataURL(f);
+            };
+            input.click();
+        };
+
+        const pickNewContactAvatar = () => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*';
+            input.onchange = e => {
+                const f = e.target.files[0]; if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const cv = document.createElement('canvas'), MAX=200;
+                        const ratio = img.width/img.height;
+                        cv.width = ratio>=1?MAX:MAX*ratio; cv.height = ratio>=1?MAX/ratio:MAX;
+                        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+                        newContactAvatar.value = cv.toDataURL('image/jpeg',0.85);
+                    };
+                    img.src = ev.target.result;
+                };
+                r.readAsDataURL(f);
+            };
+            input.click();
+        };
+
+        const addContact = () => {
+            if (!newContactName.value.trim()) return;
+            contactList.value.push({
+                id: 'c_'+Date.now(),
+                name: newContactName.value.trim().substring(0,12),
+                avatar: newContactAvatar.value || '',
+                myName: newContactMyName.value.trim().substring(0,12) || '',
+                myAvatar: ''
+            });
+            newContactName.value = '';
+            newContactMyName.value = '';
+            newContactAvatar.value = '';
+            saveContactList();
+        };
+
+        const removeContact = (id) => {
+            contactList.value = contactList.value.filter(c => c.id !== id);
+            saveContactList();
+        };
+
+        const saveContactList = async () => {
+            try { await localforage.setItem('jingyu_contacts', JSON.parse(JSON.stringify(contactList.value))); } catch(e) {}
+        };
+
+        watch(contactList, saveContactList, {deep:true});
+
+        (async () => {
+            try {
+                const cl = await localforage.getItem('jingyu_contacts');
+                if (cl && Array.isArray(cl)) contactList.value = cl;
+            } catch(e) {}
+        })();
+
+        // ── 存钱功能 ──
+        const savingGoals = ref([]);
+        const activeSavingId = ref('');
+        const activeSaving = computed({
+            get: () => savingGoals.value.find(g => g.id === activeSavingId.value) || null,
+            set: () => {}
+        });
+        const activeSavingProgress = computed(() => {
+            const g = activeSaving.value;
+            if (!g || !g.goal) return 0;
+            return Math.min(100, Math.round(g.current / g.goal * 100));
+        });
+        const savingsFormatNum = (n) => n ? Number(n).toLocaleString('zh-CN') : '0';
+
+        const makeSavingGoal = () => ({
+            id: 'sg_'+Date.now(), name: '新目标', goal: 0, current: 0,
+            deadline: '', note: '', streak: 0, lastDate: '', addInput: null, addNote: '', records: []
+        });
+
+        const addSavingGoal = () => {
+            const g = makeSavingGoal();
+            savingGoals.value.push(g);
+            activeSavingId.value = g.id;
+            saveSavings();
+        };
+
+        const deleteSavingGoal = (id) => {
+            savingGoals.value = savingGoals.value.filter(g => g.id !== id);
+            if (savingGoals.value.length) activeSavingId.value = savingGoals.value[0].id;
+            saveSavings();
+        };
+
+        const addRecord = (isIn) => {
+            const g = activeSaving.value; if (!g) return;
+            const amt = Number(g.addInput); if (!amt || amt <= 0) return;
+            const now = new Date();
+            const today = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+            if (isIn) {
+                g.current += amt;
+                if (g.lastDate !== today) {
+                    const yesterday = new Date(now - 86400000);
+                    const yStr = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
+                    g.streak = g.lastDate === yStr ? g.streak + 1 : 1;
+                    g.lastDate = today;
+                }
+            } else {
+                g.current = Math.max(0, g.current - amt);
+            }
+            g.records.push({ type: isIn?'in':'out', amount: amt, note: g.addNote||'', date: `${now.getMonth()+1}月${now.getDate()}日` });
+            g.addInput = null; g.addNote = '';
+            saveSavings();
+        };
+
+        const deleteRecord = (g, idx) => {
+            const r = g.records[idx];
+            if (r.type==='in') g.current = Math.max(0, g.current - r.amount);
+            else g.current += r.amount;
+            g.records.splice(idx, 1);
+            saveSavings();
+        };
+
+        const savingsDailyAvg = (g) => {
+            const ins = g.records.filter(r => r.type==='in');
+            if (!ins.length) return '—';
+            return savingsFormatNum(Math.round(g.current / Math.max(1, ins.length)));
+        };
+        const savingsDaysLeft = (g) => {
+            if (!g.goal || g.current >= g.goal) return '—';
+            const ins = g.records.filter(r => r.type==='in');
+            if (!ins.length) return '—';
+            const avg = g.current / ins.length;
+            if (avg <= 0) return '—';
+            return Math.ceil((g.goal - g.current) / avg) + '';
+        };
+        const savingsTrend = (g) => {
+            const last = [...g.records].slice(-7);
+            const max = Math.max(...last.map(r => r.amount), 1);
+            return last.map(r => ({ h: Math.max(8, Math.round(r.amount/max*100)), type: r.type }));
+        };
+        const saveSavings = async () => {
+            try { await localforage.setItem('jingyu_savings_v2', JSON.parse(JSON.stringify(savingGoals.value))); } catch(e) {}
+        };
+        watch(savingGoals, saveSavings, {deep:true});
+        (async () => {
+            try {
+                const data = await localforage.getItem('jingyu_savings_v2');
+                if (data && Array.isArray(data) && data.length) {
+                    savingGoals.value = data.map(g => ({addInput:null,addNote:'',streak:0,lastDate:'',...g}));
+                    activeSavingId.value = savingGoals.value[0].id;
+                }
+            } catch(e) {}
+        })();
+
+        // ── 背景音乐 ──
+        const musicPlaying = ref(false);
+        const musicVolume = ref(40);
+        const currentSound = ref('');
+        const uploadedMusicName = ref('');
+        let audioCtxMusic = null;
+        let gainNode = null;
+        let noiseSource = null;
+        let localAudio = null;
+
+        const builtinSounds = [
+            { id:'white', emoji:'🌫️', name:'白噪音', desc:'纯净底噪' },
+            { id:'rain',  emoji:'🌧️', name:'雨声',   desc:'轻柔细雨' },
+            { id:'cafe',  emoji:'☕',  name:'咖啡厅',  desc:'室内低语' },
+            { id:'wind',  emoji:'🍃', name:'风声',   desc:'轻风拂过' },
+        ];
+
+        const getAudioCtx = () => {
+            if (!audioCtxMusic) {
+                audioCtxMusic = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioCtxMusic.createGain();
+                gainNode.gain.value = musicVolume.value / 100;
+                gainNode.connect(audioCtxMusic.destination);
+            }
+            return audioCtxMusic;
+        };
+
+        const createNoise = (type) => {
+            const ctx = getAudioCtx();
+            const bufferSize = ctx.sampleRate * 4;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            if (type === 'white') {
+                for (let i=0;i<bufferSize;i++) data[i] = Math.random()*2-1;
+            } else if (type === 'rain') {
+                let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+                for (let i=0;i<bufferSize;i++) {
+                    const w=Math.random()*2-1;
+                    b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
+                    b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
+                    b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
+                    data[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926;
+                }
+            } else if (type === 'cafe') {
+                let last=0;
+                for (let i=0;i<bufferSize;i++) { const w=Math.random()*2-1; data[i]=(last+0.02*w)/1.02; last=data[i]; data[i]*=3.5; }
+            } else if (type === 'wind') {
+                let last=0;
+                for (let i=0;i<bufferSize;i++) { const w=Math.random()*2-1; data[i]=w-last; last=w; data[i]*=0.5; }
+            }
+            const source = ctx.createBufferSource();
+            source.buffer = buffer; source.loop = true;
+            if (type==='rain') {
+                const f=ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1200; f.Q.value=0.5;
+                source.connect(f); f.connect(gainNode);
+            } else if (type==='wind') {
+                const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=800;
+                source.connect(f); f.connect(gainNode);
+            } else { source.connect(gainNode); }
+            return source;
+        };
+
+        const stopCurrent = () => {
+            if (noiseSource) { try { noiseSource.stop(); } catch(e){} noiseSource=null; }
+            if (localAudio) { localAudio.pause(); localAudio.currentTime=0; }
+        };
+
+        const selectSound = (id) => {
+            stopCurrent(); currentSound.value = id;
+            if (id==='local') {
+                if (!localAudio) return;
+                localAudio.volume=musicVolume.value/100; localAudio.loop=true; localAudio.play(); musicPlaying.value=true;
+            } else {
+                const ctx=getAudioCtx();
+                if (ctx.state==='suspended') ctx.resume();
+                noiseSource=createNoise(id); noiseSource.start(); musicPlaying.value=true;
+            }
+        };
+
+        const toggleMusic = () => {
+            if (!currentSound.value) return;
+            if (musicPlaying.value) {
+                if (noiseSource && audioCtxMusic) audioCtxMusic.suspend();
+                if (localAudio) localAudio.pause();
+                musicPlaying.value=false;
+            } else {
+                if (noiseSource && audioCtxMusic) audioCtxMusic.resume();
+                else if (currentSound.value==='local' && localAudio) localAudio.play();
+                else selectSound(currentSound.value);
+                musicPlaying.value=true;
+            }
+        };
+
+        const stopMusic = () => {
+            stopCurrent();
+            if (audioCtxMusic) audioCtxMusic.suspend();
+            musicPlaying.value=false; currentSound.value='';
+        };
+
+        const setMusicVolume = () => {
+            const v = musicVolume.value/100;
+            if (gainNode) gainNode.gain.value=v;
+            if (localAudio) localAudio.volume=v;
+        };
+
+        const loadLocalMusic = (e) => {
+            const file=e.target.files[0]; if (!file) return;
+            uploadedMusicName.value=file.name.replace(/\.[^.]+$/,'');
+            const url=URL.createObjectURL(file);
+            if (localAudio) localAudio.pause();
+            localAudio=new Audio(url); localAudio.loop=true; localAudio.volume=musicVolume.value/100;
+        };
+
         watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
         watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
 
         return {
-            headerExpanded, appReady,
             chatList, messages, inputText, isTyping, previewImg, notifGranted,
             bgPreview,
             profiles, settings, modals, replyGroups, currentGroupId, searchQuery, newReplyText, filteredReplies,
@@ -3951,14 +4337,18 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             addImageReplies, requestNotifPermission, popRandomEmoji,
             stickerImages, addStickers, sendSticker, deleteSticker,
             storageInfo, refreshStorageInfo,
-            // 存钱
-            savings, savingsProgress, savingsFormatNum, addSavings, saveSavings, deleteRecord, confirmEditRecord,
-            // 通话
+            // 新功能
+            headerExpanded, appReady,
+            peekMsg, peekRecalled,
             callState, callDurationStr, callMinimized, callBg, bubbleX, bubbleY, bubbleSize, wasDragging, showBubbleSizer,
             startCall, answerCall, hangUp, setCallBg, startDrag,
-            // 联系人
             contactList, modals_contactPanel, newContactName, newContactMyName, newContactAvatar,
-            switchContact, addContact, removeContact, saveContactList, pickContactAvatar, pickNewContactAvatar
+            switchContact, addContact, removeContact, saveContactList, pickContactAvatar, pickNewContactAvatar,
+            savingGoals, activeSavingId, activeSaving, activeSavingProgress,
+            savingsFormatNum, addSavingGoal, deleteSavingGoal, addRecord, deleteRecord,
+            savingsDailyAvg, savingsDaysLeft, savingsTrend, saveSavings,
+            musicPlaying, musicVolume, currentSound, uploadedMusicName, builtinSounds,
+            selectSound, toggleMusic, stopMusic, setMusicVolume, loadLocalMusic,
         };
     }
 }).mount('#app');

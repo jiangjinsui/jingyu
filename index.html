@@ -881,6 +881,404 @@
     opacity: 0;
 }
     </style>
+<style>
+/* ══════════════════════════════════════
+   全局 UI 美化 · 山水琉璃
+══════════════════════════════════════ */
+
+/* ── 新增 CSS 变量 ── */
+:root {
+    --glass-bg: rgba(255,255,255,0.72);
+    --glass-border: rgba(255,255,255,0.55);
+    --glass-shadow: 0 8px 40px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset;
+    --accent-warm: #c9a87a;
+    --accent-sage: #8aac8e;
+    --accent-rose: #c9909a;
+    --accent-ink: #6b7fa3;
+    --gradient-warm: linear-gradient(135deg, #fdf6ee 0%, #f9f0e8 50%, #f3ebe0 100%);
+    --modal-radius: 20px;
+}
+.dark {
+    --glass-bg: rgba(22,22,28,0.82);
+    --glass-border: rgba(255,255,255,0.07);
+    --glass-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.04) inset;
+    --gradient-warm: linear-gradient(135deg, #161620 0%, #1a1a24 50%, #141418 100%);
+}
+
+/* ── 弹窗通用基底 ── */
+.jy-modal {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: var(--modal-radius);
+    overflow: hidden;
+    position: relative;
+}
+.jy-modal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 30%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.6) 70%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+.dark .jy-modal::before {
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.08) 70%, transparent 100%);
+}
+
+/* ── 装饰渐变顶条 ── */
+.jy-header-accent {
+    height: 3px;
+    border-radius: 99px 99px 0 0;
+}
+.jy-accent-warm  { background: linear-gradient(90deg, #e8c9a0, #d4a574, #c9a87a); }
+.jy-accent-sage  { background: linear-gradient(90deg, #a8c5aa, #8aac8e, #7a9e7e); }
+.jy-accent-rose  { background: linear-gradient(90deg, #d4a0aa, #c9909a, #b87888); }
+.jy-accent-ink   { background: linear-gradient(90deg, #8aa0c0, #6b7fa3, #5a6e94); }
+.jy-accent-multi { background: linear-gradient(90deg, #c9a87a, #8aac8e, #6b7fa3, #c9909a); }
+
+/* ── 弹窗内标题栏 ── */
+.jy-modal-header {
+    padding: 20px 24px 16px;
+    position: relative;
+}
+.jy-modal-title {
+    font-size: 14px;
+    letter-spacing: 0.35em;
+    font-weight: 400;
+    color: var(--color-text);
+}
+.jy-modal-subtitle {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--color-muted);
+    opacity: 0.45;
+    text-transform: uppercase;
+    margin-top: 3px;
+}
+.jy-modal-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-border) 20%, var(--color-border) 80%, transparent);
+    margin: 0 24px;
+}
+
+/* ── 卡片 ── */
+.jy-card {
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 14px;
+    transition: all 0.25s ease;
+}
+.dark .jy-card {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.07);
+}
+.jy-card:hover {
+    background: rgba(255,255,255,0.72);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+}
+.dark .jy-card:hover {
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+
+/* ── 标签页 ── */
+.jy-tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--color-border);
+}
+.jy-tab {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    padding: 10px 0;
+    margin-right: 20px;
+    border-bottom: 2px solid transparent;
+    color: var(--color-muted);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+.jy-tab.active {
+    border-bottom-color: var(--color-text);
+    color: var(--color-text);
+    opacity: 1;
+}
+
+/* ── 按钮 ── */
+.jy-btn-primary {
+    background: var(--color-text);
+    color: var(--color-bg);
+    border: none;
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+.jy-btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+.jy-btn-primary:active { transform: scale(0.97); }
+
+.jy-btn-ghost {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 9px 20px;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+.jy-btn-ghost:hover {
+    border-color: var(--color-text);
+    background: rgba(0,0,0,0.03);
+}
+.dark .jy-btn-ghost:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+/* ── 输入框 ── */
+.jy-input {
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    color: var(--color-text);
+    font-family: inherit;
+    width: 100%;
+    transition: border-color 0.2s ease;
+}
+.dark .jy-input { background: rgba(255,255,255,0.04); }
+.jy-input:focus { border-color: var(--color-muted); }
+.jy-input::placeholder { color: var(--color-muted); opacity: 0.35; }
+
+/* ── 标签 ── */
+.jy-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--color-muted);
+    opacity: 0.4;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* ── 存钱模块 · 进度环专属 ── */
+.savings-ring-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+}
+.savings-ring-glow {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,168,122,0.12) 0%, transparent 70%);
+    animation: ringGlow 3s ease-in-out infinite;
+}
+@keyframes ringGlow {
+    0%, 100% { opacity: 0.5; transform: scale(0.95); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* ── 数值展示卡片 ── */
+.jy-stat-card {
+    background: rgba(0,0,0,0.025);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.dark .jy-stat-card { background: rgba(255,255,255,0.03); }
+.jy-stat-value {
+    font-size: 17px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    color: var(--color-text);
+    line-height: 1.1;
+}
+.jy-stat-label {
+    font-size: 8px;
+    letter-spacing: 0.3em;
+    color: var(--color-muted);
+    opacity: 0.35;
+    text-transform: uppercase;
+}
+
+/* ── 信笺纸背景增强 ── */
+.letter-paper-enhanced {
+    background-image: repeating-linear-gradient(
+        transparent, transparent 31px,
+        rgba(0,0,0,0.04) 31px, rgba(0,0,0,0.04) 32px
+    );
+    background-position-y: 8px;
+    position: relative;
+}
+.dark .letter-paper-enhanced {
+    background-image: repeating-linear-gradient(
+        transparent, transparent 31px,
+        rgba(255,255,255,0.04) 31px, rgba(255,255,255,0.04) 32px
+    );
+}
+
+/* ── 音乐 · 声波动画增强 ── */
+.music-wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--color-text);
+    opacity: 0.5;
+    animation: waveBar 0.9s ease-in-out infinite alternate;
+}
+.music-wave-bar:nth-child(1) { animation-delay: 0s; }
+.music-wave-bar:nth-child(2) { animation-delay: 0.18s; }
+.music-wave-bar:nth-child(3) { animation-delay: 0.36s; }
+.music-wave-bar:nth-child(4) { animation-delay: 0.14s; }
+.music-wave-bar:nth-child(5) { animation-delay: 0.28s; }
+@keyframes waveBar {
+    from { transform: scaleY(0.3); }
+    to   { transform: scaleY(1); }
+}
+
+/* ── 联系人卡片 ── */
+.jy-contact-card {
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.dark .jy-contact-card {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.06);
+}
+.jy-contact-card:hover {
+    background: rgba(255,255,255,0.8);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    transform: translateY(-1px);
+}
+.dark .jy-contact-card:hover {
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+/* ── 信件 · 信封装饰 ── */
+.letter-envelope-deco {
+    position: absolute;
+    top: -1px; left: 50%;
+    transform: translateX(-50%);
+    width: 40px; height: 18px;
+    overflow: hidden;
+    pointer-events: none;
+}
+.letter-envelope-deco::before,
+.letter-envelope-deco::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 0; height: 0;
+}
+.letter-envelope-deco::before {
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 18px solid var(--color-border);
+    opacity: 0.3;
+}
+
+/* ── 弹窗背景遮罩增强 ── */
+.jy-overlay {
+    background: rgba(0,0,0,0.12);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.dark .jy-overlay {
+    background: rgba(0,0,0,0.45);
+}
+
+/* ── 词云 Top 卡片 ── */
+.jy-word-top-card {
+    flex: 1;
+    border-radius: 14px;
+    background: rgba(0,0,0,0.025);
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 8px;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+.dark .jy-word-top-card { background: rgba(255,255,255,0.03); }
+.jy-word-top-card:first-child {
+    background: linear-gradient(135deg, rgba(201,168,122,0.08), rgba(201,168,122,0.02));
+    border-color: rgba(201,168,122,0.2);
+}
+.dark .jy-word-top-card:first-child {
+    background: linear-gradient(135deg, rgba(201,168,122,0.1), rgba(201,168,122,0.03));
+}
+
+/* ── 存钱记录条目 ── */
+.jy-record-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    transition: background 0.15s ease;
+}
+.jy-record-row:hover { background: rgba(0,0,0,0.025); }
+.dark .jy-record-row:hover { background: rgba(255,255,255,0.03); }
+
+/* ── 声音选择卡片 ── */
+.jy-sound-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(255,255,255,0.4);
+}
+.dark .jy-sound-card { background: rgba(255,255,255,0.02); }
+.jy-sound-card:hover {
+    border-color: var(--color-text);
+    background: rgba(255,255,255,0.65);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.dark .jy-sound-card:hover {
+    background: rgba(255,255,255,0.05);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.jy-sound-card.active {
+    border-color: var(--accent-warm);
+    background: linear-gradient(135deg, rgba(201,168,122,0.08), rgba(201,168,122,0.02));
+}
+.dark .jy-sound-card.active {
+    background: linear-gradient(135deg, rgba(201,168,122,0.1), rgba(201,168,122,0.03));
+}
+
+</style>
     <style id="custom-bubble-css"></style>
 </head>
 <body>
@@ -1449,85 +1847,80 @@
     </div>
 </transition>
 
-<!-- ─── 常说的话 弹窗 ─── -->
+<!-- ─── 常说的话 弹窗 ✦ 美化版 ─── -->
 <transition name="fade">
-    <div v-if="modals.wordCloud" class="fixed inset-0 bg-bg/80 backdrop-blur-md z-50 flex justify-center items-center p-4">
-        <div class="bg-surface w-full max-w-sm shadow-2xl border border-border/50 flex flex-col max-h-[80vh] rounded-2xl overflow-hidden">
+    <div v-if="modals.wordCloud" class="fixed inset-0 jy-overlay z-50 flex justify-center items-center p-4">
+        <div class="jy-modal w-full max-w-sm flex flex-col max-h-[80vh]">
+            <div class="jy-header-accent jy-accent-multi"></div>
+
+            <!-- 标题栏 -->
             <div class="px-6 py-5 flex justify-between items-center relative">
-                <div>
-                    <h2 class="text-[13px] tracking-[0.35em] font-medium">常说的话</h2>
-                    <p class="text-[9px] text-muted/40 tracking-[0.2em] mt-0.5 uppercase">{{ profiles.them.name }} · High Frequency Words</p>
+                <div class="flex items-center gap-3">
+                    <span style="font-size:20px;filter:drop-shadow(0 2px 6px rgba(201,168,122,0.3))">💬</span>
+                    <div>
+                        <div class="jy-modal-title">常说的话</div>
+                        <div class="jy-modal-subtitle">{{ profiles.them.name }} · High Frequency Words</div>
+                    </div>
                 </div>
-                <button @click="modals.wordCloud = false" class="text-muted hover:text-text"><i data-lucide="x" class="w-4 h-4"></i></button>
-                <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
-            </div>
-
-            <div class="flex gap-3 px-6 pt-4 pb-0">
-                <button @click="wordCloudSource = 'them'; buildWordCloud()"
-                        class="text-[11px] tracking-[0.2em] pb-2 border-b-2 transition-all"
-                        :class="wordCloudSource === 'them' ? 'border-text text-text' : 'border-transparent text-muted/40 hover:text-muted'">
-                    TA 说的
-                </button>
-                <button @click="wordCloudSource = 'me'; buildWordCloud()"
-                        class="text-[11px] tracking-[0.2em] pb-2 border-b-2 transition-all"
-                        :class="wordCloudSource === 'me' ? 'border-text text-text' : 'border-transparent text-muted/40 hover:text-muted'">
-                    我说的
-                </button>
-                <button @click="wordCloudSource = 'replies'; buildWordCloud()"
-                        class="text-[11px] tracking-[0.2em] pb-2 border-b-2 transition-all"
-                        :class="wordCloudSource === 'replies' ? 'border-text text-text' : 'border-transparent text-muted/40 hover:text-muted'">
-                    字卡库
+                <button @click="modals.wordCloud = false" class="w-7 h-7 rounded-full flex items-center justify-center text-muted/40 hover:text-text hover:bg-black/5 transition-all">
+                    <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1.5]"></i>
                 </button>
             </div>
-            <div class="mx-6 h-[1px] bg-border/60 mb-4"></div>
 
-            <div class="flex-1 overflow-y-auto px-6 pb-6">
+            <!-- 标签栏 -->
+            <div class="jy-tab-bar">
+                <button @click="wordCloudSource = 'them'; buildWordCloud()" class="jy-tab" :class="wordCloudSource === 'them' ? 'active' : ''">TA 说的</button>
+                <button @click="wordCloudSource = 'me'; buildWordCloud()" class="jy-tab" :class="wordCloudSource === 'me' ? 'active' : ''">我说的</button>
+                <button @click="wordCloudSource = 'replies'; buildWordCloud()" class="jy-tab" :class="wordCloudSource === 'replies' ? 'active' : ''">字卡库</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-6 py-5">
                 <!-- 空状态 -->
                 <div v-if="wordCloudItems.length === 0"
-                     class="flex flex-col items-center justify-center py-12 text-muted/30 gap-3">
-                    <i data-lucide="wind" class="w-5 h-5 stroke-[1]"></i>
-                    <span class="text-[10px] tracking-[0.25em]">暂无记录</span>
+                     class="flex flex-col items-center justify-center py-14 gap-3">
+                    <span style="font-size:36px;opacity:0.15">🌬️</span>
+                    <span class="text-[10px] tracking-[0.3em]" style="color:var(--color-muted);opacity:0.3">暂无记录</span>
                 </div>
 
-                <!-- 词频列表 -->
-                <div v-else class="space-y-2">
-                    <!-- 最高频 Top 3 大字展示 -->
-                    <div v-if="wordCloudItems.length >= 1" class="flex gap-2 mb-4">
-                        <div v-for="(item, i) in wordCloudItems.slice(0,3)" :key="'top'+i"
-                             class="flex-1 rounded-xl border border-border/40 bg-bg/40 flex flex-col items-center py-3 gap-1">
-                            <span class="text-[8px] tracking-[0.3em] text-muted/40">NO.{{ i+1 }}</span>
-                            <span class="font-light text-text leading-tight text-center px-1 break-all"
-                                  :style="{ fontSize: i===0 ? '18px' : i===1 ? '15px' : '13px' }">{{ item.word }}</span>
-                            <span class="text-[9px] text-muted/50 font-mono">×{{ item.count }}</span>
+                <div v-else class="space-y-3">
+                    <!-- Top 3 -->
+                    <div v-if="wordCloudItems.length >= 1" class="flex gap-2 mb-5">
+                        <div v-for="(item, i) in wordCloudItems.slice(0,3)" :key="'top'+i" class="jy-word-top-card">
+                            <span class="text-[8px] tracking-[0.3em]" style="color:var(--color-muted);opacity:0.35">
+                                {{ ['🥇','🥈','🥉'][i] }}
+                            </span>
+                            <span class="font-light leading-tight text-center px-1 break-all"
+                                  :style="{ fontSize: i===0 ? '20px' : i===1 ? '16px' : '13px', color:'var(--color-text)' }">{{ item.word }}</span>
+                            <span class="text-[9px] font-mono" style="color:var(--color-muted);opacity:0.4">×{{ item.count }}</span>
                         </div>
                     </div>
 
-                    <!-- 剩余词频条形 -->
+                    <!-- 剩余条形 -->
                     <div v-for="(item, i) in wordCloudItems.slice(3)" :key="'word'+i"
-                         class="flex items-center gap-3 py-1">
-                        <span class="text-[9px] text-muted/30 font-mono w-5 text-right shrink-0">{{ i+4 }}</span>
-                        <span class="text-[12px] text-text/80 tracking-wide w-20 shrink-0 truncate">{{ item.word }}</span>
-                        <div class="flex-1 h-[3px] rounded-full bg-border/40 overflow-hidden">
-                            <div class="h-full rounded-full bg-text/25 transition-all duration-500"
-                                 :style="{ width: (item.count / wordCloudItems[0].count * 100) + '%' }"></div>
+                         class="flex items-center gap-3 py-1.5 px-1">
+                        <span class="text-[9px] font-mono w-5 text-right shrink-0" style="color:var(--color-muted);opacity:0.25">{{ i+4 }}</span>
+                        <span class="text-[12px] tracking-wide w-20 shrink-0 truncate" style="color:var(--color-text);opacity:0.75">{{ item.word }}</span>
+                        <div class="flex-1 h-[3px] rounded-full overflow-hidden" style="background:var(--color-border)">
+                            <div class="h-full rounded-full transition-all duration-500"
+                                 :style="{ width: (item.count / wordCloudItems[0].count * 100) + '%', background:'linear-gradient(90deg,var(--accent-warm),var(--accent-rose))' }"></div>
                         </div>
-                        <span class="text-[9px] text-muted/40 font-mono w-6 text-right shrink-0">{{ item.count }}</span>
+                        <span class="text-[9px] font-mono w-6 text-right shrink-0" style="color:var(--color-muted);opacity:0.35">{{ item.count }}</span>
                     </div>
                 </div>
 
                 <!-- 底部统计 -->
-                <div v-if="wordCloudItems.length > 0" class="mt-6 pt-4 border-t border-border/40 grid grid-cols-3 gap-2 text-center">
-                    <div>
-                        <div class="text-[18px] font-light text-text/70">{{ wordCloudTotal }}</div>
-                        <div class="text-[8px] tracking-widest text-muted/40 mt-0.5">总字数</div>
+                <div v-if="wordCloudItems.length > 0" class="mt-6 pt-5 grid grid-cols-3 gap-2" style="border-top:1px solid var(--color-border)">
+                    <div class="jy-stat-card items-center text-center">
+                        <div class="jy-stat-value">{{ wordCloudTotal }}</div>
+                        <div class="jy-stat-label" style="margin-top:2px">总字数</div>
                     </div>
-                    <div>
-                        <div class="text-[18px] font-light text-text/70">{{ wordCloudMsgCount }}</div>
-                        <div class="text-[8px] tracking-widest text-muted/40 mt-0.5">条消息</div>
+                    <div class="jy-stat-card items-center text-center">
+                        <div class="jy-stat-value">{{ wordCloudMsgCount }}</div>
+                        <div class="jy-stat-label" style="margin-top:2px">条消息</div>
                     </div>
-                    <div>
-                        <div class="text-[18px] font-light text-text/70">{{ wordCloudItems.length }}</div>
-                        <div class="text-[8px] tracking-widest text-muted/40 mt-0.5">高频词</div>
+                    <div class="jy-stat-card items-center text-center">
+                        <div class="jy-stat-value">{{ wordCloudItems.length }}</div>
+                        <div class="jy-stat-label" style="margin-top:2px">高频词</div>
                     </div>
                 </div>
             </div>
@@ -1768,132 +2161,143 @@
         </div>
     </transition>
     
-    <!-- 信箱弹窗 -->
+    <!-- 信箱弹窗 ✦ 美化版 -->
 <transition name="fade">
     <div v-if="modals.letter" @click.self="modals.letter = false"
-         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex justify-center items-center px-5">
-        <div class="bg-surface w-full max-w-sm flex flex-col overflow-hidden shadow-2xl rounded-sm max-h-[85vh]"
-             style="border: 1px solid var(--color-border);">
+         class="fixed inset-0 jy-overlay z-50 flex justify-center items-center px-5">
+        <div class="jy-modal w-full max-w-sm flex flex-col max-h-[88vh]">
+            <!-- 顶部暖金色装饰条 -->
+            <div class="jy-header-accent jy-accent-warm"></div>
 
-            <!-- 顶栏 + 标签切换 -->
-            <div class="px-6 pt-5 pb-0 flex justify-between items-start">
-                <div class="flex flex-col gap-1">
-                    <span class="text-[13px] tracking-[0.35em] text-text font-light">信 箱</span>
-                    <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">MAILBOX · {{ profiles.them.name }}</span>
+            <!-- 标题栏 -->
+            <div class="px-6 pt-5 pb-3 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span style="font-size:20px; filter:drop-shadow(0 2px 6px rgba(201,168,122,0.4))">✉️</span>
+                    <div>
+                        <div class="jy-modal-title">信 箱</div>
+                        <div class="jy-modal-subtitle">MAILBOX · {{ profiles.them.name }}</div>
+                    </div>
                 </div>
-                <button @click="modals.letter = false" class="text-muted/30 hover:text-muted transition-colors mt-0.5">
-                    <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+                <button @click="modals.letter = false" class="w-7 h-7 rounded-full flex items-center justify-center text-muted/40 hover:text-text hover:bg-black/5 dark:hover:bg-white/5 transition-all">
+                    <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1.5]"></i>
                 </button>
             </div>
 
-            <!-- 写信 / 信件 切换 -->
-            <div class="flex px-6 pt-3 pb-0 gap-4">
-                <button @click="letterTab = 'write'"
-                        class="text-[11px] tracking-[0.2em] pb-2 border-b-2 transition-all"
-                        :class="letterTab === 'write' ? 'border-text text-text' : 'border-transparent text-muted/40 hover:text-muted'">
-                    写 信
-                </button>
-                <button @click="letterTab = 'inbox'"
-                        class="text-[11px] tracking-[0.2em] pb-2 border-b-2 transition-all relative"
-                        :class="letterTab === 'inbox' ? 'border-text text-text' : 'border-transparent text-muted/40 hover:text-muted'">
+            <!-- 标签切换 -->
+            <div class="jy-tab-bar">
+                <button @click="letterTab = 'write'" class="jy-tab" :class="letterTab === 'write' ? 'active' : ''">写 信</button>
+                <button @click="letterTab = 'inbox'" class="jy-tab" :class="letterTab === 'inbox' ? 'active' : ''">
                     往来信件
-                    <span v-if="letterHistory.length > 0" class="ml-1 text-[9px] text-muted/30">({{ letterHistory.length }})</span>
+                    <span v-if="letterHistory.length > 0" class="ml-1 text-[9px] opacity-40">({{ letterHistory.length }})</span>
                 </button>
             </div>
-
-            <div class="mx-6 h-[1px] bg-border/60"></div>
 
             <!-- 写信面板 -->
             <template v-if="letterTab === 'write'">
-                <div class="px-6 py-4 flex-1 overflow-y-auto">
-                    <div class="text-[10px] text-muted/40 tracking-[0.2em] mb-2 italic">致 {{ profiles.them.name }}：</div>
-                    <textarea v-model="letterText" rows="8"
-                        class="w-full bg-transparent text-[13px] resize-none outline-none leading-[2] tracking-wide placeholder-muted/20 border-none font-light letter-paper"
-                        placeholder="见字如面...&#10;&#10;落笔写下想对TA说的话"></textarea>
-                </div>
-
-                <div class="mx-6 h-[1px] bg-border/60"></div>
-
-                <!-- 在途状态 + 寄出 -->
-                <div class="px-6 py-4 flex justify-between items-center shrink-0">
-                    <div class="flex flex-col gap-0.5">
-                        <span class="text-[9px] tracking-[0.2em] text-muted/30 uppercase">预计送达</span>
-                        <span class="text-[11px] tracking-[0.15em] text-muted/50">1 ~ 6 小时后</span>
-                        <span v-if="pendingLetters.length > 0" class="text-[9px] tracking-[0.15em] text-muted/30 mt-1 flex items-center gap-1">
-                            <span class="letter-transit-dot" style="width:3px;height:3px;"></span>
-                            {{ pendingLetters.length }}封信件在途中
-                        </span>
+                <div class="px-6 pt-5 pb-3 flex-1 overflow-y-auto">
+                    <!-- 信笺纸区域 -->
+                    <div class="rounded-2xl overflow-hidden" style="background: linear-gradient(135deg, rgba(253,246,238,0.8), rgba(249,240,232,0.6)); border: 1px solid rgba(201,168,122,0.15); box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);">
+                        <div class="dark:hidden absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, rgba(253,246,238,0.9), rgba(249,240,232,0.7))"></div>
+                        <div class="px-5 pt-4 pb-2">
+                            <div class="text-[10px] tracking-[0.25em] mb-3 italic flex items-center gap-2" style="color: var(--accent-warm); opacity:0.7">
+                                <span>致 {{ profiles.them.name }}，见字如面</span>
+                            </div>
+                            <textarea v-model="letterText" rows="8"
+                                class="w-full bg-transparent text-[13px] resize-none outline-none leading-[2] tracking-wide font-light letter-paper-enhanced"
+                                style="color: var(--color-text); placeholder-color: var(--color-muted);"
+                                placeholder="落笔写下想对TA说的话..."></textarea>
+                        </div>
+                        <!-- 信笺底部署名区 -->
+                        <div class="px-5 py-3 flex items-center justify-between border-t" style="border-color: rgba(201,168,122,0.1);">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-[9px] tracking-[0.2em] uppercase" style="color: var(--accent-warm); opacity:0.5">预计送达</span>
+                                <span class="text-[11px] tracking-[0.1em]" style="color: var(--color-muted)">1 ~ 6 小时后</span>
+                                <div v-if="pendingLetters.length > 0" class="flex items-center gap-1.5 mt-1">
+                                    <span class="letter-transit-dot" style="width:3px;height:3px;"></span>
+                                    <span class="text-[9px] tracking-[0.12em]" style="color:var(--color-muted);opacity:0.5">{{ pendingLetters.length }}封在途中</span>
+                                </div>
+                            </div>
+                            <button @click="sendLetter"
+                                    class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] tracking-[0.25em] transition-all"
+                                    :style="letterText.trim()
+                                        ? 'background:linear-gradient(135deg,#d4a574,#c9a87a);color:#fff;box-shadow:0 4px 16px rgba(201,168,122,0.35);'
+                                        : 'background:var(--color-border);color:var(--color-muted);pointer-events:none;opacity:0.5'">
+                                <span>寄 出</span>
+                                <span style="font-size:13px;">✉</span>
+                            </button>
+                        </div>
                     </div>
-                    <button @click="sendLetter"
-                            class="text-[11px] tracking-[0.3em] transition-all px-5 py-2 border uppercase flex items-center gap-2"
-                            :class="letterText.trim()
-                                ? 'text-text border-text/30 hover:bg-text hover:text-bg'
-                                : 'text-muted/20 border-border/30 pointer-events-none'">
-                        <span>寄 出</span>
-                        <span style="font-size:14px;">✉</span>
-                    </button>
                 </div>
             </template>
 
             <!-- 信件历史面板 -->
             <template v-if="letterTab === 'inbox'">
-                <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-
+                <div class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
                     <!-- 在途信件 -->
-                    <div v-for="pl in pendingLetters" :key="pl.id" class="letter-transit">
-                        <div class="letter-transit-inner">
-                            <div class="letter-transit-dot"></div>
-                            <span>回信途中 · 约 {{ pl.remainText }}</span>
-                        </div>
+                    <div v-for="pl in pendingLetters" :key="pl.id"
+                         class="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                         style="background:linear-gradient(135deg,rgba(201,168,122,0.08),rgba(201,168,122,0.03));border:1px dashed rgba(201,168,122,0.25)">
+                        <div class="letter-transit-dot shrink-0"></div>
+                        <span class="text-[10px] tracking-[0.18em]" style="color:var(--color-muted)">回信途中 · 约 {{ pl.remainText }}</span>
+                        <span class="ml-auto text-base">✈️</span>
                     </div>
 
-                    <!-- 已完成的信件 -->
+                    <!-- 空状态 -->
                     <div v-if="letterHistory.length === 0 && pendingLetters.length === 0"
-                         class="flex flex-col items-center justify-center py-12 text-muted/30 text-[10px] tracking-[0.25em] gap-2">
-                        <i data-lucide="mail" class="w-5 h-5 stroke-[1]"></i>
-                        <span>尚无信件往来</span>
+                         class="flex flex-col items-center justify-center py-14 gap-3">
+                        <span style="font-size:32px;opacity:0.2">📭</span>
+                        <span class="text-[10px] tracking-[0.3em]" style="color:var(--color-muted);opacity:0.4">尚无信件往来</span>
                     </div>
 
+                    <!-- 信件对 -->
                     <div v-for="(pair, idx) in letterHistory" :key="idx"
-                         class="border border-border/40 rounded-sm overflow-hidden">
-
+                         class="rounded-2xl overflow-hidden"
+                         style="border:1px solid var(--color-border);box-shadow:0 2px 12px rgba(0,0,0,0.04)">
                         <!-- 我寄出的信 -->
-                        <div class="px-4 py-3 bg-bg/30">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">我的信</span>
+                        <div class="px-5 py-4" style="background:rgba(253,246,238,0.4)">
+                            <div class="dark:hidden" style="background:rgba(253,246,238,0.6);position:absolute;inset:0;pointer-events:none;border-radius:inherit"></div>
+                            <div class="flex justify-between items-center mb-3">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-[9px] tracking-[0.15em] text-muted/30">{{ pair.sentTime }}</span>
-                                    <button @click="deleteLetter(idx)"
-                                        class="text-muted/20 hover:text-red-400 transition-colors"
-                                        title="删除这封信">
+                                    <div class="w-1 h-4 rounded-full" style="background:var(--accent-warm);opacity:0.5"></div>
+                                    <span class="text-[9px] tracking-[0.25em] uppercase" style="color:var(--accent-warm);opacity:0.7">我的信</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] tracking-[0.12em]" style="color:var(--color-muted);opacity:0.4">{{ pair.sentTime }}</span>
+                                    <button @click="deleteLetter(idx)" class="w-5 h-5 flex items-center justify-center rounded-full text-muted/25 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
                                         <i data-lucide="trash-2" class="w-3 h-3 stroke-[1.5]"></i>
                                     </button>
                                 </div>
                             </div>
-                            <div class="text-[12px] leading-[1.9] tracking-wide text-text/80 font-light">
+                            <div class="text-[12px] leading-[1.9] tracking-wide font-light" style="color:var(--color-text);opacity:0.8">
                                 <p v-for="(line, li) in pair.sentContent.split('\n')" :key="li" class="m-0">{{ line }}</p>
                             </div>
-                            <div class="text-right text-[10px] text-muted/30 italic mt-2 tracking-[0.15em]">{{ profiles.me.name }} 落笔</div>
+                            <div class="text-right text-[10px] italic mt-2 tracking-[0.15em]" style="color:var(--color-muted);opacity:0.35">{{ profiles.me.name }} 落笔</div>
                         </div>
 
-                        <!-- 分隔 -->
-                        <div class="h-[1px] bg-border/40"></div>
+                        <!-- 回信分隔装饰 -->
+                        <div class="flex items-center gap-3 px-5 py-2" style="background:var(--color-border);opacity:0.6">
+                            <div class="flex-1 h-[1px]" style="background:linear-gradient(90deg,transparent,var(--color-muted),transparent);opacity:0.3"></div>
+                            <span style="font-size:10px;opacity:0.4">✉</span>
+                            <div class="flex-1 h-[1px]" style="background:linear-gradient(90deg,transparent,var(--color-muted),transparent);opacity:0.3"></div>
+                        </div>
 
-                        <!-- 对方的回信 -->
-                        <div class="px-4 py-3">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">{{ profiles.them.name }} 的回信</span>
-                                <span class="text-[9px] tracking-[0.15em] text-muted/30">{{ pair.replyTime }}</span>
+                        <!-- 对方回信 -->
+                        <div class="px-5 py-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1 h-4 rounded-full" style="background:var(--accent-ink);opacity:0.5"></div>
+                                    <span class="text-[9px] tracking-[0.25em] uppercase" style="color:var(--accent-ink);opacity:0.7">{{ profiles.them.name }} 的回信</span>
+                                </div>
+                                <span class="text-[9px] tracking-[0.12em]" style="color:var(--color-muted);opacity:0.4">{{ pair.replyTime }}</span>
                             </div>
-                            <div class="text-[12px] leading-[1.9] tracking-wide text-text/80 font-light">
+                            <div class="text-[12px] leading-[1.9] tracking-wide font-light" style="color:var(--color-text);opacity:0.8">
                                 <p v-for="(line, li) in pair.replyContent.split('\n')" :key="li" class="m-0">{{ line }}</p>
                             </div>
-                            <div class="text-right text-[10px] text-muted/30 italic mt-2 tracking-[0.15em]">{{ profiles.them.name }} 亲启</div>
+                            <div class="text-right text-[10px] italic mt-2 tracking-[0.15em]" style="color:var(--color-muted);opacity:0.35">{{ profiles.them.name }} 亲启</div>
                         </div>
                     </div>
                 </div>
             </template>
-
         </div>
     </div>
 </transition>
@@ -1911,394 +2315,368 @@
     </div>
 </transition>
     
-    <!-- 删除信件确认弹窗 -->
+    <!-- 删除信件确认弹窗 ✦ 美化版 -->
 <transition name="fade">
     <div v-if="modals.confirmDeleteLetter" @click.self="cancelDeleteLetter"
-         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-center justify-center px-8">
-        <div class="bg-surface w-full max-w-[280px] rounded-sm shadow-2xl overflow-hidden"
-             style="border: 1px solid var(--color-border);">
-            <!-- 顶部装饰线 -->
-            <div class="h-[1px] w-full" style="background: linear-gradient(90deg, transparent, var(--color-muted), transparent); opacity: 0.3;"></div>
-            <div class="px-7 py-6 flex flex-col items-center gap-4">
-                <!-- 图标 -->
-                <div class="w-8 h-8 flex items-center justify-center opacity-30">
-                    <i data-lucide="trash-2" class="w-5 h-5 stroke-[1]"></i>
+         class="fixed inset-0 jy-overlay z-[100] flex items-center justify-center px-8">
+        <div class="jy-modal w-full max-w-[280px]">
+            <div class="jy-header-accent jy-accent-rose"></div>
+            <div class="px-7 py-7 flex flex-col items-center gap-5">
+                <div class="w-14 h-14 rounded-full flex items-center justify-center" style="background:rgba(201,144,154,0.08);border:1px solid rgba(201,144,154,0.15)">
+                    <span style="font-size:24px;filter:drop-shadow(0 2px 8px rgba(201,144,154,0.3))">🕯️</span>
                 </div>
-                <!-- 文字 -->
-                <div class="text-center flex flex-col gap-1.5">
-                    <p class="text-[12px] tracking-[0.2em] text-text font-light">焚毁这封信件？</p>
-                    <p class="text-[10px] tracking-[0.15em] text-muted/50 italic">往来文字将化为尘烟，无法复原</p>
+                <div class="text-center flex flex-col gap-2">
+                    <p class="text-[13px] tracking-[0.25em]" style="color:var(--color-text)">焚毁这封信件？</p>
+                    <p class="text-[10px] tracking-[0.15em] italic" style="color:var(--color-muted);opacity:0.4">往来文字将化为尘烟，无法复原</p>
                 </div>
-                <!-- 按钮组 -->
                 <div class="w-full flex flex-col gap-2 mt-1">
                     <button @click="confirmDeleteLetter"
-                        class="w-full py-2 text-[11px] tracking-[0.25em] border border-border/60 text-muted/60 hover:border-muted/40 hover:text-text transition-all rounded-sm">
+                        class="w-full py-2.5 text-[11px] tracking-[0.25em] rounded-xl transition-all"
+                        style="border:1px solid rgba(201,144,154,0.3);color:var(--accent-rose);background:rgba(201,144,154,0.05)">
                         付之一炬
                     </button>
                     <button @click="cancelDeleteLetter"
-                        class="w-full py-2 text-[11px] tracking-[0.25em] text-muted/30 hover:text-muted transition-colors">
+                        class="w-full py-2 text-[11px] tracking-[0.25em] transition-colors"
+                        style="color:var(--color-muted);opacity:0.35">
                         留存此信
                     </button>
                 </div>
             </div>
-            <div class="h-[1px] w-full" style="background: linear-gradient(90deg, transparent, var(--color-muted), transparent); opacity: 0.15;"></div>
         </div>
     </div>
 </transition>
 
 
 
-<!-- ── 存钱计划 ── -->
+<!-- ── 存钱计划 ✦ 美化版 ── -->
 <transition name="fade">
 <div v-if="modals.savings" @click.self="modals.savings = false"
-     class="fixed inset-0 bg-black/15 backdrop-blur-sm z-[100] flex items-end justify-center">
-    <div class="bg-surface w-full max-w-md flex flex-col overflow-hidden shadow-xl"
-         style="border:1px solid var(--color-border);border-bottom:none;border-radius:20px 20px 0 0;max-height:92vh">
+     class="fixed inset-0 jy-overlay z-[100] flex items-end justify-center">
+    <div class="jy-modal w-full max-w-md flex flex-col"
+         style="border-bottom:none;border-radius:24px 24px 0 0;max-height:92vh">
 
+        <!-- 顶部暖绿装饰条 -->
+        <div class="jy-header-accent jy-accent-sage" style="border-radius:24px 24px 0 0"></div>
+
+        <!-- 拖拽把手 -->
         <div class="flex justify-center pt-3 pb-1 shrink-0">
-            <div class="w-7 h-[3px] rounded-full bg-border/60"></div>
+            <div class="w-8 h-1 rounded-full bg-border/50"></div>
         </div>
 
-        <!-- 顶栏 + 目标切换 -->
-        <div class="px-6 pt-2 pb-3 flex justify-between items-start shrink-0">
-            <div class="flex flex-col gap-1">
-                <p class="text-[18px] font-light tracking-[0.2em] text-text">
-                    {{ activeSaving ? activeSaving.name : '存钱计划' }}
-                </p>
-                <p class="text-[9px] tracking-[0.3em] text-muted/40 uppercase">saving · goal</p>
+        <!-- 顶栏 -->
+        <div class="px-6 pt-2 pb-4 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <span style="font-size:22px;filter:drop-shadow(0 2px 8px rgba(138,172,142,0.5))">🌿</span>
+                <div>
+                    <p class="text-[18px] font-light tracking-[0.15em]">{{ activeSaving ? activeSaving.name : '存钱计划' }}</p>
+                    <p class="text-[9px] tracking-[0.3em] uppercase" style="color:var(--accent-sage);opacity:0.7">SAVING · GOAL</p>
+                </div>
             </div>
-            <div class="flex items-center gap-2 mt-1">
-                <!-- 新建目标 -->
+            <div class="flex items-center gap-2">
                 <button @click="addSavingGoal"
-                        class="w-7 h-7 rounded-full border border-border/60 flex items-center justify-center hover:border-border transition-colors text-muted/50 hover:text-text">
-                    <i data-lucide="plus" class="w-3 h-3 stroke-[1.5]"></i>
+                        class="w-8 h-8 rounded-full border border-border/60 flex items-center justify-center hover:border-border transition-all text-muted/50 hover:text-text hover:bg-black/3 dark:hover:bg-white/5">
+                    <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[1.5]"></i>
                 </button>
-                <button @click="modals.savings = false" class="text-muted/30 hover:text-muted transition-colors">
+                <button @click="modals.savings = false" class="w-8 h-8 rounded-full flex items-center justify-center text-muted/35 hover:text-text hover:bg-black/3 dark:hover:bg-white/5 transition-all">
                     <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
                 </button>
             </div>
         </div>
 
-        <!-- 目标列表 tab -->
-        <div v-if="savingGoals.length > 1" class="px-6 pb-2 flex gap-2 overflow-x-auto shrink-0">
+        <!-- 目标切换 tabs -->
+        <div v-if="savingGoals.length > 1" class="px-6 pb-3 flex gap-2 overflow-x-auto shrink-0">
             <button v-for="g in savingGoals" :key="g.id"
                     @click="activeSavingId = g.id"
-                    class="px-3 py-1 rounded-full text-[10px] tracking-wider border transition-all shrink-0"
-                    :class="activeSavingId === g.id
-                        ? 'border-text/40 text-text bg-text/5'
-                        : 'border-border/40 text-muted/50 hover:border-border'">
+                    class="px-4 py-1.5 rounded-full text-[10px] tracking-wider border transition-all shrink-0"
+                    :style="activeSavingId === g.id
+                        ? 'border-color:var(--accent-sage);color:var(--accent-sage);background:rgba(138,172,142,0.08)'
+                        : 'border-color:var(--color-border);color:var(--color-muted);opacity:0.5'">
                 {{ g.name }}
             </button>
         </div>
 
-        <div class="h-[1px] mx-6 bg-border/60 shrink-0"></div>
+        <div class="h-[1px] mx-6 bg-border/50 shrink-0"></div>
 
         <div v-if="activeSaving" class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
 
-            <!-- 圆形进度 + 统计 -->
-            <div class="flex items-center gap-6">
+            <!-- 进度环 + 核心数字 -->
+            <div class="rounded-2xl p-5 flex items-center gap-6" style="background:linear-gradient(135deg,rgba(138,172,142,0.07),rgba(138,172,142,0.02));border:1px solid rgba(138,172,142,0.15)">
                 <!-- 进度环 -->
-                <div class="relative w-24 h-24 flex items-center justify-center shrink-0">
+                <div class="savings-ring-wrap">
+                    <div class="savings-ring-glow"></div>
                     <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-border)" stroke-width="4"/>
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-text)" stroke-width="4"
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-border)" stroke-width="5"/>
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="url(#savingGrad)" stroke-width="5"
                                 stroke-linecap="round"
                                 :stroke-dasharray="`${activeSavingProgress * 2.513} 251.3`"
                                 style="transition:stroke-dasharray 0.8s ease"/>
+                        <defs>
+                            <linearGradient id="savingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#a8c5aa"/>
+                                <stop offset="100%" style="stop-color:#7a9e7e"/>
+                            </linearGradient>
+                        </defs>
                     </svg>
-                    <!-- 达成庆祝 -->
-                    <transition name="fade">
-                        <div v-if="activeSavingProgress >= 100" class="absolute inset-0 flex items-center justify-center">
-                            <span class="text-xl">🎉</span>
-                        </div>
-                        <div v-else class="flex flex-col items-center">
-                            <span class="text-lg font-light tracking-wider text-text">{{ activeSavingProgress }}%</span>
-                        </div>
-                    </transition>
+                    <div v-if="activeSavingProgress >= 100" class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-2xl">🎉</span>
+                    </div>
+                    <div v-else class="absolute inset-0 flex flex-col items-center justify-center">
+    <span class="text-xl font-light tracking-wide" style="color:var(--accent-sage)">{{ activeSavingProgress }}%</span>
+</div>
                 </div>
-
-                <!-- 右侧统计 -->
-                <div class="flex flex-col gap-2 flex-1">
-                    <div class="flex flex-col">
-                        <span class="text-[9px] text-muted/35 tracking-[0.25em] uppercase">已存</span>
-                        <span class="text-[15px] font-light tracking-wider text-text">¥ {{ savingsFormatNum(activeSaving.current) }}</span>
+                <!-- 右侧数字 -->
+                <div class="flex flex-col gap-3 flex-1">
+                    <div>
+                        <div class="jy-stat-label">已 存</div>
+                        <div class="text-[22px] font-light tracking-wider" style="color:var(--accent-sage)">¥ {{ savingsFormatNum(activeSaving.current) }}</div>
                     </div>
-                    <div class="flex flex-col">
-                        <span class="text-[9px] text-muted/35 tracking-[0.25em] uppercase">目标</span>
-                        <span class="text-[13px] font-light tracking-wider text-text/60">¥ {{ savingsFormatNum(activeSaving.goal) }}</span>
+                    <div>
+                        <div class="jy-stat-label">目 标</div>
+                        <div class="text-[15px] font-light tracking-wider" style="color:var(--color-text);opacity:0.5">¥ {{ savingsFormatNum(activeSaving.goal) }}</div>
                     </div>
-                    <div v-if="activeSaving.goal > activeSaving.current" class="flex flex-col">
-                        <span class="text-[9px] text-muted/35 tracking-[0.25em] uppercase">还差</span>
-                        <span class="text-[12px] font-light tracking-wider text-text/50">¥ {{ savingsFormatNum(activeSaving.goal - activeSaving.current) }}</span>
+                    <div v-if="activeSaving.goal > activeSaving.current">
+                        <div class="jy-stat-label">还 差</div>
+                        <div class="text-[13px] font-light tracking-wider" style="color:var(--color-text);opacity:0.4">¥ {{ savingsFormatNum(activeSaving.goal - activeSaving.current) }}</div>
                     </div>
                     <div v-else-if="activeSaving.goal > 0">
-                        <span class="text-[10px] text-text/60 tracking-widest">目标达成 ✦</span>
+                        <span class="text-[11px] tracking-widest" style="color:var(--accent-sage)">目标达成 ✦</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 里程碑进度条 -->
-            <div class="flex flex-col gap-2">
-                <div class="flex justify-between">
+            <!-- 进度条 -->
+            <div class="flex flex-col gap-1.5">
+                <div class="flex justify-between px-0.5">
                     <span v-for="m in [25,50,75,100]" :key="m"
                           class="text-[8px] tracking-widest transition-colors"
-                          :class="activeSavingProgress >= m ? 'text-text/60' : 'text-muted/25'">
+                          :style="activeSavingProgress >= m ? 'color:var(--accent-sage);opacity:0.8' : 'color:var(--color-muted);opacity:0.25'">
                         {{ m === 100 ? '达成' : m + '%' }}
                     </span>
                 </div>
-                <div class="w-full h-[2px] bg-border/50 rounded-full overflow-hidden">
+                <div class="w-full h-[4px] rounded-full overflow-hidden" style="background:var(--color-border)">
                     <div class="h-full rounded-full transition-all duration-700"
-                         :style="`width:${activeSavingProgress}%;background:var(--color-text)`"></div>
-                </div>
-                <!-- 里程碑标记 -->
-                <div class="relative h-1">
-                    <div v-for="m in [25,50,75]" :key="m"
-                         class="absolute top-0 w-[2px] h-2 rounded-full -translate-y-1/2 transition-colors"
-                         :style="`left:${m}%`"
-                         :class="activeSavingProgress >= m ? 'bg-text/40' : 'bg-border/60'"></div>
+                         :style="`width:${activeSavingProgress}%;background:linear-gradient(90deg,#a8c5aa,#7a9e7e)`"></div>
                 </div>
             </div>
 
-            <!-- 统计卡片 -->
+            <!-- 统计3格 -->
             <div class="grid grid-cols-3 gap-2">
-                <div class="flex flex-col items-center gap-1 py-3 border border-border/40 rounded-xl">
-                    <span class="text-[9px] text-muted/35 tracking-widest uppercase">打卡</span>
-                    <span class="text-[15px] font-light text-text">{{ activeSaving.streak }}</span>
-                    <span class="text-[8px] text-muted/30 tracking-widest">天连续</span>
+                <div class="jy-stat-card items-center text-center">
+                    <div class="jy-stat-label">打卡</div>
+                    <div class="jy-stat-value" style="color:var(--accent-sage)">{{ activeSaving.streak }}</div>
+                    <div class="jy-stat-label" style="margin-top:2px">天连续</div>
                 </div>
-                <div class="flex flex-col items-center gap-1 py-3 border border-border/40 rounded-xl">
-                    <span class="text-[9px] text-muted/35 tracking-widest uppercase">日均</span>
-                    <span class="text-[15px] font-light text-text">{{ savingsDailyAvg(activeSaving) }}</span>
-                    <span class="text-[8px] text-muted/30 tracking-widest">元/天</span>
+                <div class="jy-stat-card items-center text-center">
+                    <div class="jy-stat-label">日均</div>
+                    <div class="jy-stat-value">{{ savingsDailyAvg(activeSaving) }}</div>
+                    <div class="jy-stat-label" style="margin-top:2px">元/天</div>
                 </div>
-                <div class="flex flex-col items-center gap-1 py-3 border border-border/40 rounded-xl">
-                    <span class="text-[9px] text-muted/35 tracking-widest uppercase">预计</span>
-                    <span class="text-[15px] font-light text-text">{{ savingsDaysLeft(activeSaving) }}</span>
-                    <span class="text-[8px] text-muted/30 tracking-widest">天后达成</span>
+                <div class="jy-stat-card items-center text-center">
+                    <div class="jy-stat-label">预计</div>
+                    <div class="jy-stat-value">{{ savingsDaysLeft(activeSaving) }}</div>
+                    <div class="jy-stat-label" style="margin-top:2px">天后达成</div>
                 </div>
             </div>
-
-            <!-- 截止日期 -->
-            <div v-if="activeSaving.deadline" class="flex items-center justify-between px-4 py-2.5 border border-border/40 rounded-xl">
-                <span class="text-[10px] text-muted/40 tracking-widest">截止日期</span>
-                <span class="text-[11px] text-text/60 tracking-wider">{{ activeSaving.deadline }}</span>
-            </div>
-
-            <div class="h-[1px] bg-border/40"></div>
 
             <!-- 目标设置 -->
             <div class="flex flex-col gap-3">
-                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">目标设置</p>
+                <div class="jy-label">目标设置</div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div class="flex flex-col gap-1">
-                        <span class="text-[9px] text-muted/35 tracking-widest">名称</span>
-                        <input v-model="activeSaving.name" type="text" maxlength="12"
-                               placeholder="存钱目标…"
-                               @blur="saveSavings"
-                               class="bg-bg border border-border/60 px-3 py-2 text-[12px] outline-none tracking-wider w-full"
-                               style="border-radius:10px">
+                    <div class="flex flex-col gap-1.5">
+                        <div class="jy-label" style="margin-bottom:0">名称</div>
+                        <input v-model="activeSaving.name" type="text" maxlength="12" placeholder="存钱目标…" @blur="saveSavings" class="jy-input text-[12px]">
                     </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-[9px] text-muted/35 tracking-widest">目标金额 ¥</span>
-                        <input v-model.number="activeSaving.goal" type="number" min="0"
-                               placeholder="0"
-                               @blur="saveSavings"
-                               class="bg-bg border border-border/60 px-3 py-2 text-[12px] outline-none tracking-wider font-mono w-full"
-                               style="border-radius:10px">
+                    <div class="flex flex-col gap-1.5">
+                        <div class="jy-label" style="margin-bottom:0">目标 ¥</div>
+                        <input v-model.number="activeSaving.goal" type="number" min="0" placeholder="0" @blur="saveSavings" class="jy-input text-[12px] font-mono">
                     </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-[9px] text-muted/35 tracking-widest">截止日期</span>
-                        <input v-model="activeSaving.deadline" type="date"
-                               @blur="saveSavings"
-                               class="bg-bg border border-border/60 px-3 py-2 text-[11px] outline-none tracking-wider w-full text-muted/60"
-                               style="border-radius:10px">
+                    <div class="flex flex-col gap-1.5">
+                        <div class="jy-label" style="margin-bottom:0">截止日期</div>
+                        <input v-model="activeSaving.deadline" type="date" @blur="saveSavings" class="jy-input text-[11px]" style="color:var(--color-muted)">
                     </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-[9px] text-muted/35 tracking-widest">备注</span>
-                        <input v-model="activeSaving.note" type="text" maxlength="20"
-                               placeholder="为了什么…"
-                               @blur="saveSavings"
-                               class="bg-bg border border-border/60 px-3 py-2 text-[11px] outline-none tracking-wider w-full"
-                               style="border-radius:10px">
+                    <div class="flex flex-col gap-1.5">
+                        <div class="jy-label" style="margin-bottom:0">备注</div>
+                        <input v-model="activeSaving.note" type="text" maxlength="20" placeholder="为了什么…" @blur="saveSavings" class="jy-input text-[11px]">
                     </div>
                 </div>
-                <!-- 删除目标 -->
                 <button v-if="savingGoals.length > 1" @click="deleteSavingGoal(activeSaving.id)"
-                        class="text-[9px] text-muted/25 hover:text-red-400/60 tracking-widest transition-colors text-right">
+                        class="text-[9px] tracking-widest text-right transition-colors hover:text-red-400" style="color:var(--color-muted);opacity:0.25">
                     删除此目标
                 </button>
             </div>
 
             <div class="h-[1px] bg-border/40"></div>
 
-            <!-- 存入 / 取出 -->
+            <!-- 存入/取出 -->
             <div class="flex flex-col gap-3">
-                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">记录</p>
+                <div class="jy-label">记 录</div>
                 <div class="flex gap-2">
-                    <div class="flex-1 flex items-center gap-2 bg-bg border border-border/60 px-3 py-2.5" style="border-radius:10px">
-                        <span class="text-[10px] text-muted/40">¥</span>
-                        <input v-model.number="activeSaving.addInput" type="number" min="0"
-                               placeholder="金额"
+                    <div class="flex-1 flex items-center gap-2 jy-input py-0 px-3" style="height:40px">
+                        <span class="text-[11px]" style="color:var(--color-muted);opacity:0.5">¥</span>
+                        <input v-model.number="activeSaving.addInput" type="number" min="0" placeholder="金额"
                                @keydown.enter="addRecord(true)"
-                               class="flex-1 bg-transparent text-[12px] outline-none tracking-wider font-mono">
+                               class="flex-1 bg-transparent text-[12px] outline-none tracking-wider font-mono" style="border:none;padding:0">
                     </div>
                     <input v-model="activeSaving.addNote" type="text" maxlength="15"
                            placeholder="备注（可选）"
                            @keydown.enter="addRecord(true)"
-                           class="flex-1 bg-bg border border-border/60 px-3 py-2.5 text-[11px] outline-none tracking-wider"
-                           style="border-radius:10px">
+                           class="flex-1 jy-input text-[11px]">
                 </div>
                 <div class="flex gap-2">
                     <button @click="addRecord(true)"
-                            class="flex-1 py-2.5 border border-border/60 text-[11px] tracking-[0.2em] hover:bg-border/30 transition-colors text-text/70"
-                            style="border-radius:10px">+ 存入</button>
+                            class="flex-1 py-3 rounded-xl text-[11px] tracking-[0.2em] transition-all font-light"
+                            style="background:linear-gradient(135deg,rgba(138,172,142,0.15),rgba(138,172,142,0.08));border:1px solid rgba(138,172,142,0.25);color:var(--accent-sage)">
+                        ＋ 存 入
+                    </button>
                     <button @click="addRecord(false)"
-                            class="flex-1 py-2.5 border border-border/40 text-[11px] tracking-[0.2em] hover:bg-border/20 transition-colors text-muted/50"
-                            style="border-radius:10px">− 取出</button>
+                            class="flex-1 py-3 rounded-xl text-[11px] tracking-[0.2em] transition-all font-light"
+                            style="background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.12);color:rgba(239,68,68,0.5)">
+                        − 取 出
+                    </button>
                 </div>
             </div>
 
-            <!-- 趋势图（近7条） -->
+            <!-- 趋势图 -->
             <div v-if="activeSaving.records.length >= 2" class="flex flex-col gap-2">
-                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">趋势</p>
-                <div class="flex items-end gap-1.5 h-12 px-1">
+                <div class="jy-label">趋势</div>
+                <div class="flex items-end gap-1.5 h-14 px-1 py-1 rounded-xl" style="background:rgba(0,0,0,0.02);border:1px solid var(--color-border)">
                     <div v-for="(r, i) in savingsTrend(activeSaving)" :key="i"
                          class="flex-1 rounded-sm transition-all duration-500"
-                         :style="`height:${r.h}%;background:${r.type==='in' ? 'var(--color-text)' : 'rgba(239,68,68,0.4)'};opacity:${0.3 + i * 0.1}`">
+                         :style="`height:${r.h}%;background:${r.type==='in' ? 'var(--accent-sage)' : 'rgba(239,68,68,0.35)'};opacity:${0.35 + i * 0.09}`">
                     </div>
                 </div>
             </div>
 
-            <!-- 记录列表 -->
-            <div class="flex flex-col gap-1.5">
+            <!-- 明细 -->
+            <div class="flex flex-col gap-2">
                 <div class="flex justify-between items-center">
-                    <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">明细</p>
+                    <div class="jy-label" style="margin-bottom:0">明 细</div>
                     <button v-if="activeSaving.records.length"
                             @click="activeSaving.records=[]; activeSaving.current=0; activeSaving.streak=0; saveSavings()"
-                            class="text-[8px] text-muted/20 hover:text-red-400/60 tracking-widest transition-colors">清空</button>
+                            class="text-[8px] tracking-widest transition-colors hover:text-red-400" style="color:var(--color-muted);opacity:0.2">清空</button>
                 </div>
-                <div v-if="!activeSaving.records.length" class="text-center text-[10px] text-muted/20 tracking-widest py-4 italic">暂无记录</div>
-                <div class="flex flex-col max-h-48 overflow-y-auto gap-0.5">
+                <div v-if="!activeSaving.records.length" class="text-center py-5 text-[10px] tracking-widest italic" style="color:var(--color-muted);opacity:0.25">暂无记录</div>
+                <div class="flex flex-col max-h-52 overflow-y-auto gap-0.5">
                     <div v-for="(r, ri) in [...activeSaving.records].reverse()" :key="ri"
-                         class="flex items-center gap-2 py-2 px-3 hover:bg-bg/60 transition-colors group/rec"
-                         style="border-radius:8px">
-                        <span class="text-[9px] text-muted/35 tracking-wider w-14 shrink-0">{{ r.date }}</span>
-                        <span class="flex-1 text-[10px] text-muted/40 tracking-wide truncate italic">{{ r.note }}</span>
-                        <span class="text-[11px] font-mono shrink-0"
-                              :class="r.type === 'in' ? 'text-text/60' : 'text-red-400/60'">
+                         class="jy-record-row group/rec">
+                        <span class="text-[9px] tracking-wider w-14 shrink-0" style="color:var(--color-muted);opacity:0.4">{{ r.date }}</span>
+                        <span class="flex-1 text-[10px] tracking-wide truncate italic" style="color:var(--color-muted);opacity:0.4">{{ r.note }}</span>
+                        <span class="text-[11px] font-mono shrink-0 font-light"
+                              :style="r.type === 'in' ? 'color:var(--accent-sage)' : 'color:rgba(239,68,68,0.55)'">
                             {{ r.type === 'in' ? '＋' : '−' }}¥ {{ savingsFormatNum(r.amount) }}
                         </span>
                         <button @click="deleteRecord(activeSaving, activeSaving.records.length - 1 - ri)"
-                                class="opacity-0 group-hover/rec:opacity-100 transition-opacity text-muted/20 hover:text-red-400/60 shrink-0">
+                                class="opacity-0 group-hover/rec:opacity-100 transition-opacity shrink-0 hover:text-red-400" style="color:var(--color-muted);opacity:0">
                             <i data-lucide="x" class="w-3 h-3 stroke-[1.5]"></i>
                         </button>
                     </div>
                 </div>
             </div>
-
         </div>
 
-        <!-- 无目标时 -->
-        <div v-else class="flex-1 flex flex-col items-center justify-center gap-4 py-16">
-            <span class="text-muted/20 text-[10px] tracking-widest">还没有存钱目标</span>
-            <button @click="addSavingGoal"
-                    class="px-6 py-2.5 border border-border/60 text-[11px] tracking-[0.2em] text-text/60 hover:border-border transition-colors"
-                    style="border-radius:12px">新建目标</button>
+        <!-- 无目标 -->
+        <div v-else class="flex-1 flex flex-col items-center justify-center gap-5 py-16">
+            <span style="font-size:40px;opacity:0.2">🌱</span>
+            <span class="text-[10px] tracking-widest" style="color:var(--color-muted);opacity:0.4">还没有存钱目标</span>
+            <button @click="addSavingGoal" class="jy-btn-ghost">新建目标</button>
         </div>
-
     </div>
 </div>
 </transition>
 
-<!-- ── Ta说：联系人全屏页面 ── -->
+<!-- ── Ta说：联系人全屏页面 ✦ 美化版 ── -->
 <transition name="fade">
     <div v-if="modals_contactPanel"
-         class="fixed inset-0 bg-bg z-[110] flex flex-col overflow-hidden">
+         class="fixed inset-0 z-[110] flex flex-col overflow-hidden"
+         style="background:var(--color-bg)">
 
         <!-- 顶栏 -->
-        <div class="h-14 flex items-center justify-between px-5 shrink-0 relative bg-surface"
-             style="padding-top: env(safe-area-inset-top, 0px);">
-            <button @click="modals_contactPanel = false" class="text-muted hover:text-text transition-colors flex items-center gap-1.5">
-                <i data-lucide="arrow-left" class="w-4 h-4 stroke-[1.5]"></i>
-                <span class="text-[11px] tracking-widest">返回</span>
-            </button>
-            <div class="flex flex-col items-center">
-                <span class="text-[13px] tracking-[0.3em] text-text font-light">Ta 说</span>
-                <span class="text-[8px] tracking-[0.25em] text-muted/40 uppercase">SWITCH · CONTACT</span>
+        <div class="shrink-0 relative" style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding-top:env(safe-area-inset-top,0px)">
+            <!-- 彩虹顶条 -->
+            <div class="h-[2px] jy-accent-multi"></div>
+            <div class="h-14 flex items-center justify-between px-5">
+                <button @click="modals_contactPanel = false" class="flex items-center gap-2 text-muted hover:text-text transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4 stroke-[1.5]"></i>
+                    <span class="text-[11px] tracking-widest">返回</span>
+                </button>
+                <div class="flex flex-col items-center">
+                    <span class="text-[13px] tracking-[0.3em] font-light" style="color:var(--color-text)">Ta 说</span>
+                    <span class="text-[8px] tracking-[0.25em] uppercase" style="color:var(--color-muted);opacity:0.35">SWITCH · CONTACT</span>
+                </div>
+                <div class="w-16"></div>
             </div>
-            <div class="w-16"></div>
-            <div class="absolute bottom-0 left-0 right-0 h-[1px] bg-border/60"></div>
         </div>
 
         <!-- 内容区 -->
-        <div class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
+        <div class="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-6">
 
             <!-- 当前对话 -->
             <div>
-                <div class="text-[9px] text-muted/40 tracking-[0.3em] uppercase mb-3">当前对话</div>
-                <div class="flex items-center gap-4 bg-surface rounded-2xl p-4 border border-border/40">
-                    <div class="w-12 h-12 overflow-hidden bg-bg flex items-center justify-center text-muted shrink-0 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%' }">
+                <div class="jy-label">当前对话</div>
+                <div class="jy-contact-card" style="cursor:default;background:linear-gradient(135deg,rgba(107,127,163,0.07),rgba(107,127,163,0.02));border-color:rgba(107,127,163,0.15)">
+                    <div class="w-12 h-12 overflow-hidden flex items-center justify-center text-muted shrink-0 shadow-sm" :style="{ borderRadius: settings.avatarRadius + '%', background:'var(--color-bg)', border:'1px solid var(--color-border)' }">
                         <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
                         <span v-else class="text-lg font-light">{{ profiles.them.name.charAt(0) }}</span>
                     </div>
-                    <div class="flex flex-col gap-0.5 flex-1 min-w-0">
-                        <span class="text-[13px] tracking-wider text-text font-light">{{ profiles.them.name }}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[13px] tracking-wider font-light" style="color:var(--color-text)">{{ profiles.them.name }}</div>
+                        <div class="text-[9px] tracking-widest mt-0.5" style="color:var(--accent-ink);opacity:0.6">当前聊天中</div>
                     </div>
-                    <div class="w-6 h-6 flex items-center justify-center">
-                        <div class="w-2 h-2 rounded-full bg-text/20"></div>
-                    </div>
+                    <div class="w-2 h-2 rounded-full shrink-0" style="background:var(--accent-ink);opacity:0.4;box-shadow:0 0 6px var(--accent-ink)"></div>
                 </div>
             </div>
 
             <!-- 联系人列表 -->
             <div>
-                <div class="text-[9px] text-muted/40 tracking-[0.3em] uppercase mb-3">联系人</div>
+                <div class="jy-label">联系人</div>
                 <div v-if="contactList.length === 0"
-                     class="flex flex-col items-center justify-center py-10 text-muted/25 text-[10px] tracking-widest gap-2">
-                    <i data-lucide="users" class="w-5 h-5 stroke-[1]"></i>
-                    <span>尚无联系人</span>
+                     class="flex flex-col items-center justify-center py-12 gap-3">
+                    <span style="font-size:36px;opacity:0.15">👥</span>
+                    <span class="text-[10px] tracking-widest" style="color:var(--color-muted);opacity:0.3">尚无联系人</span>
                 </div>
                 <div class="flex flex-col gap-2">
                     <div v-for="c in contactList" :key="c.id"
-                         class="flex items-center gap-4 bg-surface rounded-2xl p-4 border border-border/30 cursor-pointer hover:border-border/60 active:scale-[0.98] transition-all group/contact"
+                         class="jy-contact-card group/contact"
                          @click="switchContact(c)">
-                        <!-- 头像（可点击换图） -->
+                        <!-- 头像 -->
                         <div class="relative shrink-0" @click.stop>
-                            <div class="w-11 h-11 overflow-hidden bg-bg flex items-center justify-center text-muted shadow-sm cursor-pointer"
-                                 :style="{ borderRadius: settings.avatarRadius + '%' }"
+                            <div class="w-11 h-11 overflow-hidden flex items-center justify-center text-muted shadow-sm cursor-pointer"
+                                 :style="{ borderRadius: settings.avatarRadius + '%', background:'var(--color-bg)', border:'1px solid var(--color-border)' }"
                                  @click="pickContactAvatar(c)">
                                 <img v-if="c.avatar" :src="c.avatar" class="w-full h-full object-cover">
                                 <span v-else class="text-base font-light">{{ c.name.charAt(0) }}</span>
                             </div>
-                            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-surface border border-border/40 rounded-full flex items-center justify-center pointer-events-none">
-                                <i data-lucide="camera" class="w-2 h-2 text-muted/40 stroke-[1.5]"></i>
+                            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center pointer-events-none" style="background:var(--color-surface);border:1px solid var(--color-border)">
+                                <i data-lucide="camera" class="w-2 h-2 stroke-[1.5]" style="color:var(--color-muted);opacity:0.5"></i>
                             </div>
                         </div>
                         <!-- 信息 -->
                         <div class="flex flex-col gap-1 flex-1 min-w-0" @click.stop>
-                            <!-- 名字可编辑 -->
                             <input :value="c.name" maxlength="12"
                                    @change="e => { c.name = e.target.value.trim().substring(0,12); saveContactList(); }"
                                    @click.stop
-                                   class="bg-transparent text-[13px] tracking-wider text-text outline-none border-none w-full font-light"
+                                   class="bg-transparent text-[13px] tracking-wider outline-none border-none w-full font-light"
+                                   style="color:var(--color-text)"
                                    placeholder="联系人名字">
-                            <!-- 我的名字 -->
-                            <div class="flex items-center gap-1.5 mt-0.5">
-                                <span class="text-[8px] text-muted/25 tracking-widest shrink-0">我叫</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[8px] tracking-widest shrink-0" style="color:var(--color-muted);opacity:0.3">我叫</span>
                                 <input :value="c.myName || ''" maxlength="12"
                                        @change="e => { c.myName = e.target.value.trim().substring(0,12); saveContactList(); }"
                                        @click.stop
-                                       class="bg-transparent text-[10px] text-muted/40 tracking-wide outline-none border-none flex-1"
+                                       class="bg-transparent text-[10px] tracking-wide outline-none border-none flex-1"
+                                       style="color:var(--color-muted);opacity:0.5"
                                        placeholder="我的名字（可选）">
                             </div>
                         </div>
-                        <!-- 切换 + 删除 -->
+                        <!-- 操作 -->
                         <div class="flex flex-col items-end gap-2 shrink-0">
-                            <button @click.stop="removeContact(c.id)" class="text-muted/15 hover:text-red-400 transition-colors p-1">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5 stroke-[1.5]"></i>
+                            <button @click.stop="removeContact(c.id)" class="w-6 h-6 rounded-full flex items-center justify-center transition-all hover:bg-red-50 dark:hover:bg-red-900/10" style="color:var(--color-muted);opacity:0.2" @mouseenter="$event.target.style.opacity=1" @mouseleave="$event.target.style.opacity=0.2">
+                                <i data-lucide="trash-2" class="w-3 h-3 stroke-[1.5]"></i>
                             </button>
                             <button @click="switchContact(c)"
-                                    class="text-[9px] tracking-widest text-muted/40 hover:text-text border border-border/40 hover:border-border px-2 py-0.5 rounded-lg transition-all">
+                                    class="text-[9px] tracking-widest px-2.5 py-1 rounded-lg transition-all"
+                                    style="border:1px solid var(--color-border);color:var(--color-muted);opacity:0.5"
+                                    @mouseenter="$event.target.style.opacity=1" @mouseleave="$event.target.style.opacity=0.5">
                                 切换
                             </button>
                         </div>
@@ -2308,29 +2686,25 @@
 
             <!-- 添加新联系人 -->
             <div>
-                <div class="text-[9px] text-muted/40 tracking-[0.3em] uppercase mb-3">添加联系人</div>
-                <div class="bg-surface rounded-2xl p-4 border border-border/30 flex flex-col gap-3">
+                <div class="jy-label">添加联系人</div>
+                <div class="rounded-2xl p-5 flex flex-col gap-4" style="background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(12px)">
                     <div class="flex gap-3 items-center">
-                        <!-- 新头像预览 -->
-                        <div class="w-11 h-11 overflow-hidden bg-bg flex items-center justify-center text-muted/30 shrink-0 border border-dashed border-border/60 cursor-pointer"
-                             :style="{ borderRadius: settings.avatarRadius + '%' }"
+                        <div class="w-12 h-12 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer transition-all hover:opacity-80"
+                             :style="{ borderRadius: settings.avatarRadius + '%', background:'var(--color-bg)', border:'1px dashed var(--color-border)' }"
                              @click="pickNewContactAvatar">
                             <img v-if="newContactAvatar" :src="newContactAvatar" class="w-full h-full object-cover">
-                            <i v-else data-lucide="plus" class="w-4 h-4 stroke-[1]"></i>
+                            <i v-else data-lucide="plus" class="w-4 h-4 stroke-[1]" style="color:var(--color-muted);opacity:0.4"></i>
                         </div>
                         <div class="flex flex-col gap-2 flex-1">
                             <input v-model="newContactName" @keydown.enter="addContact" type="text" maxlength="12"
                                    placeholder="对方名字..."
-                                   class="bg-bg border border-border/60 rounded-xl px-3 py-1.5 text-[12px] outline-none tracking-wider w-full">
+                                   class="jy-input text-[12px]">
                             <input v-model="newContactMyName" type="text" maxlength="12"
                                    placeholder="我的名字（在这段对话里叫什么）"
-                                   class="bg-bg border border-border/60 rounded-xl px-3 py-1.5 text-[11px] outline-none tracking-wider w-full text-muted">
+                                   class="jy-input text-[11px]" style="color:var(--color-muted)">
                         </div>
                     </div>
-                    <button @click="addContact"
-                            class="w-full text-[11px] tracking-[0.25em] border border-text/20 text-text py-2.5 rounded-xl hover:bg-text hover:text-bg transition-all">
-                        添 加
-                    </button>
+                    <button @click="addContact" class="jy-btn-primary w-full tracking-[0.25em]">添 加</button>
                 </div>
             </div>
 
@@ -2528,52 +2902,57 @@
 
 
 
-<!-- ── 背景音乐 ── -->
+<!-- ── 背景音乐 ✦ 美化版 ── -->
 <transition name="fade">
 <div v-if="modals.music" @click.self="modals.music = false"
-     class="fixed inset-0 bg-black/15 backdrop-blur-sm z-[100] flex items-end justify-center">
-    <div class="bg-surface w-full max-w-md flex flex-col overflow-hidden shadow-xl"
-         style="border:1px solid var(--color-border);border-bottom:none;border-radius:20px 20px 0 0;max-height:80vh">
+     class="fixed inset-0 jy-overlay z-[100] flex items-end justify-center">
+    <div class="jy-modal w-full max-w-md flex flex-col"
+         style="border-bottom:none;border-radius:24px 24px 0 0;max-height:80vh">
+
+        <div class="jy-header-accent jy-accent-ink" style="border-radius:24px 24px 0 0"></div>
 
         <div class="flex justify-center pt-3 pb-1 shrink-0">
-            <div class="w-7 h-[3px] rounded-full bg-border/60"></div>
+            <div class="w-8 h-1 rounded-full bg-border/50"></div>
         </div>
 
-        <div class="px-6 pt-2 pb-4 flex justify-between items-end shrink-0">
-            <div>
-                <p class="text-[18px] font-light tracking-[0.2em] text-text">背景音乐</p>
-                <p class="text-[9px] tracking-[0.3em] text-muted/40 mt-0.5 uppercase">ambient · sound</p>
+        <div class="px-6 pt-2 pb-4 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <!-- 动态声波图标 -->
+                <div class="flex items-end gap-[3px] h-6" style="padding-bottom:2px">
+                    <div v-for="b in 5" :key="b" class="music-wave-bar"
+                         :style="`height:${musicPlaying ? [14,20,12,18,10][b-1] : 6}px;transition:height 0.3s ease`"></div>
+                </div>
+                <div>
+                    <p class="text-[18px] font-light tracking-[0.15em]">背景音乐</p>
+                    <p class="text-[9px] tracking-[0.3em] uppercase" style="color:var(--accent-ink);opacity:0.7">AMBIENT · SOUND</p>
+                </div>
             </div>
-            <button @click="modals.music = false" class="text-muted/30 hover:text-muted transition-colors mb-1">
+            <button @click="modals.music = false" class="w-8 h-8 rounded-full flex items-center justify-center text-muted/35 hover:text-text hover:bg-black/3 dark:hover:bg-white/5 transition-all">
                 <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
             </button>
         </div>
 
-        <div class="h-[1px] mx-6 bg-border/60 shrink-0"></div>
+        <div class="h-[1px] mx-6 bg-border/50 shrink-0"></div>
 
         <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
 
             <!-- 内置氛围音 -->
             <div class="flex flex-col gap-3">
-                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">内置氛围</p>
+                <div class="jy-label">内置氛围</div>
                 <div class="grid grid-cols-2 gap-2">
                     <button v-for="s in builtinSounds" :key="s.id"
                             @click="selectSound(s.id)"
-                            class="flex items-center gap-3 px-4 py-3 border transition-all"
-                            :class="currentSound === s.id && musicPlaying
-                                ? 'border-text/40 bg-text/5'
-                                : 'border-border/50 hover:border-border'"
-                            style="border-radius:12px">
-                        <span class="text-lg">{{ s.emoji }}</span>
-                        <div class="flex flex-col items-start gap-0.5">
-                            <span class="text-[11px] tracking-wider text-text/80">{{ s.name }}</span>
-                            <span class="text-[8px] text-muted/40 tracking-widest">{{ s.desc }}</span>
+                            class="jy-sound-card"
+                            :class="currentSound === s.id && musicPlaying ? 'active' : ''">
+                        <span class="text-xl shrink-0" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1))">{{ s.emoji }}</span>
+                        <div class="flex flex-col items-start gap-0.5 flex-1 min-w-0">
+                            <span class="text-[11px] tracking-wider" style="color:var(--color-text);opacity:0.8">{{ s.name }}</span>
+                            <span class="text-[8px] tracking-widest" style="color:var(--color-muted);opacity:0.4">{{ s.desc }}</span>
                         </div>
-                        <!-- 播放中波纹 -->
                         <div v-if="currentSound === s.id && musicPlaying"
-                             class="ml-auto flex gap-0.5 items-end h-3">
-                            <div v-for="b in 3" :key="b" class="w-0.5 bg-text/40 rounded-full"
-                                 :style="`height:${[8,12,6][b-1]}px;animation:barBounce 0.8s ease-in-out infinite;animation-delay:${(b-1)*0.15}s`"></div>
+                             class="flex gap-[3px] items-end h-4 shrink-0">
+                            <div v-for="b in 4" :key="b" class="music-wave-bar w-[3px]"
+                                 :style="`height:${[10,16,8,13][b-1]}px`"></div>
                         </div>
                     </button>
                 </div>
@@ -2581,28 +2960,29 @@
 
             <div class="h-[1px] bg-border/40"></div>
 
-            <!-- 上传本地音乐 -->
+            <!-- 本地音乐 -->
             <div class="flex flex-col gap-3">
-                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">本地音乐</p>
-                <label class="flex items-center gap-3 px-4 py-3 border border-dashed border-border/50 hover:border-border transition-colors cursor-pointer" style="border-radius:12px">
-                    <i data-lucide="upload" class="w-4 h-4 text-muted/40 stroke-[1.5] shrink-0"></i>
+                <div class="jy-label">本地音乐</div>
+                <label class="flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all rounded-2xl"
+                       style="border:1px dashed var(--color-border);background:rgba(0,0,0,0.015)" >
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:rgba(107,127,163,0.1)">
+                        <i data-lucide="upload" class="w-3.5 h-3.5 stroke-[1.5]" style="color:var(--accent-ink);opacity:0.6"></i>
+                    </div>
                     <div class="flex flex-col gap-0.5">
-                        <span class="text-[11px] tracking-wider text-text/60">{{ uploadedMusicName || '上传音频文件' }}</span>
-                        <span class="text-[8px] text-muted/30 tracking-widest">mp3 · wav · ogg · flac</span>
+                        <span class="text-[11px] tracking-wider" style="color:var(--color-text);opacity:0.6">{{ uploadedMusicName || '上传音频文件' }}</span>
+                        <span class="text-[8px] tracking-widest" style="color:var(--color-muted);opacity:0.3">mp3 · wav · ogg · flac</span>
                     </div>
                     <input type="file" accept="audio/*" class="hidden" @change="loadLocalMusic">
                 </label>
                 <button v-if="uploadedMusicName"
                         @click="selectSound('local')"
-                        class="flex items-center gap-3 px-4 py-3 border transition-all"
-                        :class="currentSound === 'local' && musicPlaying ? 'border-text/40 bg-text/5' : 'border-border/50 hover:border-border'"
-                        style="border-radius:12px">
-                    <span class="text-lg">🎵</span>
-                    <span class="text-[11px] tracking-wider text-text/70 flex-1 truncate">{{ uploadedMusicName }}</span>
-                    <div v-if="currentSound === 'local' && musicPlaying"
-                         class="flex gap-0.5 items-end h-3">
-                        <div v-for="b in 3" :key="b" class="w-0.5 bg-text/40 rounded-full"
-                             :style="`height:${[8,12,6][b-1]}px;animation:barBounce 0.8s ease-in-out infinite;animation-delay:${(b-1)*0.15}s`"></div>
+                        class="jy-sound-card"
+                        :class="currentSound === 'local' && musicPlaying ? 'active' : ''">
+                    <span class="text-xl shrink-0">🎵</span>
+                    <span class="text-[11px] tracking-wider flex-1 truncate" style="color:var(--color-text);opacity:0.7">{{ uploadedMusicName }}</span>
+                    <div v-if="currentSound === 'local' && musicPlaying" class="flex gap-[3px] items-end h-4 shrink-0">
+                        <div v-for="b in 4" :key="b" class="music-wave-bar w-[3px]"
+                             :style="`height:${[10,16,8,13][b-1]}px`"></div>
                     </div>
                 </button>
             </div>
@@ -2611,26 +2991,26 @@
 
             <!-- 音量 + 控制 -->
             <div class="flex flex-col gap-4">
-                <p class="text-[9px] text-muted/35 tracking-[0.3em] uppercase">音量</p>
-                <div class="flex items-center gap-3">
-                    <i data-lucide="volume" class="w-3.5 h-3.5 text-muted/30 stroke-[1.5] shrink-0"></i>
+                <div class="jy-label">音 量</div>
+                <div class="flex items-center gap-3 px-1">
+                    <i data-lucide="volume" class="w-3.5 h-3.5 stroke-[1.5] shrink-0" style="color:var(--color-muted);opacity:0.35"></i>
                     <input type="range" min="0" max="100" v-model.number="musicVolume"
                            @input="setMusicVolume"
-                           class="flex-1 accent-text/60 cursor-pointer" style="height:2px">
-                    <i data-lucide="volume-2" class="w-3.5 h-3.5 text-muted/30 stroke-[1.5] shrink-0"></i>
+                           class="flex-1 cursor-pointer" style="height:3px;accent-color:var(--accent-ink)">
+                    <i data-lucide="volume-2" class="w-3.5 h-3.5 stroke-[1.5] shrink-0" style="color:var(--color-muted);opacity:0.35"></i>
                 </div>
 
-                <!-- 播放/暂停 + 停止 -->
                 <div class="flex gap-3">
                     <button @click="toggleMusic"
-                            class="flex-1 flex items-center justify-center gap-2 py-3 border border-border/60 hover:border-border transition-colors text-[11px] tracking-[0.2em] text-text/70"
-                            style="border-radius:12px">
+                            class="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl transition-all text-[11px] tracking-[0.2em]"
+                            :style="musicPlaying
+                                ? 'background:linear-gradient(135deg,rgba(107,127,163,0.15),rgba(107,127,163,0.08));border:1px solid rgba(107,127,163,0.25);color:var(--accent-ink)'
+                                : 'background:var(--color-text);color:var(--color-bg);border:1px solid transparent'">
                         <i :data-lucide="musicPlaying ? 'pause' : 'play'" class="w-4 h-4 stroke-[1.5]"></i>
-                        {{ musicPlaying ? '暂停' : '播放' }}
+                        {{ musicPlaying ? '暂 停' : '播 放' }}
                     </button>
                     <button v-if="musicPlaying || currentSound" @click="stopMusic"
-                            class="px-5 py-3 border border-border/40 hover:border-border transition-colors text-muted/40 hover:text-muted"
-                            style="border-radius:12px">
+                            class="px-5 py-3 rounded-2xl border border-border/50 transition-all hover:border-border text-muted/40 hover:text-muted">
                         <i data-lucide="square" class="w-3.5 h-3.5 stroke-[1.5]"></i>
                     </button>
                 </div>
@@ -2641,81 +3021,86 @@
 </div>
 </transition>
 
-<!-- ── 查看撤回消息 ── -->
+<!-- ── 查看撤回消息 ✦ 美化版 ── -->
 <transition name="fade">
 <div v-if="peekMsg" @click.self="peekMsg = null"
-     class="fixed inset-0 bg-black/15 backdrop-blur-sm z-[100] flex items-center justify-center px-8">
-    <div class="bg-surface w-full max-w-xs rounded-2xl shadow-xl overflow-hidden"
-         style="border:1px solid var(--color-border)">
+     class="fixed inset-0 jy-overlay z-[100] flex items-center justify-center px-8">
+    <div class="jy-modal w-full max-w-xs">
+        <div class="jy-header-accent jy-accent-rose"></div>
         <div class="px-5 pt-5 pb-2 flex justify-between items-center">
-            <span class="text-[10px] tracking-[0.3em] text-muted/40 uppercase">撤回的消息</span>
-            <button @click="peekMsg = null" class="text-muted/30 hover:text-muted transition-colors">
-                <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
+            <div class="flex items-center gap-2">
+                <span style="font-size:14px;opacity:0.5">👻</span>
+                <span class="text-[10px] tracking-[0.3em] uppercase" style="color:var(--color-muted);opacity:0.5">撤回的消息</span>
+            </div>
+            <button @click="peekMsg = null" class="w-6 h-6 rounded-full flex items-center justify-center text-muted/30 hover:text-text hover:bg-black/5 transition-all">
+                <i data-lucide="x" class="w-3 h-3 stroke-[1.5]"></i>
             </button>
         </div>
         <div class="px-5 pb-5 pt-2">
-            <div class="bg-bg border border-border/40 rounded-xl px-4 py-3">
-                <p class="text-[12px] text-text/70 tracking-wide leading-relaxed italic">{{ peekMsg }}</p>
+            <div class="rounded-2xl px-4 py-3.5" style="background:rgba(0,0,0,0.025);border:1px solid var(--color-border)">
+                <p class="text-[12px] tracking-wide leading-relaxed italic" style="color:var(--color-text);opacity:0.7">{{ peekMsg }}</p>
             </div>
-            <p class="text-[8px] text-muted/25 tracking-widest mt-3 text-center">对方已撤回，此内容仅你可见</p>
+            <p class="text-[8px] tracking-widest mt-3 text-center" style="color:var(--color-muted);opacity:0.25">对方已撤回，此内容仅你可见</p>
         </div>
     </div>
 </div>
 </transition>
 
 
-    <!-- 多条草稿弹窗 -->
+    <!-- 多条草稿弹窗 ✦ 美化版 -->
 <transition name="fade">
     <div v-if="modals.multiDraft" @click.self="modals.multiDraft = false"
-         class="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex justify-center items-center px-6">
-        <div class="bg-surface w-full max-w-sm flex flex-col overflow-hidden shadow-2xl"
-             style="border: 1px solid var(--color-border); border-radius: 4px;">
+         class="fixed inset-0 jy-overlay z-50 flex justify-center items-center px-6">
+        <div class="jy-modal w-full max-w-sm flex flex-col">
+            <div class="jy-header-accent jy-accent-multi"></div>
 
             <!-- 顶栏 -->
-            <div class="px-6 pt-6 pb-4 flex justify-between items-start">
-                <div class="flex flex-col gap-1">
-                    <span class="text-[13px] tracking-[0.35em] text-text font-light">草 稿</span>
-                    <span class="text-[9px] tracking-[0.25em] text-muted/40 uppercase">DRAFT · MULTI SEND</span>
+            <div class="px-6 pt-5 pb-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span style="font-size:18px;opacity:0.7">📝</span>
+                    <div>
+                        <div class="jy-modal-title">草 稿</div>
+                        <div class="jy-modal-subtitle">DRAFT · MULTI SEND</div>
+                    </div>
                 </div>
-                <button @click="modals.multiDraft = false" class="text-muted/30 hover:text-muted transition-colors mt-0.5">
+                <button @click="modals.multiDraft = false" class="w-7 h-7 rounded-full flex items-center justify-center text-muted/35 hover:text-text hover:bg-black/5 transition-all">
                     <i data-lucide="x" class="w-3.5 h-3.5 stroke-[1]"></i>
                 </button>
             </div>
 
-            <!-- 分隔线 -->
-            <div class="mx-6 h-[1px] bg-border/60"></div>
+            <div class="jy-modal-divider"></div>
 
             <!-- 输入区 -->
             <div class="px-6 py-5 relative">
                 <textarea v-model="draftText" rows="6"
-                    class="w-full bg-transparent text-[13px] resize-none outline-none leading-[1.9] tracking-wide placeholder-muted/25 border-none font-light"
+                    class="w-full bg-transparent text-[13px] resize-none outline-none leading-[1.9] tracking-wide font-light"
+                    style="color:var(--color-text);border:none;placeholder-color:var(--color-muted)"
                     placeholder="每行将作为一条独立消息发出&#10;&#10;例如&#10;你好呀&#10;我想你了"></textarea>
-                <!-- 右下角行数 -->
-                <span class="absolute bottom-6 right-6 text-[9px] tracking-[0.2em] text-muted/25 font-mono select-none transition-opacity"
-                      :style="{ opacity: draftLines.length > 0 ? 1 : 0 }">
+                <span class="absolute bottom-6 right-6 text-[9px] tracking-[0.2em] font-mono select-none transition-opacity"
+                      style="color:var(--color-muted);opacity:0.25"
+                      :style="{ opacity: draftLines.length > 0 ? 0.35 : 0 }">
                     {{ draftLines.length }} LINE{{ draftLines.length > 1 ? 'S' : '' }}
                 </span>
             </div>
 
-            <!-- 分隔线 -->
-            <div class="mx-6 h-[1px] bg-border/60"></div>
+            <div class="jy-modal-divider"></div>
 
             <!-- 底部操作 -->
             <div class="px-6 py-4 flex justify-between items-center">
                 <button @click="draftText = ''"
-                        class="text-[10px] tracking-[0.25em] text-muted/30 hover:text-muted transition-colors uppercase"
-                        :class="draftLines.length === 0 ? 'pointer-events-none' : ''">
+                        class="text-[10px] tracking-[0.25em] uppercase transition-colors"
+                        style="color:var(--color-muted);opacity:0.3"
+                        :class="draftLines.length === 0 ? 'pointer-events-none' : 'hover:opacity-60'">
                     清 空
                 </button>
                 <button @click="sendDraft"
-                        class="text-[11px] tracking-[0.3em] transition-all px-5 py-2 border uppercase"
-                        :class="draftLines.length > 0
-                            ? 'text-text border-text/30 hover:bg-text hover:text-bg'
-                            : 'text-muted/20 border-border/30 pointer-events-none'">
+                        class="px-6 py-2.5 rounded-xl text-[11px] tracking-[0.3em] transition-all uppercase"
+                        :style="draftLines.length > 0
+                            ? 'background:var(--color-text);color:var(--color-bg);box-shadow:0 4px 16px rgba(0,0,0,0.12)'
+                            : 'background:var(--color-border);color:var(--color-muted);opacity:0.4;pointer-events:none'">
                     发 送
                 </button>
             </div>
-
         </div>
     </div>
 </transition>

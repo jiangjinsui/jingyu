@@ -2494,12 +2494,12 @@
 <div v-if="callMinimized && (callState==='outgoing'||callState==='active'||callState==='rejected')"
      class="fixed z-[300] select-none"
      :style="`top:${bubbleY}px;left:${bubbleX}px`"
-     @mousedown="startDrag" @touchstart.prevent="startDrag">
+     @mousedown="startDrag" @touchstart="startDrag">
 
     <div class="relative flex items-center gap-2.5 px-3 py-2.5 shadow-lg overflow-hidden cursor-pointer"
          style="border-radius:16px;min-width:130px;max-width:190px"
          :style="callBg ? `background:url('${callBg}') center/cover no-repeat` : 'background:var(--color-surface);border:1px solid var(--color-border)'"
-         @click.stop="!wasDragging && (callMinimized = false)">
+         @click.stop>
 
         <!-- 蒙层：仅有背景图时用，且不太深 -->
         <div v-if="callBg" class="absolute inset-0" style="background:rgba(0,0,0,0.38);border-radius:16px"></div>
@@ -3302,8 +3302,8 @@ const scrollToBottom = async () => {
             if (sender === 'them') {
                 const displayText = type === 'image' ? '[图片]' : txt;
                 sendSystemNotif(profiles.them.name, displayText);
-                // 15% 概率在 3~8 秒后撤回
-                if (type === 'text' && Math.random() < 0.15) {
+                // 10% 概率在 3~8 秒后撤回
+                if (type === 'text' && Math.random() < 0.10) {
                     const recallDelay = (3 + Math.random() * 5) * 1000;
                     setTimeout(() => {
                         const m = messages.value.find(x => x.id === msgId);
@@ -4083,13 +4083,18 @@ updateLetterRemainText();
                 }
             };
             const onUp = () => {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                document.removeEventListener('touchmove', onMove);
-                document.removeEventListener('touchend', onUp);
-                if (!wasDragging.value) callMinimized.value = false;
-                setTimeout(() => { wasDragging.value = false; }, 50);
-            };
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onUp);
+    setTimeout(() => {
+        if (!wasDragging.value) {
+            callMinimized.value = false;
+            nextTick(() => lucide.createIcons());
+        }
+        wasDragging.value = false;
+    }, 10);
+};
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
             document.addEventListener('touchmove', onMove, {passive:true});
@@ -4453,7 +4458,9 @@ updateLetterRemainText();
         };
 
         watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
-        watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
+watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
+watch(callMinimized, () => setTimeout(() => lucide.createIcons(), 60));
+watch(callState, () => setTimeout(() => lucide.createIcons(), 60));
 
         // ══════════════════════════════════════
         // 常说的话

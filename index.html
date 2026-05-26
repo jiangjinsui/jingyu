@@ -2277,7 +2277,8 @@
                 </div>
                 <div class="flex flex-col gap-2">
                     <div v-for="c in contactList" :key="c.id"
-                         class="flex items-center gap-4 bg-surface rounded-2xl p-4 border border-border/30 cursor-pointer hover:border-border/60 active:scale-[0.98] transition-all group/contact"
+                         class="flex items-center gap-4 bg-surface rounded-2xl p-4 border transition-all group/contact cursor-pointer active:scale-[0.98]"
+                         :class="c.id === activeContactId ? 'border-border/70' : 'border-border/30 hover:border-border/60'"
                          @click="switchContact(c)">
                         <!-- 头像（可点击换图） -->
                         <div class="relative shrink-0" @click.stop>
@@ -2294,11 +2295,14 @@
                         <!-- 信息 -->
                         <div class="flex flex-col gap-1 flex-1 min-w-0" @click.stop>
                             <!-- 名字可编辑 -->
-                            <input :value="c.name" maxlength="12"
-                                   @change="e => { c.name = e.target.value.trim().substring(0,12); saveContactList(); }"
-                                   @click.stop
-                                   class="bg-transparent text-[13px] tracking-wider text-text outline-none border-none w-full font-light"
-                                   placeholder="联系人名字">
+                            <div class="flex items-center gap-2">
+                                <input :value="c.name" maxlength="12"
+                                       @change="e => { c.name = e.target.value.trim().substring(0,12); saveContactList(); }"
+                                       @click.stop
+                                       class="bg-transparent text-[13px] tracking-wider text-text outline-none border-none w-full font-light"
+                                       placeholder="联系人名字">
+                                <span v-if="c.id === activeContactId" class="text-[8px] tracking-widest text-muted/40 shrink-0">聊天中</span>
+                            </div>
                             <!-- 我的名字 -->
                             <div class="flex items-center gap-1.5 mt-0.5">
                                 <span class="text-[8px] text-muted/25 tracking-widest shrink-0">我叫</span>
@@ -2314,10 +2318,11 @@
                             <button @click.stop="removeContact(c.id)" class="text-muted/15 hover:text-red-400 transition-colors p-1">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5 stroke-[1.5]"></i>
                             </button>
-                            <button @click="switchContact(c)"
+                            <button v-if="c.id !== activeContactId" @click="switchContact(c)"
                                     class="text-[9px] tracking-widest text-muted/40 hover:text-text border border-border/40 hover:border-border px-2 py-0.5 rounded-lg transition-all">
                                 切换
                             </button>
+                            <span v-else class="text-[9px] tracking-widest text-muted/25 px-2 py-0.5">✓</span>
                         </div>
                     </div>
                 </div>
@@ -2494,12 +2499,12 @@
 <div v-if="callMinimized && (callState==='outgoing'||callState==='active'||callState==='rejected')"
      class="fixed z-[300] select-none"
      :style="`top:${bubbleY}px;left:${bubbleX}px`"
-     @mousedown="startDrag" @touchstart="startDrag">
+     @mousedown="startDrag" @touchstart.prevent="startDrag">
 
     <div class="relative flex items-center gap-2.5 px-3 py-2.5 shadow-lg overflow-hidden cursor-pointer"
          style="border-radius:16px;min-width:130px;max-width:190px"
          :style="callBg ? `background:url('${callBg}') center/cover no-repeat` : 'background:var(--color-surface);border:1px solid var(--color-border)'"
-         @click.stop>
+         @click.stop="!wasDragging && (callMinimized = false)">
 
         <!-- 蒙层：仅有背景图时用，且不太深 -->
         <div v-if="callBg" class="absolute inset-0" style="background:rgba(0,0,0,0.38);border-radius:16px"></div>
@@ -3240,6 +3245,13 @@ const pendingDeleteIdx = ref(null);
                     replyGroups: JSON.parse(JSON.stringify(replyGroups.value)),
                     stickerImages: JSON.parse(JSON.stringify(stickerImages.value))
                 });
+                // 同步保存到联系人专属聊天记录
+                if (activeContactId.value) {
+                    try {
+                        await localforage.setItem('jingyu_chat_' + activeContactId.value, JSON.parse(JSON.stringify(messages.value)));
+                        await localforage.setItem('jingyu_active_contact', activeContactId.value);
+                    } catch(e) {}
+                }
                 refreshStorageInfo();
             }, 500);
         };
@@ -3302,8 +3314,8 @@ const scrollToBottom = async () => {
             if (sender === 'them') {
                 const displayText = type === 'image' ? '[图片]' : txt;
                 sendSystemNotif(profiles.them.name, displayText);
-                // 10% 概率在 3~8 秒后撤回
-                if (type === 'text' && Math.random() < 0.10) {
+                // 15% 概率在 3~8 秒后撤回
+                if (type === 'text' && Math.random() < 0.15) {
                     const recallDelay = (3 + Math.random() * 5) * 1000;
                     setTimeout(() => {
                         const m = messages.value.find(x => x.id === msgId);
@@ -3573,6 +3585,8 @@ const deleteMsg = (id) => {
                         c.height = ratio >= 1 ? MAX / ratio : MAX;
                         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
                         profiles[role].avatar = c.toDataURL('image/jpeg', 0.85);
+                        // 改了头像 → 自动同步联系人
+                        if (role === 'them' || role === 'me') autoSyncCurrentContact();
                     };
                     img.src = ev.target.result;
                 };
@@ -3583,7 +3597,11 @@ const deleteMsg = (id) => {
 
         const changeName = role => {
             const n = prompt(`修改昵称：`, profiles[role].name);
-            if (n && n.trim()) profiles[role].name = n.trim().substring(0, 12);
+            if (n && n.trim()) {
+                profiles[role].name = n.trim().substring(0, 12);
+                // 改了对方名字 → 自动同步到当前联系人（或新建）
+                if (role === 'them') autoSyncCurrentContact();
+            }
         };
 
         const editProfile = role => {
@@ -3978,6 +3996,23 @@ const importAllData = (e) => {
                     if(data.stickerImages) stickerImages.value = data.stickerImages;
                 }
             } catch(e) {}
+
+            // ── 恢复联系人列表 & 自动绑定当前聊天 ──
+            try {
+                const cl = await localforage.getItem('jingyu_contacts');
+                if (cl && Array.isArray(cl)) contactList.value = cl;
+            } catch(e) {}
+
+            try {
+                const savedActiveId = await localforage.getItem('jingyu_active_contact');
+                if (savedActiveId && contactList.value.find(c => c.id === savedActiveId)) {
+                    activeContactId.value = savedActiveId;
+                } else if (messages.value.length > 0 || profiles.them.name !== '对方') {
+                    // 有历史聊天但没绑定联系人 → 自动创建并绑定
+                    autoSyncCurrentContact();
+                }
+            } catch(e) {}
+
             if(settings.isDark) document.documentElement.classList.add('dark');
             applyCSS(); applyBg(); setupActiveMsg(); checkNotifPermission(); refreshStorageInfo();
             
@@ -4083,18 +4118,13 @@ updateLetterRemainText();
                 }
             };
             const onUp = () => {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('touchend', onUp);
-    setTimeout(() => {
-        if (!wasDragging.value) {
-            callMinimized.value = false;
-            nextTick(() => lucide.createIcons());
-        }
-        wasDragging.value = false;
-    }, 10);
-};
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
+                if (!wasDragging.value) callMinimized.value = false;
+                setTimeout(() => { wasDragging.value = false; }, 50);
+            };
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
             document.addEventListener('touchmove', onMove, {passive:true});
@@ -4157,12 +4187,101 @@ updateLetterRemainText();
         const newContactName = ref('');
         const newContactMyName = ref('');
         const newContactAvatar = ref('');
+        const activeContactId = ref(''); // 当前正在聊的联系人 id
 
-        const switchContact = (contact) => {
-            profiles.them.name = contact.name;
+        // 把当前聊天快照存入联系人专属 key
+        const saveCurrentContactChat = async () => {
+            if (!activeContactId.value) return;
+            try {
+                await localforage.setItem(
+                    'jingyu_chat_' + activeContactId.value,
+                    JSON.parse(JSON.stringify(messages.value))
+                );
+            } catch(e) {}
+        };
+
+        // 改了 profiles.them / profiles.me 后，自动更新联系人列表里对应记录（没有则新建）
+        const autoSyncCurrentContact = () => {
+            if (activeContactId.value) {
+                // 更新已有联系人的信息
+                const c = contactList.value.find(x => x.id === activeContactId.value);
+                if (c) {
+                    c.name     = profiles.them.name;
+                    c.avatar   = profiles.them.avatar || '';
+                    c.myName   = profiles.me.name;
+                    c.myAvatar = profiles.me.avatar || '';
+                    saveContactList();
+                    return;
+                }
+            }
+            // 没有活跃联系人 → 新建一条
+            const nc = {
+                id: 'c_' + Date.now(),
+                name:     profiles.them.name,
+                avatar:   profiles.them.avatar || '',
+                myName:   profiles.me.name,
+                myAvatar: profiles.me.avatar || ''
+            };
+            contactList.value.unshift(nc);
+            activeContactId.value = nc.id;
+            saveCurrentContactChat();
+            saveContactList();
+        };
+
+        const switchContact = async (contact) => {
+            // 1. 先保存当前聊天
+            await saveCurrentContactChat();
+            // 2. 切换头像 / 名字
+            profiles.them.name   = contact.name;
             profiles.them.avatar = contact.avatar || '';
-            if (contact.myName) profiles.me.name = contact.myName;
-            if (contact.myAvatar) profiles.me.avatar = contact.myAvatar;
+            profiles.me.name     = contact.myName  || profiles.me.name;
+            profiles.me.avatar   = contact.myAvatar || profiles.me.avatar;
+            // 3. 加载目标联系人历史消息
+            activeContactId.value = contact.id;
+            try {
+                const saved = await localforage.getItem('jingyu_chat_' + contact.id);
+                messages.value = (saved && Array.isArray(saved)) ? saved : [];
+            } catch(e) { messages.value = []; }
+            modals_contactPanel.value = false;
+            saveData();
+        };
+
+        // 新建联系人：先把当前聊天存好，再开一个全新的空白窗口
+        const addContact = async () => {
+            const name = newContactName.value.trim();
+            if (!name) return;
+
+            // ① 先把当前窗口的备注+聊天记录存好
+            if (activeContactId.value) {
+                await saveCurrentContactChat();
+            } else {
+                // 当前还没绑联系人，帮它建一个并存好
+                autoSyncCurrentContact();
+                await saveCurrentContactChat();
+            }
+
+            // ② 新建联系人（空聊天）
+            const nc = {
+                id: 'c_' + Date.now(),
+                name: name.substring(0, 12),
+                avatar: newContactAvatar.value || '',
+                myName: newContactMyName.value.trim().substring(0, 12) || profiles.me.name,
+                myAvatar: profiles.me.avatar || ''
+            };
+            contactList.value.push(nc);
+            try { await localforage.setItem('jingyu_chat_' + nc.id, []); } catch(e) {}
+
+            // ③ 切换到新窗口（空白）
+            activeContactId.value = nc.id;
+            messages.value = [];
+            profiles.them.name   = nc.name;
+            profiles.them.avatar = nc.avatar || '';
+            if (nc.myName) profiles.me.name = nc.myName;
+
+            newContactName.value   = '';
+            newContactMyName.value = '';
+            newContactAvatar.value = '';
+            saveContactList();
             modals_contactPanel.value = false;
             saveData();
         };
@@ -4212,22 +4331,19 @@ updateLetterRemainText();
             input.click();
         };
 
-        const addContact = () => {
-            if (!newContactName.value.trim()) return;
-            contactList.value.push({
-                id: 'c_'+Date.now(),
-                name: newContactName.value.trim().substring(0,12),
-                avatar: newContactAvatar.value || '',
-                myName: newContactMyName.value.trim().substring(0,12) || '',
-                myAvatar: ''
-            });
-            newContactName.value = '';
-            newContactMyName.value = '';
-            newContactAvatar.value = '';
-            saveContactList();
-        };
-
-        const removeContact = (id) => {
+        const removeContact = async (id) => {
+            if (!confirm('删除联系人后，ta 的聊天记录也会一起删除，确认吗？')) return;
+            // 如果删的是当前聊天联系人，先清空聊天窗口
+            if (activeContactId.value === id) {
+                activeContactId.value = '';
+                messages.value = [];
+                profiles.them.name   = '对方';
+                profiles.them.avatar = '';
+                try { await localforage.removeItem('jingyu_active_contact'); } catch(e) {}
+                saveData();
+            }
+            // 删除专属聊天记录
+            try { await localforage.removeItem('jingyu_chat_' + id); } catch(e) {}
             contactList.value = contactList.value.filter(c => c.id !== id);
             saveContactList();
         };
@@ -4237,13 +4353,6 @@ updateLetterRemainText();
         };
 
         watch(contactList, saveContactList, {deep:true});
-
-        (async () => {
-            try {
-                const cl = await localforage.getItem('jingyu_contacts');
-                if (cl && Array.isArray(cl)) contactList.value = cl;
-            } catch(e) {}
-        })();
 
         // ── 存钱功能 ──
         const savingGoals = ref([]);
@@ -4458,9 +4567,7 @@ updateLetterRemainText();
         };
 
         watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
-watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
-watch(callMinimized, () => setTimeout(() => lucide.createIcons(), 60));
-watch(callState, () => setTimeout(() => lucide.createIcons(), 60));
+        watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
 
         // ══════════════════════════════════════
         // 常说的话
@@ -4560,6 +4667,7 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             callState, callDurationStr, callMinimized, callBg, bubbleX, bubbleY, bubbleSize, wasDragging, showBubbleSizer,
             startCall, answerCall, hangUp, setCallBg, startDrag,
             contactList, modals_contactPanel, newContactName, newContactMyName, newContactAvatar,
+            activeContactId, autoSyncCurrentContact,
             switchContact, addContact, removeContact, saveContactList, pickContactAvatar, pickNewContactAvatar,
             savingGoals, activeSavingId, activeSaving, activeSavingProgress,
             savingsFormatNum, addSavingGoal, deleteSavingGoal, addRecord, deleteRecord,

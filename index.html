@@ -90,8 +90,10 @@
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
         [v-cloak] { display: none !important; }
-        @keyframes jy-lt-viz { from { opacity: 0.2; transform: scaleY(0.4); } to { opacity: 0.55; transform: scaleY(1); } }
         input, textarea, button { outline: none !important; box-shadow: none !important; }
+        @keyframes jy-lt-viz { from { opacity: 0.18; transform: scaleY(0.35); } to { opacity: 0.45; transform: scaleY(1); } }
+        .jy-lt-hover-mask { opacity: 0 !important; }
+        [data-v-app] div:hover > .jy-lt-hover-mask, .jy-lt-resize:hover > div { opacity: 1 !important; }
         .msg-bubble { line-height: 1.6; letter-spacing: 0.3px; word-break: break-word; }
 
        /* ══════════════════════════════════════
@@ -2642,123 +2644,84 @@
 <transition name="fade">
 <div v-if="listenTogether.active"
      class="fixed z-[290] select-none"
-     :style="`top:${listenTogether.y}px;left:${listenTogether.x}px`"
+     :style="`top:${listenTogether.y}px;left:${listenTogether.x}px;transform-origin:top left;transform:scale(${listenTogether.scale})`"
      @mousedown="startListenDrag" @touchstart.prevent="startListenDrag">
 
-    <!-- 拼贴感外壳 -->
-    <div style="
-        width:148px;
-        background:var(--color-surface);
-        border:1px solid var(--color-border);
-        border-radius:14px;
-        box-shadow:0 6px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.06);
-        overflow:hidden;
-        font-family:'Courier New',monospace;
-        user-select:none;
-    ">
-        <!-- 顶部胶带装饰条 -->
-        <div style="height:3px;background:linear-gradient(90deg,var(--color-border) 0%,var(--color-muted) 50%,var(--color-border) 100%);opacity:0.4;"></div>
+    <div style="width:148px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.06);overflow:visible;font-family:'Courier New',monospace;">
+
+        <!-- 顶部装饰条 -->
+        <div style="height:3px;background:linear-gradient(90deg,var(--color-border) 0%,var(--color-muted) 50%,var(--color-border) 100%);opacity:0.4;border-radius:14px 14px 0 0;"></div>
 
         <div style="padding:10px 10px 8px;">
 
             <!-- 标题行 -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:7px;letter-spacing:0.2em;color:var(--color-muted);opacity:0.5;text-transform:uppercase;">
-                    ♫ listening
-                </span>
-                <span style="font-size:7px;letter-spacing:0.1em;color:var(--color-muted);opacity:0.4;">
-                    {{ listenTogetherDurationStr }}
-                </span>
+                <span style="font-size:7px;letter-spacing:0.2em;color:var(--color-muted);opacity:0.5;text-transform:uppercase;">♫ listening</span>
+                <span style="font-size:7px;letter-spacing:0.08em;color:var(--color-muted);opacity:0.4;">{{ listenTogetherDurationStr }}</span>
             </div>
 
-            <!-- 双头像区域 -->
+            <!-- 双头像 -->
             <div style="display:flex;align-items:flex-end;justify-content:center;gap:6px;margin-bottom:8px;position:relative;">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:1px;background:var(--color-border);opacity:0.5;z-index:0;"></div>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;border-radius:50%;background:var(--color-muted);opacity:0.35;z-index:1;"></div>
 
-                <!-- 连接线 -->
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:1px;background:var(--color-border);opacity:0.6;z-index:0;"></div>
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;border-radius:50%;background:var(--color-muted);opacity:0.4;z-index:1;"></div>
-
-                <!-- 左头像 (me) -->
+                <!-- me -->
                 <div style="display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;">
                     <div @click.stop="changeAvatar('me')"
-                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;transition:transform 0.2s,box-shadow 0.2s;box-shadow:2px 3px 8px rgba(0,0,0,0.1);"
-                         @mouseenter="$event.currentTarget.style.transform='scale(1.06)'"
-                         @mouseleave="$event.currentTarget.style.transform='scale(1)'">
-                        <img v-if="profiles.me.avatar" :src="profiles.me.avatar"
-                             style="width:100%;height:100%;object-fit:cover;display:block;">
-                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">
-                            {{ profiles.me.name.charAt(0) }}
-                        </div>
-                        <!-- 悬浮换图提示 -->
-                        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;border-radius:6px;"
-                             @mouseenter="$event.currentTarget.style.opacity='1'"
-                             @mouseleave="$event.currentTarget.style.opacity='0'">
-                            <span style="font-size:8px;color:#fff;letter-spacing:0.05em;">换图</span>
+                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;box-shadow:2px 3px 8px rgba(0,0,0,0.1);">
+                        <img v-if="profiles.me.avatar" :src="profiles.me.avatar" style="width:100%;height:100%;object-fit:cover;display:block;">
+                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">{{ profiles.me.name.charAt(0) }}</div>
+                        <div class="jy-lt-hover-mask" style="position:absolute;inset:0;background:rgba(0,0,0,0.32);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.18s;">
+                            <span style="font-size:7px;color:#fff;letter-spacing:0.05em;">换图</span>
                         </div>
                     </div>
-                    <span style="font-size:7px;color:var(--color-muted);opacity:0.55;letter-spacing:0.05em;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
-                        {{ profiles.me.name }}
-                    </span>
+                    <span style="font-size:7px;color:var(--color-muted);opacity:0.5;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">{{ profiles.me.name }}</span>
                 </div>
 
-                <!-- 右头像 (them) -->
+                <!-- them -->
                 <div style="display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;">
                     <div @click.stop="changeAvatar('them')"
-                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;transition:transform 0.2s,box-shadow 0.2s;box-shadow:2px 3px 8px rgba(0,0,0,0.1);"
-                         @mouseenter="$event.currentTarget.style.transform='scale(1.06)'"
-                         @mouseleave="$event.currentTarget.style.transform='scale(1)'">
-                        <img v-if="profiles.them.avatar" :src="profiles.them.avatar"
-                             style="width:100%;height:100%;object-fit:cover;display:block;">
-                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">
-                            {{ profiles.them.name.charAt(0) }}
-                        </div>
-                        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;border-radius:6px;"
-                             @mouseenter="$event.currentTarget.style.opacity='1'"
-                             @mouseleave="$event.currentTarget.style.opacity='0'">
-                            <span style="font-size:8px;color:#fff;letter-spacing:0.05em;">换图</span>
+                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;box-shadow:2px 3px 8px rgba(0,0,0,0.1);">
+                        <img v-if="profiles.them.avatar" :src="profiles.them.avatar" style="width:100%;height:100%;object-fit:cover;display:block;">
+                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">{{ profiles.them.name.charAt(0) }}</div>
+                        <div class="jy-lt-hover-mask" style="position:absolute;inset:0;background:rgba(0,0,0,0.32);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.18s;">
+                            <span style="font-size:7px;color:#fff;letter-spacing:0.05em;">换图</span>
                         </div>
                     </div>
-                    <span style="font-size:7px;color:var(--color-muted);opacity:0.55;letter-spacing:0.05em;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
-                        {{ profiles.them.name }}
-                    </span>
+                    <span style="font-size:7px;color:var(--color-muted);opacity:0.5;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">{{ profiles.them.name }}</span>
                 </div>
             </div>
 
-            <!-- 音浪频谱 -->
+            <!-- 音浪 -->
             <div style="display:flex;align-items:flex-end;justify-content:center;gap:2px;height:14px;margin-bottom:7px;">
-                <span v-for="(h, i) in [4,7,10,6,12,8,5,11,7,9,4,8]" :key="i"
-                      :style="`
-                        width:3px;
-                        height:${h}px;
-                        border-radius:1px;
-                        background:var(--color-muted);
-                        opacity:0.35;
-                        animation:jy-lt-viz 0.${4+i%5}s ${i%2===0?'ease-in-out':'ease'} infinite alternate;
-                        animation-delay:${i*0.07}s;
-                      `">
+                <span v-for="(h,i) in [4,7,10,6,12,8,5,11,7,9,4,8]" :key="i"
+                      :style="`width:3px;height:${h}px;border-radius:1px;background:var(--color-muted);opacity:0.3;animation:jy-lt-viz 0.${4+i%5}s ease-in-out infinite alternate;animation-delay:${i*0.07}s`">
                 </span>
             </div>
 
-            <!-- 分隔线 -->
-            <div style="height:1px;background:var(--color-border);opacity:0.5;margin-bottom:6px;"></div>
+            <!-- 分隔 -->
+            <div style="height:1px;background:var(--color-border);opacity:0.45;margin-bottom:6px;"></div>
 
-            <!-- 底部操作 -->
+            <!-- 底部 -->
             <div style="display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:7px;letter-spacing:0.15em;color:var(--color-muted);opacity:0.35;font-style:italic;">
-                    一起听
-                </span>
+                <span style="font-size:7px;letter-spacing:0.12em;color:var(--color-muted);opacity:0.3;font-style:italic;">一起听</span>
                 <button @click.stop="toggleListenTogether"
-                        style="font-size:7px;letter-spacing:0.15em;color:var(--color-muted);opacity:0.45;background:none;border:none;cursor:pointer;padding:0;transition:opacity 0.2s;"
-                        @mouseenter="$event.currentTarget.style.opacity='0.9'"
-                        @mouseleave="$event.currentTarget.style.opacity='0.45'">
+                        style="font-size:7px;letter-spacing:0.12em;color:var(--color-muted);opacity:0.4;background:none;border:none;cursor:pointer;padding:0;transition:opacity 0.2s;"
+                        onmouseenter="this.style.opacity='0.85'" onmouseleave="this.style.opacity='0.4'">
                     结束
                 </button>
             </div>
-
         </div>
 
         <!-- 底部装饰条 -->
-        <div style="height:2px;background:linear-gradient(90deg,transparent,var(--color-border),transparent);opacity:0.3;"></div>
+        <div style="height:2px;background:linear-gradient(90deg,transparent,var(--color-border),transparent);opacity:0.3;border-radius:0 0 14px 14px;"></div>
+
+        <!-- 缩放手柄：底部居中，上下拖动调大小 -->
+        <div class="jy-lt-resize"
+             @mousedown.stop="startListenResize" @touchstart.stop.prevent="startListenResize"
+             style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:28px;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;z-index:10;">
+            <div style="width:20px;height:3px;border-radius:2px;background:var(--color-border);opacity:0.5;"></div>
+        </div>
     </div>
 </div>
 </transition>
@@ -4272,6 +4235,7 @@ updateLetterRemainText();
                     listenTogether.seconds = lt.seconds || 0;
                     if (typeof lt.x === 'number') listenTogether.x = lt.x;
                     if (typeof lt.y === 'number') listenTogether.y = lt.y;
+                    if (typeof lt.scale === 'number') listenTogether.scale = lt.scale;
                 }
             } catch(e) {}
 
@@ -4499,7 +4463,7 @@ updateLetterRemainText();
         };
 
         // ── 一起听 ──
-        const listenTogether = reactive({ active: false, seconds: 0, x: Math.max(20, window.innerWidth/2 - 60), y: 110 });
+        const listenTogether = reactive({ active: false, seconds: 0, x: Math.max(20, window.innerWidth/2 - 60), y: 110, scale: 0.75 });
         let listenTogetherTimer = null;
         const listenWasDragging = ref(false);
 
@@ -4513,7 +4477,7 @@ updateLetterRemainText();
         });
 
         const saveListenTogether = async () => {
-            try { await localforage.setItem('jingyu_listen_together', { seconds: listenTogether.seconds, x: listenTogether.x, y: listenTogether.y }); } catch(e) {}
+            try { await localforage.setItem('jingyu_listen_together', { seconds: listenTogether.seconds, x: listenTogether.x, y: listenTogether.y, scale: listenTogether.scale }); } catch(e) {}
         };
 
         const startListenTimer = () => {
@@ -4544,6 +4508,7 @@ updateLetterRemainText();
         const startListenDrag = (e) => {
             // 点击的是"结束"按钮本身时，不要触发拖拽逻辑，避免按钮点击被拖拽吞掉
             if (e.target.closest('button')) return;
+            if (e.target.closest('.jy-lt-resize')) return;
             const isTouch = !!e.touches;
             const startX = isTouch ? e.touches[0].clientX : e.clientX;
             const startY = isTouch ? e.touches[0].clientY : e.clientY;
@@ -4571,6 +4536,30 @@ updateLetterRemainText();
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
             document.addEventListener('touchmove', onMove, {passive:true});
+            document.addEventListener('touchend', onUp);
+        };
+
+        const startListenResize = (e) => {
+            e.stopPropagation();
+            const isTouch = !!e.touches;
+            const startY = isTouch ? e.touches[0].clientY : e.clientY;
+            const origScale = listenTogether.scale;
+            const onMove = (ev) => {
+                const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                const dy = startY - cy; // 上拖变大，下拖变小
+                const delta = dy * 0.004;
+                listenTogether.scale = Math.min(1.4, Math.max(0.45, origScale + delta));
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
+                saveListenTogether();
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove, {passive:false});
             document.addEventListener('touchend', onUp);
         };
 
@@ -5147,7 +5136,7 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             headerExpanded, appReady,
             peekMsg, peekRecalled,
             callState, callDurationStr, callMinimized, callBg, bubbleX, bubbleY, bubbleSize, wasDragging, showBubbleSizer,
-            listenTogether, listenTogetherDurationStr, toggleListenTogether, startListenDrag,
+            listenTogether, listenTogetherDurationStr, toggleListenTogether, startListenDrag, startListenResize,
             tourActive, tourStepIndex, tourSteps, tourRect, tourTooltipStyle, startTour, nextTourStep, prevTourStep, endTour,
             startCall, answerCall, hangUp, setCallBg, startDrag,
             contactList, modals_contactPanel, newContactName, newContactMyName, newContactAvatar,

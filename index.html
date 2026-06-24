@@ -89,6 +89,8 @@
         .fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
+        [v-cloak] { display: none !important; }
+        @keyframes jy-lt-viz { from { opacity: 0.2; transform: scaleY(0.4); } to { opacity: 0.55; transform: scaleY(1); } }
         input, textarea, button { outline: none !important; box-shadow: none !important; }
         .msg-bubble { line-height: 1.6; letter-spacing: 0.3px; word-break: break-word; }
 
@@ -979,7 +981,7 @@
     <button class="dismiss" id="dismiss-install">✕</button>
 </div>
 
-<div id="app" class="h-[100dvh] w-full flex justify-center items-center selection:bg-text selection:text-bg relative"
+<div id="app" v-cloak class="h-[100dvh] w-full flex justify-center items-center selection:bg-text selection:text-bg relative"
      :class="settings.bgImage ? '' : 'bg-bg'">
 
     <div class="w-full md:max-w-3xl h-full flex flex-col relative md:shadow-2xl md:border-x border-border/50 transition-all duration-500" :class="settings.bgImage ? 'bg-transparent' : 'bg-surface/90 backdrop-blur-lg'">
@@ -1001,12 +1003,12 @@
     <!-- 中间：功能按钮 -->
     <div class="flex gap-3 text-muted items-center relative">
         <!-- Ta说 在月亮左边 -->
-        <button @click="modals_contactPanel = true" class="hover:text-text transition-colors text-[9px] tracking-widest leading-none">Ta说</button>
+        <button id="tour-contact-btn" @click="modals_contactPanel = true" class="hover:text-text transition-colors text-[9px] tracking-widest leading-none">Ta说</button>
         <button @click="toggleTheme" class="hover:text-text transition-colors"><i :data-lucide="settings.isDark ? 'sun' : 'moon'" class="w-4 h-4 stroke-[1.5]"></i></button>
         <button @click="startCall" class="hover:text-text transition-colors" title="通话"><i data-lucide="phone" class="w-4 h-4 stroke-[1.5]"></i></button>
-        <button @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
+        <button id="tour-sticker-btn" @click="modals.stickerPanel = !modals.stickerPanel; modals.replyManager = false; modals.settings = false" class="hover:text-text transition-colors" :class="modals.stickerPanel ? 'text-text' : ''"><i data-lucide="image" class="w-4 h-4 stroke-[1.5]"></i></button>
         <!-- 更多 -->
-        <button @click="headerExpanded = !headerExpanded" class="hover:text-text transition-colors" :class="headerExpanded ? 'text-text' : ''">
+        <button id="tour-more-btn" @click="headerExpanded = !headerExpanded" class="hover:text-text transition-colors" :class="headerExpanded ? 'text-text' : ''">
             <i data-lucide="more-horizontal" class="w-4 h-4 stroke-[1.5]"></i>
         </button>
         <!-- 折叠浮层 -->
@@ -1017,10 +1019,10 @@
                 <button @click="modals.letter = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5">
                     <i data-lucide="mail" class="w-4 h-4 stroke-[1.5]"></i>
                 </button>
-                <button @click="modals.music = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5" :class="musicPlaying ? 'text-text' : ''">
+                <button id="tour-music-btn" @click="modals.music = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5" :class="musicPlaying ? 'text-text' : ''">
                     <i data-lucide="music" class="w-4 h-4 stroke-[1.5]"></i>
                 </button>
-                <button @click="modals.replyManager = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5">
+                <button id="tour-replylib-btn" @click="modals.replyManager = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5">
                     <i data-lucide="library" class="w-4 h-4 stroke-[1.5]"></i>
                 </button>
                 <button @click="modals.savings = true; headerExpanded = false" class="hover:text-text transition-colors p-1.5">
@@ -1031,7 +1033,7 @@
                     </svg>
                 </button>
 
-                <button @click="modals.settings = true; refreshStorageInfo(); headerExpanded = false" class="hover:text-text transition-colors p-1.5">
+                <button id="tour-settings-btn" @click="modals.settings = true; refreshStorageInfo(); headerExpanded = false" class="hover:text-text transition-colors p-1.5">
                     <i data-lucide="sliders-horizontal" class="w-4 h-4 stroke-[1.5]"></i>
                 </button>
             </div>
@@ -1199,12 +1201,12 @@
         <i data-lucide="layout-list" class="w-5 h-5 stroke-[1.5]"></i>
     </button>
 
-    <textarea v-model="inputText" @keydown.enter.prevent="sendMsg('me', 'text')" rows="1"
+    <textarea id="tour-input-box" v-model="inputText" @keydown.enter.prevent="sendMsg('me', 'text')" rows="1"
               class="flex-1 bg-bg/50 hover:bg-bg focus:bg-bg rounded-xl px-4 py-2.5 text-[12px] md:text-[13px] resize-none max-h-32 placeholder-muted/50 leading-relaxed tracking-wide transition-colors border border-transparent focus:border-border"
               placeholder="书写..."></textarea>
 
     <div class="flex gap-2 shrink-0 text-muted/80">
-        <button @click="triggerReply" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" title="让对方说话">
+        <button id="tour-replyas-them-btn" @click="triggerReply" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" title="让对方说话">
             <i data-lucide="pen-tool" class="w-5 h-5 stroke-[1.5]"></i>
         </button>
         <button @click="sendMsg('me', 'text')" class="p-2 hover:bg-border/50 rounded-xl transition-all duration-300" :class="{'text-text': inputText.trim()}" title="发送">
@@ -1225,6 +1227,18 @@
                 <div class="absolute bottom-0 left-6 right-6 h-[1px] bg-border/80"></div>
             </div>
             <div class="px-6 py-6 overflow-y-auto flex flex-col gap-8 text-[13px] md:text-[14px]">
+
+                <!-- 来源声明 -->
+                <div class="bg-bg/50 border border-border/60 rounded-lg px-4 py-3 text-[11px] leading-relaxed text-muted/80 tracking-wide">
+            声明：该网站源代码来源于 @Milk老师的静语，禁止盈利。
+                   注意：本网站为免费分享。若你是通过付费渠道获取该网站，说明你可能遭遇了倒卖行为；请联系小红书账号 @愿你我岁岁平安。♡
+                </div>
+
+                <!-- 新手教程 -->
+                <div class="flex justify-between items-center bg-bg/50 px-4 py-3 cursor-pointer hover:bg-border/50 transition-colors rounded" @click="modals.onboarding = true">
+                    <span class="tracking-widest">新手教程 / 使用说明</span>
+                    <span class="text-muted text-xs flex items-center gap-1"><i data-lucide="chevron-right" class="w-3 h-3"></i></span>
+                </div>
 
                 <!-- 身份与显示 -->
                 <div class="space-y-3">
@@ -1757,6 +1771,82 @@
                 </div>
                 <div class="px-6 py-4 border-t border-border/50 shrink-0">
                     <button @click="modals.githubGuide = false" class="w-full text-[12px] tracking-widest border border-border py-2.5 rounded-lg hover:bg-bg transition-colors">我知道了</button>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- 新手教程弹窗 -->
+    <transition name="fade">
+        <div v-if="modals.onboarding" @click.self="modals.onboarding = false"
+             class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-end md:items-center justify-center p-0 md:p-6">
+            <div class="bg-surface w-full max-w-lg rounded-t-2xl md:rounded-2xl shadow-2xl border border-border/50 overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="px-6 py-4 flex justify-between items-center border-b border-border/50 shrink-0">
+                    <span class="text-[13px] tracking-widest font-medium">📖 新手教程 / 使用说明</span>
+                    <button @click="modals.onboarding = false" class="text-muted hover:text-text"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div class="overflow-y-auto px-6 py-5 space-y-5 text-[12px] leading-relaxed tracking-wide">
+
+                    <div class="bg-bg/60 rounded-xl px-4 py-3 border border-border/30">
+                        <p class="text-text/70">该网站源代码基于 @Milk老师的静语制作，仅为爱发电，禁止任何盈利用途。
+                 另外，本人不接受任何关于“对面是低频 / 批皮”的言论。字卡对话本身存在概率机制，未触发到某些内容属于正常现象。若看到相关言论，我会选择停止分享；如果无法接受这一点，可以直接退出网页。♡
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <p class="text-[11px] tracking-widest text-muted uppercase">这是什么</p>
+                        <p class="text-text/70">静语是一个可以用字卡聊天的网站。<br>你发出字卡后，对方会通过预设好的字卡、表情和贴图给你回应。</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <p class="text-[11px] tracking-widest text-muted uppercase">关于联系人</p>
+                        <p class="text-text/70">可以添加多个联系人，每个联系人拥有自己独立的聊天记录、字卡库和贴图，互不混用，切换联系人即可切换到对应的专属空间。</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <p class="text-[11px] tracking-widest text-muted uppercase">数据安全</p>
+                        <p class="text-text/70">所有数据默认只保存在你本机浏览器中，可以在设置里开启 GitHub 云端备份，防止数据丢失。</p>
+                    </div>
+
+                    <div class="bg-bg/60 rounded-xl px-4 py-3 border border-border/30">
+                        <p class="text-text/70">点击下方「开始引导」，会一步步用高亮的方式带你认识每个功能按钮，建议第一次使用时看一遍～</p>
+                    </div>
+
+                </div>
+                <div class="px-6 py-4 border-t border-border/50 shrink-0 flex gap-3">
+                    <button @click="modals.onboarding = false" class="flex-1 text-[12px] tracking-widest border border-border py-2.5 rounded-lg hover:bg-bg transition-colors text-muted">跳过</button>
+                    <button @click="startTour" class="flex-1 text-[12px] tracking-widest bg-text text-bg py-2.5 rounded-lg hover:opacity-85 transition-opacity">开始引导</button>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- 聚光灯引导教程 -->
+    <transition name="fade">
+        <div v-if="tourActive" class="fixed inset-0 z-[500]" style="pointer-events:none">
+            <!-- 高亮镂空 -->
+            <div v-if="tourRect.visible"
+                 class="fixed transition-all duration-300 rounded-xl"
+                 :style="`top:${tourRect.top - 6}px;left:${tourRect.left - 6}px;width:${tourRect.width + 12}px;height:${tourRect.height + 12}px;box-shadow:0 0 0 9999px rgba(0,0,0,0.78);`">
+            </div>
+            <!-- 无目标时的纯遮罩（开场/结束页） -->
+            <div v-else class="fixed inset-0 bg-black/78"></div>
+
+            <!-- 提示卡片 -->
+            <div class="fixed transition-all duration-300"
+                 style="pointer-events:auto"
+                 :style="tourTooltipStyle">
+                <div v-if="tourSteps[tourStepIndex]" class="bg-surface rounded-2xl shadow-2xl border border-border/50 px-5 py-4 w-[260px] md:w-[280px]">
+                    <p class="text-[12px] tracking-widest font-medium text-text mb-1.5">{{ tourSteps[tourStepIndex]?.title }}</p>
+                    <p class="text-[11px] leading-relaxed text-text/70 whitespace-pre-line">{{ tourSteps[tourStepIndex]?.desc }}</p>
+                    <div class="flex items-center justify-between mt-4">
+                        <span class="text-[9px] text-muted/40 tracking-widest">{{ tourStepIndex + 1 }} / {{ tourSteps.length }}</span>
+                        <div class="flex gap-2">
+                            <button @click="endTour" class="text-[10px] tracking-widest text-muted/50 hover:text-muted px-2 py-1.5">跳过</button>
+                            <button v-if="tourStepIndex > 0" @click="prevTourStep" class="text-[10px] tracking-widest text-muted/60 hover:text-text px-2 py-1.5 border border-border/50 rounded-lg">上一步</button>
+                            <button @click="nextTourStep" class="text-[10px] tracking-widest bg-text text-bg px-3 py-1.5 rounded-lg hover:opacity-85 transition-opacity">{{ tourStepIndex === tourSteps.length - 1 ? '完成' : '下一步' }}</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2548,7 +2638,130 @@
 </transition>
 </template>
 
+<!-- ── 一起听 悬浮窗 ── -->
+<transition name="fade">
+<div v-if="listenTogether.active"
+     class="fixed z-[290] select-none"
+     :style="`top:${listenTogether.y}px;left:${listenTogether.x}px`"
+     @mousedown="startListenDrag" @touchstart.prevent="startListenDrag">
 
+    <!-- 拼贴感外壳 -->
+    <div style="
+        width:148px;
+        background:var(--color-surface);
+        border:1px solid var(--color-border);
+        border-radius:14px;
+        box-shadow:0 6px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.06);
+        overflow:hidden;
+        font-family:'Courier New',monospace;
+        user-select:none;
+    ">
+        <!-- 顶部胶带装饰条 -->
+        <div style="height:3px;background:linear-gradient(90deg,var(--color-border) 0%,var(--color-muted) 50%,var(--color-border) 100%);opacity:0.4;"></div>
+
+        <div style="padding:10px 10px 8px;">
+
+            <!-- 标题行 -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:7px;letter-spacing:0.2em;color:var(--color-muted);opacity:0.5;text-transform:uppercase;">
+                    ♫ listening
+                </span>
+                <span style="font-size:7px;letter-spacing:0.1em;color:var(--color-muted);opacity:0.4;">
+                    {{ listenTogetherDurationStr }}
+                </span>
+            </div>
+
+            <!-- 双头像区域 -->
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:6px;margin-bottom:8px;position:relative;">
+
+                <!-- 连接线 -->
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:1px;background:var(--color-border);opacity:0.6;z-index:0;"></div>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;border-radius:50%;background:var(--color-muted);opacity:0.4;z-index:1;"></div>
+
+                <!-- 左头像 (me) -->
+                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;">
+                    <div @click.stop="changeAvatar('me')"
+                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;transition:transform 0.2s,box-shadow 0.2s;box-shadow:2px 3px 8px rgba(0,0,0,0.1);"
+                         @mouseenter="$event.currentTarget.style.transform='scale(1.06)'"
+                         @mouseleave="$event.currentTarget.style.transform='scale(1)'">
+                        <img v-if="profiles.me.avatar" :src="profiles.me.avatar"
+                             style="width:100%;height:100%;object-fit:cover;display:block;">
+                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">
+                            {{ profiles.me.name.charAt(0) }}
+                        </div>
+                        <!-- 悬浮换图提示 -->
+                        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;border-radius:6px;"
+                             @mouseenter="$event.currentTarget.style.opacity='1'"
+                             @mouseleave="$event.currentTarget.style.opacity='0'">
+                            <span style="font-size:8px;color:#fff;letter-spacing:0.05em;">换图</span>
+                        </div>
+                    </div>
+                    <span style="font-size:7px;color:var(--color-muted);opacity:0.55;letter-spacing:0.05em;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                        {{ profiles.me.name }}
+                    </span>
+                </div>
+
+                <!-- 右头像 (them) -->
+                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;">
+                    <div @click.stop="changeAvatar('them')"
+                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;transition:transform 0.2s,box-shadow 0.2s;box-shadow:2px 3px 8px rgba(0,0,0,0.1);"
+                         @mouseenter="$event.currentTarget.style.transform='scale(1.06)'"
+                         @mouseleave="$event.currentTarget.style.transform='scale(1)'">
+                        <img v-if="profiles.them.avatar" :src="profiles.them.avatar"
+                             style="width:100%;height:100%;object-fit:cover;display:block;">
+                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">
+                            {{ profiles.them.name.charAt(0) }}
+                        </div>
+                        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;border-radius:6px;"
+                             @mouseenter="$event.currentTarget.style.opacity='1'"
+                             @mouseleave="$event.currentTarget.style.opacity='0'">
+                            <span style="font-size:8px;color:#fff;letter-spacing:0.05em;">换图</span>
+                        </div>
+                    </div>
+                    <span style="font-size:7px;color:var(--color-muted);opacity:0.55;letter-spacing:0.05em;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                        {{ profiles.them.name }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- 音浪频谱 -->
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:2px;height:14px;margin-bottom:7px;">
+                <span v-for="(h, i) in [4,7,10,6,12,8,5,11,7,9,4,8]" :key="i"
+                      :style="`
+                        width:3px;
+                        height:${h}px;
+                        border-radius:1px;
+                        background:var(--color-muted);
+                        opacity:0.35;
+                        animation:jy-lt-viz 0.${4+i%5}s ${i%2===0?'ease-in-out':'ease'} infinite alternate;
+                        animation-delay:${i*0.07}s;
+                      `">
+                </span>
+            </div>
+
+            <!-- 分隔线 -->
+            <div style="height:1px;background:var(--color-border);opacity:0.5;margin-bottom:6px;"></div>
+
+            <!-- 底部操作 -->
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:7px;letter-spacing:0.15em;color:var(--color-muted);opacity:0.35;font-style:italic;">
+                    一起听
+                </span>
+                <button @click.stop="toggleListenTogether"
+                        style="font-size:7px;letter-spacing:0.15em;color:var(--color-muted);opacity:0.45;background:none;border:none;cursor:pointer;padding:0;transition:opacity 0.2s;"
+                        @mouseenter="$event.currentTarget.style.opacity='0.9'"
+                        @mouseleave="$event.currentTarget.style.opacity='0.45'">
+                    结束
+                </button>
+            </div>
+
+        </div>
+
+        <!-- 底部装饰条 -->
+        <div style="height:2px;background:linear-gradient(90deg,transparent,var(--color-border),transparent);opacity:0.3;"></div>
+    </div>
+</div>
+</transition>
 
 <!-- ── 背景音乐 ── -->
 <transition name="fade">
@@ -2656,6 +2869,19 @@
                         <i data-lucide="square" class="w-3.5 h-3.5 stroke-[1.5]"></i>
                     </button>
                 </div>
+            </div>
+
+            <div class="h-[1px] bg-border/40"></div>
+
+            <!-- 一起听 -->
+            <div class="flex flex-col gap-3">
+                <button @click="toggleListenTogether"
+                        class="flex items-center justify-center gap-2 py-3 border transition-all text-[11px] tracking-[0.2em]"
+                        :class="listenTogether.active ? 'border-text/40 bg-text/5 text-text' : 'border-border/50 hover:border-border text-text/60'"
+                        style="border-radius:12px">
+                    <i data-lucide="headphones" class="w-4 h-4 stroke-[1.5]"></i>
+                    {{ listenTogether.active ? '结束一起听' : '一起听' }}
+                </button>
             </div>
 
         </div>
@@ -3083,7 +3309,7 @@ setInterval(() => {
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, savings: false, music: false, wordCloud: false });
+const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, savings: false, music: false, wordCloud: false, onboarding: false });
 const pendingDeleteIdx = ref(null);
         
         const groupEditTarget = ref(null);
@@ -3245,10 +3471,14 @@ const pendingDeleteIdx = ref(null);
                     replyGroups: JSON.parse(JSON.stringify(replyGroups.value)),
                     stickerImages: JSON.parse(JSON.stringify(stickerImages.value))
                 });
-                // 同步保存到联系人专属聊天记录
+                // 同步保存到联系人专属聊天记录（消息 + 字卡库 + 贴图，每个联系人独立）
                 if (activeContactId.value) {
                     try {
-                        await localforage.setItem('jingyu_chat_' + activeContactId.value, JSON.parse(JSON.stringify(messages.value)));
+                        await localforage.setItem('jingyu_chat_' + activeContactId.value, {
+                            messages: JSON.parse(JSON.stringify(messages.value)),
+                            replyGroups: JSON.parse(JSON.stringify(replyGroups.value)),
+                            stickerImages: JSON.parse(JSON.stringify(stickerImages.value))
+                        });
                         await localforage.setItem('jingyu_active_contact', activeContactId.value);
                     } catch(e) {}
                 }
@@ -3287,7 +3517,7 @@ const pendingDeleteIdx = ref(null);
             } catch(e) {}
         };
 
-        watch([messages, profiles, settings, replyGroups], saveData, { deep: true });
+        watch([messages, profiles, settings, replyGroups, stickerImages], saveData, { deep: true });
 
 const scrollToBottom = async () => {
     await nextTick();
@@ -4007,6 +4237,12 @@ const importAllData = (e) => {
                 const savedActiveId = await localforage.getItem('jingyu_active_contact');
                 if (savedActiveId && contactList.value.find(c => c.id === savedActiveId)) {
                     activeContactId.value = savedActiveId;
+                    // 按联系人加载专属聊天记录、字卡库、贴图，避免与全局/其他联系人数据混用
+                    const data = await loadContactData(savedActiveId);
+                    messages.value = data.messages;
+                    replyGroups.value = data.replyGroups;
+                    stickerImages.value = data.stickerImages;
+                    currentGroupId.value = (replyGroups.value[0] && replyGroups.value[0].id) || 'g_custom';
                 } else if (messages.value.length > 0 || profiles.them.name !== '对方') {
                     // 有历史聊天但没绑定联系人 → 自动创建并绑定
                     autoSyncCurrentContact();
@@ -4015,10 +4251,29 @@ const importAllData = (e) => {
 
             if(settings.isDark) document.documentElement.classList.add('dark');
             applyCSS(); applyBg(); setupActiveMsg(); checkNotifPermission(); refreshStorageInfo();
+
+            // 首次访问自动弹出新手教程
+            try {
+                const seen = await localforage.getItem('jingyu_onboarding_seen');
+                if (!seen) {
+                    modals.onboarding = true;
+                    await localforage.setItem('jingyu_onboarding_seen', true);
+                }
+            } catch(e) {}
             
            // 恢复待送达信件的定时器
 pendingLetters.value.forEach(p => scheduleLetterDelivery(p));
 updateLetterRemainText();
+
+            // 恢复"一起听"累计时长与位置
+            try {
+                const lt = await localforage.getItem('jingyu_listen_together');
+                if (lt) {
+                    listenTogether.seconds = lt.seconds || 0;
+                    if (typeof lt.x === 'number') listenTogether.x = lt.x;
+                    if (typeof lt.y === 'number') listenTogether.y = lt.y;
+                }
+            } catch(e) {}
 
             document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') nextTick(lucide.createIcons); });
             // 监听保活唤醒事件，重启后台定时器
@@ -4067,6 +4322,118 @@ updateLetterRemainText();
         const headerExpanded = ref(false);
         const appReady = ref(false);
         watch(headerExpanded, (v) => { if (v) nextTick(() => lucide.createIcons()); });
+
+        // ── 聚光灯新手引导教程 ──
+        const tourActive = ref(false);
+        const tourStepIndex = ref(0);
+        const tourRect = reactive({ top: 0, left: 0, width: 0, height: 0, visible: false });
+
+        const tourSteps = [
+            { id: 'intro', target: null,
+              title: '这是什么',
+              desc: '静语是一个可以用「字卡」聊天传讯的网站。\n你发出聊天后，对方会通过预设好的字卡、表情和贴图给你回应。' },
+            { id: 'contact', target: '#tour-contact-btn',
+              title: '联系人',
+              desc: '点这里可以添加或切换联系人。\n每一位联系人都拥有独立的聊天记录、字卡库与贴图，属于你们之间的内容不会与其他人混在一起。' },
+            { id: 'sticker', target: '#tour-sticker-btn',
+              title: '贴图',
+              desc: '点击这里打开贴图（表情包）面板，你可以选择已上传的图片快速发送。\n不过这里显示的是用户贴图，梦角回复时使用的贴图需要提前在字卡中配置♡' },
+            { id: 'more', target: '#tour-more-btn',
+              title: '更多功能',
+              desc: '点击这个按钮可以展开更多功能入口。',
+              enter: () => { headerExpanded.value = true; } },
+            { id: 'music', target: '#tour-music-btn',
+              title: '背景音乐',
+              desc: '点击这里可以打开背景音乐，也可以开启「一起听」功能，和对方一起记录彼此陪伴的时长。' },
+            { id: 'replylib', target: '#tour-replylib-btn',
+              title: '字卡库',
+              desc: '在这里管理对方常用的回复文字和表情，方便快速发送。' },
+            { id: 'settings', target: '#tour-settings-btn',
+              title: '设置',
+              desc: '更多设置都在这里，包括主题、通知、数据备份等，新手教程也可以在这里重新打开。',
+              leave: () => { headerExpanded.value = false; } },
+            { id: 'input', target: '#tour-input-box',
+              title: '发送消息',
+              desc: '在这里打字，按 Enter/回车键 发送你的消息。' },
+            { id: 'replyAsThem', target: '#tour-replyas-them-btn',
+              title: '让对方说话',
+              desc: '点击这个按钮，可以让对方再次发送句子' },
+            { id: 'end', target: null,
+              title: '教程结束',
+              desc: '祝你聊得愉快～随时可以在设置里重新打开这个教程。' }
+        ];
+
+        const computeTourRect = async () => {
+            await nextTick();
+            const step = tourSteps[tourStepIndex.value];
+            if (!step || !step.target) { tourRect.visible = false; return; }
+            const el = document.querySelector(step.target);
+            if (!el) { tourRect.visible = false; return; }
+            const r = el.getBoundingClientRect();
+            tourRect.top = r.top; tourRect.left = r.left;
+            tourRect.width = r.width; tourRect.height = r.height;
+            tourRect.visible = true;
+        };
+
+        const onTourResize = () => computeTourRect();
+
+        const goToTourStep = async (idx) => {
+            const oldStep = tourSteps[tourStepIndex.value];
+            if (oldStep && oldStep.leave) oldStep.leave();
+            tourStepIndex.value = idx;
+            const newStep = tourSteps[idx];
+            if (newStep && newStep.enter) newStep.enter();
+            await computeTourRect();
+            nextTick(() => lucide.createIcons());
+        };
+
+        const startTour = async () => {
+            modals.onboarding = false;
+            modals.settings = false;
+            modals.stickerPanel = false;
+            modals.replyManager = false;
+            modals.music = false;
+            headerExpanded.value = false;
+            tourActive.value = true;
+            window.addEventListener('resize', onTourResize);
+            await goToTourStep(0);
+        };
+
+        const nextTourStep = () => {
+            if (tourStepIndex.value >= tourSteps.length - 1) { endTour(); return; }
+            goToTourStep(tourStepIndex.value + 1);
+        };
+
+        const prevTourStep = () => {
+            if (tourStepIndex.value <= 0) return;
+            goToTourStep(tourStepIndex.value - 1);
+        };
+
+        const endTour = () => {
+            const step = tourSteps[tourStepIndex.value];
+            if (step && step.leave) step.leave();
+            tourActive.value = false;
+            headerExpanded.value = false;
+            window.removeEventListener('resize', onTourResize);
+        };
+
+        const tourTooltipStyle = computed(() => {
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const tooltipW = vw < 400 ? 260 : 280;
+            if (!tourRect.visible) {
+                // 无目标元素：居中显示
+                return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+            }
+            const margin = 16;
+            const spaceBelow = vh - (tourRect.top + tourRect.height);
+            const placeAbove = spaceBelow < 180 && tourRect.top > 180;
+            let left = tourRect.left + tourRect.width / 2;
+            left = Math.max(tooltipW / 2 + 10, Math.min(vw - tooltipW / 2 - 10, left));
+            if (placeAbove) {
+                return { top: `${tourRect.top - margin}px`, left: `${left}px`, transform: 'translate(-50%, -100%)' };
+            }
+            return { top: `${tourRect.top + tourRect.height + margin}px`, left: `${left}px`, transform: 'translate(-50%, 0)' };
+        });
 
         // ── 撤回消息 ──
         const peekMsg = ref(null);
@@ -4124,6 +4491,82 @@ updateLetterRemainText();
                 document.removeEventListener('touchend', onUp);
                 if (!wasDragging.value) callMinimized.value = false;
                 setTimeout(() => { wasDragging.value = false; }, 50);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove, {passive:true});
+            document.addEventListener('touchend', onUp);
+        };
+
+        // ── 一起听 ──
+        const listenTogether = reactive({ active: false, seconds: 0, x: Math.max(20, window.innerWidth/2 - 60), y: 110 });
+        let listenTogetherTimer = null;
+        const listenWasDragging = ref(false);
+
+        const listenTogetherDurationStr = computed(() => {
+            const totalSec = listenTogether.seconds;
+            const totalMin = Math.floor(totalSec / 60);
+            if (totalMin < 60) return `${totalMin} 分钟`;
+            const hours = Math.floor(totalMin / 60);
+            const mins = totalMin % 60;
+            return mins > 0 ? `${hours} 小时 ${mins} 分钟` : `${hours} 小时`;
+        });
+
+        const saveListenTogether = async () => {
+            try { await localforage.setItem('jingyu_listen_together', { seconds: listenTogether.seconds, x: listenTogether.x, y: listenTogether.y }); } catch(e) {}
+        };
+
+        const startListenTimer = () => {
+            clearInterval(listenTogetherTimer);
+            listenTogetherTimer = setInterval(() => {
+                listenTogether.seconds++;
+                saveListenTogether();
+            }, 1000);
+        };
+
+        const toggleListenTogether = () => {
+            if (listenTogether.active) {
+                listenTogether.active = false;
+                clearInterval(listenTogetherTimer);
+                saveListenTogether();
+            } else {
+                listenTogether.active = true;
+                // 自动开始播放音乐，营造一起听的氛围
+                if (!musicPlaying.value) {
+                    if (currentSound.value) selectSound(currentSound.value);
+                    else if (builtinSounds && builtinSounds.length) selectSound(builtinSounds[0].id);
+                }
+                startListenTimer();
+                nextTick(() => lucide.createIcons());
+            }
+        };
+
+        const startListenDrag = (e) => {
+            // 点击的是"结束"按钮本身时，不要触发拖拽逻辑，避免按钮点击被拖拽吞掉
+            if (e.target.closest('button')) return;
+            const isTouch = !!e.touches;
+            const startX = isTouch ? e.touches[0].clientX : e.clientX;
+            const startY = isTouch ? e.touches[0].clientY : e.clientY;
+            const origX = listenTogether.x, origY = listenTogether.y;
+            listenWasDragging.value = false;
+            const widgetW = 120, widgetH = 100;
+            const onMove = (ev) => {
+                const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                const dx = cx-startX, dy = cy-startY;
+                if (Math.abs(dx)>4||Math.abs(dy)>4) listenWasDragging.value = true;
+                if (listenWasDragging.value) {
+                    listenTogether.x = Math.max(0, Math.min(window.innerWidth-widgetW, origX+dx));
+                    listenTogether.y = Math.max(0, Math.min(window.innerHeight-widgetH, origY+dy));
+                }
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
+                saveListenTogether();
+                setTimeout(() => { listenWasDragging.value = false; }, 50);
             };
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
@@ -4189,15 +4632,43 @@ updateLetterRemainText();
         const newContactAvatar = ref('');
         const activeContactId = ref(''); // 当前正在聊的联系人 id
 
-        // 把当前聊天快照存入联系人专属 key
+        // 把当前聊天 + 字卡库 + 贴图 快照存入联系人专属 key（每个联系人独立，禁止混用）
         const saveCurrentContactChat = async () => {
             if (!activeContactId.value) return;
             try {
                 await localforage.setItem(
                     'jingyu_chat_' + activeContactId.value,
-                    JSON.parse(JSON.stringify(messages.value))
+                    {
+                        messages: JSON.parse(JSON.stringify(messages.value)),
+                        replyGroups: JSON.parse(JSON.stringify(replyGroups.value)),
+                        stickerImages: JSON.parse(JSON.stringify(stickerImages.value))
+                    }
                 );
             } catch(e) {}
+        };
+
+        // 默认的初始字卡库（新建联系人时使用）
+        const defaultReplyGroups = () => ([
+            { id: 'g_custom', name: '我的回复', replies: [] },
+            { id: 'g_emoji', name: '表情库', replies: generateEmojis() }
+        ]);
+
+        // 读取某个联系人专属的聊天数据（兼容旧格式：纯消息数组）
+        const loadContactData = async (id) => {
+            let saved = null;
+            try { saved = await localforage.getItem('jingyu_chat_' + id); } catch(e) {}
+            if (Array.isArray(saved)) {
+                // 旧格式：只有消息数组，字卡库/贴图给一份全新默认值，避免与其他联系人混用
+                return { messages: saved, replyGroups: defaultReplyGroups(), stickerImages: [] };
+            }
+            if (saved && typeof saved === 'object') {
+                return {
+                    messages: Array.isArray(saved.messages) ? saved.messages : [],
+                    replyGroups: Array.isArray(saved.replyGroups) && saved.replyGroups.length ? saved.replyGroups : defaultReplyGroups(),
+                    stickerImages: Array.isArray(saved.stickerImages) ? saved.stickerImages : []
+                };
+            }
+            return { messages: [], replyGroups: defaultReplyGroups(), stickerImages: [] };
         };
 
         // 改了 profiles.them / profiles.me 后，自动更新联系人列表里对应记录（没有则新建）
@@ -4229,29 +4700,31 @@ updateLetterRemainText();
         };
 
         const switchContact = async (contact) => {
-            // 1. 先保存当前聊天
+            if (activeContactId.value === contact.id) { modals_contactPanel.value = false; return; }
+            // 1. 先保存当前联系人的聊天 + 字卡库 + 贴图
             await saveCurrentContactChat();
             // 2. 切换头像 / 名字
             profiles.them.name   = contact.name;
             profiles.them.avatar = contact.avatar || '';
             profiles.me.name     = contact.myName  || profiles.me.name;
             profiles.me.avatar   = contact.myAvatar || profiles.me.avatar;
-            // 3. 加载目标联系人历史消息
+            // 3. 加载目标联系人专属的聊天记录、字卡库、贴图（每个联系人完全独立，禁止混用）
             activeContactId.value = contact.id;
-            try {
-                const saved = await localforage.getItem('jingyu_chat_' + contact.id);
-                messages.value = (saved && Array.isArray(saved)) ? saved : [];
-            } catch(e) { messages.value = []; }
+            const data = await loadContactData(contact.id);
+            messages.value = data.messages;
+            replyGroups.value = data.replyGroups;
+            stickerImages.value = data.stickerImages;
+            currentGroupId.value = (replyGroups.value[0] && replyGroups.value[0].id) || 'g_custom';
             modals_contactPanel.value = false;
             saveData();
         };
 
-        // 新建联系人：先把当前聊天存好，再开一个全新的空白窗口
+        // 新建联系人：先把当前联系人的数据存好，再开一个全新的空白窗口（独立字卡库 + 贴图）
         const addContact = async () => {
             const name = newContactName.value.trim();
             if (!name) return;
 
-            // ① 先把当前窗口的备注+聊天记录存好
+            // ① 先把当前窗口的备注+聊天记录+字卡库+贴图存好
             if (activeContactId.value) {
                 await saveCurrentContactChat();
             } else {
@@ -4260,7 +4733,7 @@ updateLetterRemainText();
                 await saveCurrentContactChat();
             }
 
-            // ② 新建联系人（空聊天）
+            // ② 新建联系人（空聊天 + 全新默认字卡库 + 空贴图，与其他联系人完全独立）
             const nc = {
                 id: 'c_' + Date.now(),
                 name: name.substring(0, 12),
@@ -4269,11 +4742,20 @@ updateLetterRemainText();
                 myAvatar: profiles.me.avatar || ''
             };
             contactList.value.push(nc);
-            try { await localforage.setItem('jingyu_chat_' + nc.id, []); } catch(e) {}
+            try {
+                await localforage.setItem('jingyu_chat_' + nc.id, {
+                    messages: [],
+                    replyGroups: defaultReplyGroups(),
+                    stickerImages: []
+                });
+            } catch(e) {}
 
-            // ③ 切换到新窗口（空白）
+            // ③ 切换到新窗口（空白，独立字卡库）
             activeContactId.value = nc.id;
             messages.value = [];
+            replyGroups.value = defaultReplyGroups();
+            stickerImages.value = [];
+            currentGroupId.value = 'g_custom';
             profiles.them.name   = nc.name;
             profiles.them.avatar = nc.avatar || '';
             if (nc.myName) profiles.me.name = nc.myName;
@@ -4665,6 +5147,8 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             headerExpanded, appReady,
             peekMsg, peekRecalled,
             callState, callDurationStr, callMinimized, callBg, bubbleX, bubbleY, bubbleSize, wasDragging, showBubbleSizer,
+            listenTogether, listenTogetherDurationStr, toggleListenTogether, startListenDrag,
+            tourActive, tourStepIndex, tourSteps, tourRect, tourTooltipStyle, startTour, nextTourStep, prevTourStep, endTour,
             startCall, answerCall, hangUp, setCallBg, startDrag,
             contactList, modals_contactPanel, newContactName, newContactMyName, newContactAvatar,
             activeContactId, autoSyncCurrentContact,

@@ -91,9 +91,6 @@
 
         [v-cloak] { display: none !important; }
         input, textarea, button { outline: none !important; box-shadow: none !important; }
-        @keyframes jy-lt-viz { from { opacity: 0.18; transform: scaleY(0.35); } to { opacity: 0.45; transform: scaleY(1); } }
-        .jy-lt-hover-mask { opacity: 0 !important; }
-        [data-v-app] div:hover > .jy-lt-hover-mask, .jy-lt-resize:hover > div { opacity: 1 !important; }
         .msg-bubble { line-height: 1.6; letter-spacing: 0.3px; word-break: break-word; }
 
        /* ══════════════════════════════════════
@@ -2039,6 +2036,37 @@
     </div>
 </transition>
 
+<!-- ── 删除本地音乐确认弹窗 ── -->
+<transition name="fade">
+    <div v-if="modals.confirmDeleteMusic" @click.self="cancelDeleteMusic"
+         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[200] flex items-center justify-center px-8">
+        <div class="bg-surface w-full max-w-[280px] rounded-sm shadow-2xl overflow-hidden"
+             style="border: 1px solid var(--color-border);">
+            <div class="h-[1px] w-full" style="background: linear-gradient(90deg, transparent, var(--color-muted), transparent); opacity: 0.3;"></div>
+            <div class="px-7 py-6 flex flex-col items-center gap-4">
+                <div class="w-8 h-8 flex items-center justify-center opacity-30">
+                    <i data-lucide="music-off" class="w-5 h-5 stroke-[1]"></i>
+                </div>
+                <div class="text-center flex flex-col gap-1.5">
+                    <p class="text-[12px] tracking-[0.2em] text-text font-light">确认删除「{{ uploadedMusicName }}」？</p>
+                    <p class="text-[10px] tracking-[0.15em] text-muted/50 italic">音乐将从列表移除，随时可重新上传</p>
+                </div>
+                <div class="w-full flex flex-col gap-2 mt-1">
+                    <button @click="confirmDeleteMusic"
+                        class="w-full py-2 text-[11px] tracking-[0.25em] border border-border/60 text-muted/60 hover:border-muted/40 hover:text-text transition-all rounded-sm">
+                        删除
+                    </button>
+                    <button @click="cancelDeleteMusic"
+                        class="w-full py-2 text-[11px] tracking-[0.25em] text-muted/30 hover:text-muted transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+            <div class="h-[1px] w-full" style="background: linear-gradient(90deg, transparent, var(--color-muted), transparent); opacity: 0.15;"></div>
+        </div>
+    </div>
+</transition>
+
 
 
 <!-- ── 存钱计划 ── -->
@@ -2644,83 +2672,37 @@
 <transition name="fade">
 <div v-if="listenTogether.active"
      class="fixed z-[290] select-none"
-     :style="`top:${listenTogether.y}px;left:${listenTogether.x}px;transform-origin:top left;transform:scale(${listenTogether.scale})`"
-     @mousedown="startListenDrag" @touchstart.prevent="startListenDrag">
-
-    <div style="width:148px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.06);overflow:visible;font-family:'Courier New',monospace;">
-
-        <!-- 顶部装饰条 -->
-        <div style="height:3px;background:linear-gradient(90deg,var(--color-border) 0%,var(--color-muted) 50%,var(--color-border) 100%);opacity:0.4;border-radius:14px 14px 0 0;"></div>
-
-        <div style="padding:10px 10px 8px;">
-
-            <!-- 标题行 -->
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:7px;letter-spacing:0.2em;color:var(--color-muted);opacity:0.5;text-transform:uppercase;">♫ listening</span>
-                <span style="font-size:7px;letter-spacing:0.08em;color:var(--color-muted);opacity:0.4;">{{ listenTogetherDurationStr }}</span>
+     :style="`top:${listenTogether.y}px;left:${listenTogether.x}px;transform:scale(${listenTogether.scale});transform-origin:top left;`">
+    <div class="relative flex flex-col items-center gap-1.5 px-3 py-2.5 shadow-lg bg-surface border border-border/60 cursor-grab active:cursor-grabbing"
+         style="border-radius:18px;min-width:108px;"
+         @mousedown="startListenDrag" @touchstart="startListenDrag">
+        <span class="text-[8px] tracking-widest text-muted/50 uppercase flex items-center gap-1 pointer-events-none">
+            <i data-lucide="headphones" class="w-2.5 h-2.5 stroke-[1.5]"></i>
+            一起听了 {{ listenTogetherDurationStr }}
+        </span>
+        <div class="flex items-center -space-x-2 pointer-events-none">
+            <div class="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center shrink-0 z-10 shadow-sm"
+                 style="border:2px solid var(--color-surface);background:var(--color-bg)">
+                <img v-if="profiles.me.avatar" :src="profiles.me.avatar" class="w-full h-full object-cover">
+                <span v-else class="text-[10px] font-light text-muted">{{ profiles.me.name.charAt(0) }}</span>
             </div>
-
-            <!-- 双头像 -->
-            <div style="display:flex;align-items:flex-end;justify-content:center;gap:6px;margin-bottom:8px;position:relative;">
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:1px;background:var(--color-border);opacity:0.5;z-index:0;"></div>
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;border-radius:50%;background:var(--color-muted);opacity:0.35;z-index:1;"></div>
-
-                <!-- me -->
-                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;">
-                    <div @click.stop="changeAvatar('me')"
-                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;box-shadow:2px 3px 8px rgba(0,0,0,0.1);">
-                        <img v-if="profiles.me.avatar" :src="profiles.me.avatar" style="width:100%;height:100%;object-fit:cover;display:block;">
-                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">{{ profiles.me.name.charAt(0) }}</div>
-                        <div class="jy-lt-hover-mask" style="position:absolute;inset:0;background:rgba(0,0,0,0.32);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.18s;">
-                            <span style="font-size:7px;color:#fff;letter-spacing:0.05em;">换图</span>
-                        </div>
-                    </div>
-                    <span style="font-size:7px;color:var(--color-muted);opacity:0.5;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">{{ profiles.me.name }}</span>
-                </div>
-
-                <!-- them -->
-                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;">
-                    <div @click.stop="changeAvatar('them')"
-                         style="width:42px;height:42px;border-radius:8px;overflow:hidden;border:1.5px solid var(--color-border);cursor:pointer;position:relative;box-shadow:2px 3px 8px rgba(0,0,0,0.1);">
-                        <img v-if="profiles.them.avatar" :src="profiles.them.avatar" style="width:100%;height:100%;object-fit:cover;display:block;">
-                        <div v-else style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-bg);font-size:14px;color:var(--color-muted);">{{ profiles.them.name.charAt(0) }}</div>
-                        <div class="jy-lt-hover-mask" style="position:absolute;inset:0;background:rgba(0,0,0,0.32);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.18s;">
-                            <span style="font-size:7px;color:#fff;letter-spacing:0.05em;">换图</span>
-                        </div>
-                    </div>
-                    <span style="font-size:7px;color:var(--color-muted);opacity:0.5;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">{{ profiles.them.name }}</span>
-                </div>
-            </div>
-
-            <!-- 音浪 -->
-            <div style="display:flex;align-items:flex-end;justify-content:center;gap:2px;height:14px;margin-bottom:7px;">
-                <span v-for="(h,i) in [4,7,10,6,12,8,5,11,7,9,4,8]" :key="i"
-                      :style="`width:3px;height:${h}px;border-radius:1px;background:var(--color-muted);opacity:0.3;animation:jy-lt-viz 0.${4+i%5}s ease-in-out infinite alternate;animation-delay:${i*0.07}s`">
-                </span>
-            </div>
-
-            <!-- 分隔 -->
-            <div style="height:1px;background:var(--color-border);opacity:0.45;margin-bottom:6px;"></div>
-
-            <!-- 底部 -->
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:7px;letter-spacing:0.12em;color:var(--color-muted);opacity:0.3;font-style:italic;">一起听</span>
-                <button @click.stop="toggleListenTogether"
-                        style="font-size:7px;letter-spacing:0.12em;color:var(--color-muted);opacity:0.4;background:none;border:none;cursor:pointer;padding:0;transition:opacity 0.2s;"
-                        onmouseenter="this.style.opacity='0.85'" onmouseleave="this.style.opacity='0.4'">
-                    结束
-                </button>
+            <div class="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center shrink-0 shadow-sm"
+                 style="border:2px solid var(--color-surface);background:var(--color-bg)">
+                <img v-if="profiles.them.avatar" :src="profiles.them.avatar" class="w-full h-full object-cover">
+                <span v-else class="text-[10px] font-light text-muted">{{ profiles.them.name.charAt(0) }}</span>
             </div>
         </div>
+        <button @click.stop="toggleListenTogether"
+                @mousedown.stop @touchstart.stop
+                class="relative z-20 text-[10px] tracking-widest text-muted/60 hover:text-text transition-colors mt-0.5 px-3 py-1 rounded-full border border-border/40 hover:border-border/70 active:scale-95"
+                style="touch-action:manipulation;min-width:52px;">
+            结束
+        </button>
 
-        <!-- 底部装饰条 -->
-        <div style="height:2px;background:linear-gradient(90deg,transparent,var(--color-border),transparent);opacity:0.3;border-radius:0 0 14px 14px;"></div>
-
-        <!-- 缩放手柄：底部居中，上下拖动调大小 -->
-        <div class="jy-lt-resize"
-             @mousedown.stop="startListenResize" @touchstart.stop.prevent="startListenResize"
-             style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:28px;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;z-index:10;">
-            <div style="width:20px;height:3px;border-radius:2px;background:var(--color-border);opacity:0.5;"></div>
+        <!-- 缩放手柄：拖动右下角可自定义悬浮窗大小 -->
+        <div @mousedown.stop="startListenResize" @touchstart.stop="startListenResize"
+             class="absolute -bottom-1 -right-1 w-5 h-5 flex items-end justify-end cursor-nwse-resize z-20 opacity-50 hover:opacity-90 transition-opacity">
+            <i data-lucide="maximize-2" class="w-3 h-3 stroke-[2] text-muted"></i>
         </div>
     </div>
 </div>
@@ -2802,6 +2784,12 @@
                         <div v-for="b in 3" :key="b" class="w-0.5 bg-text/40 rounded-full"
                              :style="`height:${[8,12,6][b-1]}px;animation:barBounce 0.8s ease-in-out infinite;animation-delay:${(b-1)*0.15}s`"></div>
                     </div>
+                    <!-- 删除按钮 -->
+                    <button @click.stop="requestDeleteMusic"
+                            class="ml-1 p-1 rounded-full text-muted/30 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+                            title="删除此音乐">
+                        <i data-lucide="trash-2" class="w-3 h-3 stroke-[1.5]"></i>
+                    </button>
                 </button>
             </div>
 
@@ -3272,7 +3260,7 @@ setInterval(() => {
             avatarRadius: 50, bgImage: '', customCSS: ''
         });
 
-const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, savings: false, music: false, wordCloud: false, onboarding: false });
+const modals = reactive({ settings: false, replyManager: false, stickerPanel: false, multiDraft: false, groupEdit: false, githubGuide: false, letter: false, confirmDeleteLetter: false, savings: false, music: false, wordCloud: false, onboarding: false, confirmDeleteMusic: false });
 const pendingDeleteIdx = ref(null);
         
         const groupEditTarget = ref(null);
@@ -4228,7 +4216,7 @@ const importAllData = (e) => {
 pendingLetters.value.forEach(p => scheduleLetterDelivery(p));
 updateLetterRemainText();
 
-            // 恢复"一起听"累计时长与位置
+            // 恢复"一起听"累计时长、位置与自定义大小
             try {
                 const lt = await localforage.getItem('jingyu_listen_together');
                 if (lt) {
@@ -4463,7 +4451,7 @@ updateLetterRemainText();
         };
 
         // ── 一起听 ──
-        const listenTogether = reactive({ active: false, seconds: 0, x: Math.max(20, window.innerWidth/2 - 60), y: 110, scale: 0.75 });
+        const listenTogether = reactive({ active: false, seconds: 0, x: Math.max(20, window.innerWidth/2 - 60), y: 110, scale: 1 });
         let listenTogetherTimer = null;
         const listenWasDragging = ref(false);
 
@@ -4493,6 +4481,8 @@ updateLetterRemainText();
                 listenTogether.active = false;
                 clearInterval(listenTogetherTimer);
                 saveListenTogether();
+                // 结束一起听的同时关闭背景音乐
+                stopMusic();
             } else {
                 listenTogether.active = true;
                 // 自动开始播放音乐，营造一起听的氛围
@@ -4505,21 +4495,19 @@ updateLetterRemainText();
             }
         };
 
+        // 拖动悬浮窗位置（按钮 / 缩放手柄点击会用 .stop 单独拦截，不会触发这里）
         const startListenDrag = (e) => {
-            // 点击的是"结束"按钮本身时，不要触发拖拽逻辑，避免按钮点击被拖拽吞掉
-            if (e.target.closest('button')) return;
-            if (e.target.closest('.jy-lt-resize')) return;
             const isTouch = !!e.touches;
             const startX = isTouch ? e.touches[0].clientX : e.clientX;
             const startY = isTouch ? e.touches[0].clientY : e.clientY;
             const origX = listenTogether.x, origY = listenTogether.y;
             listenWasDragging.value = false;
-            const widgetW = 120, widgetH = 100;
+            const widgetW = 120 * listenTogether.scale, widgetH = 100 * listenTogether.scale;
             const onMove = (ev) => {
                 const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
                 const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
                 const dx = cx-startX, dy = cy-startY;
-                if (Math.abs(dx)>4||Math.abs(dy)>4) listenWasDragging.value = true;
+                if (Math.abs(dx)>4||Math.abs(dy)>4) { listenWasDragging.value = true; ev.preventDefault && ev.preventDefault(); }
                 if (listenWasDragging.value) {
                     listenTogether.x = Math.max(0, Math.min(window.innerWidth-widgetW, origX+dx));
                     listenTogether.y = Math.max(0, Math.min(window.innerHeight-widgetH, origY+dy));
@@ -4535,20 +4523,26 @@ updateLetterRemainText();
             };
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
-            document.addEventListener('touchmove', onMove, {passive:true});
+            document.addEventListener('touchmove', onMove, {passive:false});
             document.addEventListener('touchend', onUp);
         };
 
+        // 拖动右下角手柄，自定义悬浮窗的缩放大小（0.7 ~ 1.8 倍之间）
         const startListenResize = (e) => {
-            e.stopPropagation();
             const isTouch = !!e.touches;
+            const startX = isTouch ? e.touches[0].clientX : e.clientX;
             const startY = isTouch ? e.touches[0].clientY : e.clientY;
             const origScale = listenTogether.scale;
+            const baseSize = 100; // 用对角线距离换算缩放，手感更顺
             const onMove = (ev) => {
+                if (ev.cancelable) ev.preventDefault();
+                const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
                 const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
-                const dy = startY - cy; // 上拖变大，下拖变小
-                const delta = dy * 0.004;
-                listenTogether.scale = Math.min(1.4, Math.max(0.45, origScale + delta));
+                const dx = cx-startX, dy = cy-startY;
+                const delta = (dx + dy) / 2;
+                let next = origScale + delta / baseSize;
+                next = Math.max(0.7, Math.min(1.8, next));
+                listenTogether.scale = next;
             };
             const onUp = () => {
                 document.removeEventListener('mousemove', onMove);
@@ -4929,10 +4923,14 @@ updateLetterRemainText();
         let localAudio = null;
 
         const builtinSounds = [
-            { id:'white', emoji:'🌫️', name:'白噪音', desc:'纯净底噪' },
-            { id:'rain',  emoji:'🌧️', name:'雨声',   desc:'轻柔细雨' },
-            { id:'cafe',  emoji:'☕',  name:'咖啡厅',  desc:'室内低语' },
-            { id:'wind',  emoji:'🍃', name:'风声',   desc:'轻风拂过' },
+            { id:'rain',    emoji:'🌧️', name:'雨声',   desc:'窗边细雨' },
+            { id:'forest',  emoji:'🌿', name:'森林',   desc:'虫鸣鸟语' },
+            { id:'ocean',   emoji:'🌊', name:'海浪',   desc:'潮起潮落' },
+            { id:'fire',    emoji:'🔥', name:'篝火',   desc:'噼啪炉火' },
+            { id:'wind',    emoji:'🍃', name:'风声',   desc:'轻风拂过' },
+            { id:'cafe',    emoji:'☕', name:'咖啡厅',  desc:'室内温柔' },
+            { id:'night',   emoji:'🌙', name:'夜晚',   desc:'蝉鸣夜色' },
+            { id:'stream',  emoji:'💧', name:'溪流',   desc:'山间流水' },
         ];
 
         const getAudioCtx = () => {
@@ -4947,34 +4945,165 @@ updateLetterRemainText();
 
         const createNoise = (type) => {
             const ctx = getAudioCtx();
-            const bufferSize = ctx.sampleRate * 4;
-            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const data = buffer.getChannelData(0);
-            if (type === 'white') {
-                for (let i=0;i<bufferSize;i++) data[i] = Math.random()*2-1;
-            } else if (type === 'rain') {
+            const sr = ctx.sampleRate;
+            const bufferSize = sr * 6;
+            const buffer = ctx.createBuffer(2, bufferSize, sr);
+
+            // 生成粉红噪声基底（比白噪音温润得多）
+            const makePink = (ch) => {
+                const d = buffer.getChannelData(ch);
                 let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
                 for (let i=0;i<bufferSize;i++) {
                     const w=Math.random()*2-1;
                     b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
                     b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
                     b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
-                    data[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926;
+                    d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926;
                 }
-            } else if (type === 'cafe') {
+                return d;
+            };
+            // 棕噪声（更低沉温暖）
+            const makeBrown = (ch) => {
+                const d = buffer.getChannelData(ch);
                 let last=0;
-                for (let i=0;i<bufferSize;i++) { const w=Math.random()*2-1; data[i]=(last+0.02*w)/1.02; last=data[i]; data[i]*=3.5; }
-            } else if (type === 'wind') {
-                let last=0;
-                for (let i=0;i<bufferSize;i++) { const w=Math.random()*2-1; data[i]=w-last; last=w; data[i]*=0.5; }
+                for (let i=0;i<bufferSize;i++) {
+                    const w=Math.random()*2-1;
+                    last=(last+0.02*w)/1.02; d[i]=last*3.5;
+                    if(d[i]>1) d[i]=1; if(d[i]<-1) d[i]=-1;
+                }
+                return d;
+            };
+
+            if (type==='rain') {
+                // 雨声 = 粉红噪声 + 高频点击声模拟雨滴
+                for (let ch=0;ch<2;ch++) {
+                    const d = makePink(ch);
+                    // 叠加随机雨滴 transient
+                    for (let i=0;i<bufferSize;i++) {
+                        if (Math.random() < 0.0012) {
+                            const amp = 0.3 + Math.random()*0.5;
+                            const len = Math.floor(sr*0.02 + Math.random()*sr*0.04);
+                            for (let j=0;j<len && i+j<bufferSize;j++) {
+                                d[i+j] += amp * Math.exp(-j/(sr*0.008)) * (Math.random()*2-1);
+                            }
+                        }
+                        d[i] *= 0.7;
+                    }
+                }
+            } else if (type==='forest') {
+                // 森林 = 低通棕噪 + 间歇性鸟鸣谐波
+                for (let ch=0;ch<2;ch++) {
+                    const d = makeBrown(ch);
+                    // 模拟蟋蟀/虫鸣：随机正弦脉冲
+                    const freqs=[3200,4100,5000,2800];
+                    for (let k=0;k<40;k++) {
+                        const start=Math.floor(Math.random()*(bufferSize-sr*0.3));
+                        const freq=freqs[Math.floor(Math.random()*freqs.length)]+Math.random()*200;
+                        const dur=Math.floor(sr*(0.1+Math.random()*0.3));
+                        for (let i=0;i<dur;i++) {
+                            const env=Math.sin(Math.PI*i/dur);
+                            d[start+i]+=0.12*env*Math.sin(2*Math.PI*freq*i/sr);
+                        }
+                    }
+                    for (let i=0;i<bufferSize;i++) d[i]*=0.6;
+                }
+            } else if (type==='ocean') {
+                // 海浪 = 低频调制棕噪声，模拟浪涌节奏
+                for (let ch=0;ch<2;ch++) {
+                    const d = makeBrown(ch);
+                    // 慢速 LFO 调制 (0.12Hz 约8秒一浪)
+                    const lfoFreq = 0.12 + (ch===0?0:0.015);
+                    for (let i=0;i<bufferSize;i++) {
+                        const wave = 0.3 + 0.7*Math.pow(Math.max(0,Math.sin(2*Math.PI*lfoFreq*i/sr)),0.6);
+                        d[i] = d[i] * wave * 0.9;
+                    }
+                }
+            } else if (type==='fire') {
+                // 篝火 = 棕噪 + 不规则噼啪
+                for (let ch=0;ch<2;ch++) {
+                    const d = makeBrown(ch);
+                    for (let i=0;i<bufferSize;i++) d[i]*=0.4;
+                    // 噼啪声
+                    for (let k=0;k<bufferSize;k++) {
+                        if (Math.random()<0.0006) {
+                            const amp=0.4+Math.random()*0.5;
+                            const decay=sr*(0.003+Math.random()*0.015);
+                            for (let j=0;j<decay && k+j<bufferSize;j++)
+                                d[k+j]+=amp*Math.exp(-j/(sr*0.003))*(Math.random()*2-1);
+                        }
+                    }
+                }
+            } else if (type==='wind') {
+                // 风声 = 粉红噪 + 慢LFO调制 + 低通
+                for (let ch=0;ch<2;ch++) {
+                    const d = makePink(ch);
+                    const lfo=0.05+(ch===0?0:0.02);
+                    for (let i=0;i<bufferSize;i++) {
+                        const env=0.4+0.6*Math.abs(Math.sin(2*Math.PI*lfo*i/sr));
+                        d[i]*=env*0.6;
+                    }
+                }
+            } else if (type==='cafe') {
+                // 咖啡厅 = 棕噪 + 随机远处说话声频率段
+                for (let ch=0;ch<2;ch++) {
+                    const d = makeBrown(ch);
+                    for (let i=0;i<bufferSize;i++) d[i]*=0.5;
+                    // 叠加随机中频能量模拟人声嗡嗡
+                    for (let k=0;k<20;k++) {
+                        const start=Math.floor(Math.random()*(bufferSize-sr*1.5));
+                        const dur=Math.floor(sr*(0.3+Math.random()*1.2));
+                        const baseF=300+Math.random()*400;
+                        for (let i=0;i<dur;i++) {
+                            const env=Math.sin(Math.PI*i/dur)*0.08;
+                            d[start+i]+=env*Math.sin(2*Math.PI*baseF*i/sr);
+                            d[start+i]+=env*0.5*Math.sin(2*Math.PI*(baseF*1.5)*i/sr);
+                        }
+                    }
+                }
+            } else if (type==='night') {
+                // 夜晚 = 极低底噪 + 蝉鸣
+                for (let ch=0;ch<2;ch++) {
+                    const d = buffer.getChannelData(ch);
+                    for (let i=0;i<bufferSize;i++) d[i]=(Math.random()*2-1)*0.03;
+                    // 持续蝉鸣（约4kHz 调幅）
+                    const freq=3800+(ch*80);
+                    const amFreq=14;
+                    for (let i=0;i<bufferSize;i++) {
+                        const am=0.5+0.5*Math.sin(2*Math.PI*amFreq*i/sr);
+                        d[i]+=0.18*am*Math.sin(2*Math.PI*freq*i/sr);
+                    }
+                }
+            } else if (type==='stream') {
+                // 溪流 = 高通粉红噪 + 快速调制
+                for (let ch=0;ch<2;ch++) {
+                    const d = makePink(ch);
+                    const lfo=0.8+(ch*0.15);
+                    for (let i=0;i<bufferSize;i++) {
+                        const env=0.5+0.5*Math.sin(2*Math.PI*lfo*i/sr+ch*Math.PI*0.3);
+                        d[i]*=env*0.65;
+                    }
+                }
             }
+
             const source = ctx.createBufferSource();
             source.buffer = buffer; source.loop = true;
-            if (type==='rain') {
-                const f=ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1200; f.Q.value=0.5;
-                source.connect(f); f.connect(gainNode);
-            } else if (type==='wind') {
-                const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=800;
+
+            // 每种声音都加滤波器让音色更准确
+            const filters = {
+                rain:   {type:'bandpass',freq:2200,Q:0.4},
+                forest: {type:'lowpass', freq:6000,Q:0.7},
+                ocean:  {type:'lowpass', freq:800, Q:0.5},
+                fire:   {type:'lowpass', freq:3000,Q:0.6},
+                wind:   {type:'lowpass', freq:1200,Q:0.5},
+                cafe:   {type:'bandpass',freq:1500,Q:0.3},
+                night:  {type:'bandpass',freq:4000,Q:1.2},
+                stream: {type:'highpass',freq:600, Q:0.6},
+            };
+            if (filters[type]) {
+                const f=ctx.createBiquadFilter();
+                f.type=filters[type].type;
+                f.frequency.value=filters[type].freq;
+                f.Q.value=filters[type].Q;
                 source.connect(f); f.connect(gainNode);
             } else { source.connect(gainNode); }
             return source;
@@ -5035,6 +5164,19 @@ updateLetterRemainText();
             const url=URL.createObjectURL(file);
             if (localAudio) localAudio.pause();
             localAudio=new Audio(url); localAudio.loop=true; localAudio.volume=musicVolume.value/100;
+        };
+
+        const requestDeleteMusic = () => {
+            modals.confirmDeleteMusic = true;
+        };
+        const confirmDeleteMusic = () => {
+            if (currentSound.value === 'local') stopMusic();
+            if (localAudio) { localAudio.pause(); localAudio = null; }
+            uploadedMusicName.value = '';
+            modals.confirmDeleteMusic = false;
+        };
+        const cancelDeleteMusic = () => {
+            modals.confirmDeleteMusic = false;
         };
 
         watch([messages, modals], () => nextTick(() => lucide.createIcons()), { deep: true });
@@ -5147,6 +5289,7 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             savingsDailyAvg, savingsDaysLeft, savingsTrend, saveSavings,
             musicPlaying, musicVolume, currentSound, uploadedMusicName, builtinSounds,
             selectSound, toggleMusic, stopMusic, setMusicVolume, loadLocalMusic,
+            requestDeleteMusic, confirmDeleteMusic, cancelDeleteMusic,
             // 常说的话
             wordCloudSource, wordCloudItems, wordCloudTotal, wordCloudMsgCount, buildWordCloud,
         };

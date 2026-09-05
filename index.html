@@ -12,7 +12,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f9f9f9" id="theme-color-meta">
     <link rel="manifest" id="pwa-manifest">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f9f9f9'/><text y='.9em' font-size='80' x='10'>🪶</text></svg>">
+    <link rel="apple-touch-icon" href="./icon-512x512.png">
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1365,18 +1365,6 @@
                     </div>
                     <button @click="restoreFromGithub" class="w-full text-[11px] tracking-widest border border-border py-1.5 hover:bg-border transition-colors">📥 从GitHub导入备份</button>
 
-                    <!-- 自定义桌面封面 -->
-                    <div class="pt-3 mt-3 border-t border-border/30 space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] text-muted/50 tracking-widest uppercase">🎨 自定义桌面封面</span>
-                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" v-model="customIcon.enabled" class="accent-text w-3.5 h-3.5">
-                                <span class="text-[10px] tracking-widest text-muted">启用</span>
-                            </label>
-                        </div>
-                        <p class="text-[9px] text-muted/40 leading-relaxed">将名为 icon-512x512.png 的图片(512×512 PNG)上传到GitHub仓库根目录，启用后保存，重新添加到桌面即可生效。</p>
-                        <button @click="saveCustomIcon" class="w-full text-[11px] tracking-widest border border-border py-1.5 hover:bg-border transition-colors">保存封面设置</button>
-                    </div>
                     <div v-if="githubStatus" class="text-[10px] tracking-wider py-1 text-center"
                          :class="githubStatus.startsWith('✅') ? 'text-green-700 dark:text-green-400' : githubStatus.startsWith('❌') ? 'text-red-700/70' : 'text-muted'">
                         {{ githubStatus }}
@@ -2950,9 +2938,9 @@
         theme_color: "#f9f9f9",
         icons: [
             {
-                src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23f9f9f9'/><text y='145' x='24' font-size='140'>🪶</text></svg>",
-                sizes: "192x192",
-                type: "image/svg+xml"
+                src: "./icon-512x512.png",
+                sizes: "512x512",
+                type: "image/png"
             }
         ]
     };
@@ -4114,7 +4102,20 @@ const importAllData = (e) => {
             } catch(e) {}
         })();
 
+        // 规范化用户填写的"用户名/仓库名"：去掉误粘贴的完整URL前缀、结尾的 .git、以及多余的空格和斜杠
+        const normalizeGithubRepo = (repo) => {
+            if (!repo) return '';
+            let r = repo.trim();
+            r = r.replace(/^https?:\/\/(www\.)?github\.com\//i, '');
+            r = r.replace(/\.git$/i, '');
+            r = r.replace(/^\/+|\/+$/g, '');
+            return r;
+        };
+        // 实际发起请求时统一使用规范化后的仓库名，避免因粘贴了完整URL或多余斜杠导致 404
+        const getRepoSlug = () => normalizeGithubRepo(githubSettings.repo);
+
         const saveGithubSettings = async () => {
+            githubSettings.repo = normalizeGithubRepo(githubSettings.repo);
             await localforage.setItem('jingyu_github', JSON.parse(JSON.stringify(githubSettings)));
             setupGithubTimer();
             githubStatus.value = '✅ 设置已保存';
@@ -4128,33 +4129,47 @@ const importAllData = (e) => {
             'Content-Type': 'application/json'
         });
 
+        // 尽量从 GitHub 的错误响应中取出具体原因（如 "Not Found"、"Bad credentials" 等），方便定位问题
+        const githubErrorDetail = async (res) => {
+            try {
+                const data = await res.json();
+                if (data && data.message) return `${res.status} ${data.message}`;
+            } catch(e) {}
+            return `${res.status}`;
+        };
+
         const githubUploadFile = async (filename, content) => {
             const base64 = btoa(unescape(encodeURIComponent(content)));
-            const apiUrl = `https://api.github.com/repos/${githubSettings.repo}/contents/${encodeURIComponent(filename)}`;
+            const apiUrl = `https://api.github.com/repos/${getRepoSlug()}/contents/${encodeURIComponent(filename)}`;
             let sha = '';
             try {
                 const res = await fetch(apiUrl, { headers: githubHeaders() });
                 if (res.ok) sha = (await res.json()).sha;
             } catch(e) {}
-            const body = { message: `静语备份 ${new Date().toLocaleString('zh-CN')}`, content: base64 };
+            const body = { message: `静语备份 ${new Date().toLocaleString('zh-CN')}`, content: base64, branch: 'main' };
             if (sha) body.sha = sha;
-            const res = await fetch(apiUrl, { method: 'PUT', headers: githubHeaders(), body: JSON.stringify(body) });
-            if (!res.ok) throw new Error(`上传 ${filename} 失败: ${res.status}`);
+            let res = await fetch(apiUrl, { method: 'PUT', headers: githubHeaders(), body: JSON.stringify(body) });
+            if (!res.ok && res.status === 404) {
+                // 部分仓库的默认分支不是 main（如 master），去掉 branch 后重试一次，交由 GitHub 使用默认分支
+                delete body.branch;
+                res = await fetch(apiUrl, { method: 'PUT', headers: githubHeaders(), body: JSON.stringify(body) });
+            }
+            if (!res.ok) throw new Error(`上传 ${filename} 失败: ${await githubErrorDetail(res)}`);
         };
 
         const githubDownloadFile = async (filename) => {
-            const apiUrl = `https://api.github.com/repos/${githubSettings.repo}/contents/${encodeURIComponent(filename)}`;
+            const apiUrl = `https://api.github.com/repos/${getRepoSlug()}/contents/${encodeURIComponent(filename)}`;
             const res = await fetch(apiUrl, { headers: githubHeaders() });
-            if (!res.ok) throw new Error(`下载 ${filename} 失败: ${res.status}`);
+            if (!res.ok) throw new Error(`下载 ${filename} 失败: ${await githubErrorDetail(res)}`);
             const info = await res.json();
             let base64 = info.content;
             // GitHub Contents API 对超过 1MB 的文件不会内联返回内容（content 为空、encoding 为 "none"），
             // 备份数据常包含图片等二进制内容，很容易超过 1MB，需改用 Git Blobs API（支持最大 100MB）读取完整内容
             if (!base64 || info.encoding === 'none') {
                 if (!info.sha) throw new Error(`下载 ${filename} 失败: 无法获取内容`);
-                const blobUrl = `https://api.github.com/repos/${githubSettings.repo}/git/blobs/${info.sha}`;
+                const blobUrl = `https://api.github.com/repos/${getRepoSlug()}/git/blobs/${info.sha}`;
                 const blobRes = await fetch(blobUrl, { headers: githubHeaders() });
-                if (!blobRes.ok) throw new Error(`下载 ${filename} 失败: ${blobRes.status}`);
+                if (!blobRes.ok) throw new Error(`下载 ${filename} 失败: ${await githubErrorDetail(blobRes)}`);
                 const blobInfo = await blobRes.json();
                 base64 = blobInfo.content;
             }
@@ -4236,58 +4251,6 @@ const importAllData = (e) => {
             }
         };
 
-        // ── 自定义PWA封面 ──
-        const customIcon = reactive({ enabled: false });
-        const CUSTOM_ICON_FILE = 'icon-512x512.png';
-        (async () => {
-            try {
-                const ci = await localforage.getItem('jingyu_custom_icon');
-                if (ci) {
-                    Object.assign(customIcon, ci);
-                    if (ci.enabled && githubSettings.repo) {
-                        applyCustomIcon(`https://raw.githubusercontent.com/${githubSettings.repo}/main/${CUSTOM_ICON_FILE}`);
-                    }
-                }
-            } catch(e) {}
-        })();
-
-        const applyCustomIcon = (url) => {
-            let link = document.querySelector('link[rel="apple-touch-icon"]');
-            if (link) link.href = url;
-            else {
-                link = document.createElement('link');
-                link.rel = 'apple-touch-icon';
-                link.href = url;
-                document.head.appendChild(link);
-            }
-            const manifestData = {
-                name: '静语', short_name: '静语', start_url: '.', display: 'standalone',
-                background_color: '#f9f9f9', theme_color: '#f9f9f9',
-                icons: [
-                    { src: url, sizes: '192x192', type: 'image/png' },
-                    { src: url, sizes: '512x512', type: 'image/png' }
-                ]
-            };
-            const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-            document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
-        };
-
-        const saveCustomIcon = async () => {
-            await localforage.setItem('jingyu_custom_icon', JSON.parse(JSON.stringify(customIcon)));
-            if (customIcon.enabled) {
-                if (!githubSettings.repo) {
-                    githubStatus.value = '❌ 请先填写GitHub仓库地址';
-                    setTimeout(() => githubStatus.value = '', 3000);
-                    return;
-                }
-                const iconUrl = `https://raw.githubusercontent.com/${githubSettings.repo}/main/${CUSTOM_ICON_FILE}`;
-                applyCustomIcon(iconUrl);
-                githubStatus.value = '✅ 封面已更新，重新添加到桌面即可生效';
-            } else {
-                githubStatus.value = '✅ 封面设置已保存';
-            }
-            setTimeout(() => githubStatus.value = '', 3000);
-        };
 
         const triggerGithubBackup = async () => {
             if (!githubSettings.token || !githubSettings.repo) {
@@ -4299,7 +4262,7 @@ const importAllData = (e) => {
                 const data = await localforage.getItem('jingyu_data');
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
                 const filename = '静语备份.json';
-                const apiUrl = `https://api.github.com/repos/${githubSettings.repo}/contents/${encodeURIComponent(filename)}`;
+                const apiUrl = `https://api.github.com/repos/${getRepoSlug()}/contents/${encodeURIComponent(filename)}`;
 
                 // 先获取已有文件的 sha（更新时需要）
                 let sha = '';
@@ -5450,7 +5413,7 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
             openGroupEdit, confirmGroupEdit, cancelGroupEdit, groupEditTarget,
-            githubSettings, saveGithubSettings, triggerGithubBackup, triggerGithubBackupV2, restoreFromGithub, customIcon, saveCustomIcon, githubStatus,
+            githubSettings, saveGithubSettings, triggerGithubBackup, triggerGithubBackupV2, restoreFromGithub, githubStatus,
             selectedReplies, multiSelectMode, moveTargetGroupId, toggleSelect, moveSelected, deleteSelected,
             dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,
             addImageReplies, requestNotifPermission, popRandomEmoji,

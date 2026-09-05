@@ -4147,7 +4147,19 @@ const importAllData = (e) => {
             const res = await fetch(apiUrl, { headers: githubHeaders() });
             if (!res.ok) throw new Error(`下载 ${filename} 失败: ${res.status}`);
             const info = await res.json();
-            return decodeURIComponent(escape(atob(info.content)));
+            let base64 = info.content;
+            // GitHub Contents API 对超过 1MB 的文件不会内联返回内容（content 为空、encoding 为 "none"），
+            // 备份数据常包含图片等二进制内容，很容易超过 1MB，需改用 Git Blobs API（支持最大 100MB）读取完整内容
+            if (!base64 || info.encoding === 'none') {
+                if (!info.sha) throw new Error(`下载 ${filename} 失败: 无法获取内容`);
+                const blobUrl = `https://api.github.com/repos/${githubSettings.repo}/git/blobs/${info.sha}`;
+                const blobRes = await fetch(blobUrl, { headers: githubHeaders() });
+                if (!blobRes.ok) throw new Error(`下载 ${filename} 失败: ${blobRes.status}`);
+                const blobInfo = await blobRes.json();
+                base64 = blobInfo.content;
+            }
+            if (!base64) throw new Error(`下载 ${filename} 失败: 内容为空`);
+            return decodeURIComponent(escape(atob(base64.replace(/\n/g, ''))));
         };
 
         // ── 分片备份 ──

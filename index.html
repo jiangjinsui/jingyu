@@ -1374,10 +1374,10 @@
                                 <span class="text-[10px] tracking-widest text-muted">启用</span>
                             </label>
                         </div>
-                        <input v-model="customIcon.url" type="text"
+                        <input v-model="customIcon.filename" type="text"
                                class="w-full bg-bg border border-border rounded px-3 py-1.5 text-[11px] outline-none font-mono"
-                               placeholder="图标URL (如: https://raw.githubusercontent.com/用户/仓库/main/icon.png)">
-                        <p class="text-[9px] text-muted/40 leading-relaxed">将图片(建议512×512 PNG)上传到GitHub仓库，填入raw链接。保存后重新添加到桌面生效。</p>
+                               placeholder="仓库中的图片文件名 (如: icon-512x512.png)">
+                        <p class="text-[9px] text-muted/40 leading-relaxed">将图片(建议512×512 PNG)上传到GitHub仓库根目录，填入文件名即可。保存后重新添加到桌面生效。</p>
                         <button @click="saveCustomIcon" class="w-full text-[11px] tracking-widest border border-border py-1.5 hover:bg-border transition-colors">保存封面设置</button>
                     </div>
                     <div v-if="githubStatus" class="text-[10px] tracking-wider py-1 text-center"
@@ -4228,13 +4228,15 @@ const importAllData = (e) => {
         };
 
         // ── 自定义PWA封面 ──
-        const customIcon = reactive({ url: '', enabled: false });
+        const customIcon = reactive({ filename: 'icon-512x512.png', enabled: false });
         (async () => {
             try {
                 const ci = await localforage.getItem('jingyu_custom_icon');
                 if (ci) {
                     Object.assign(customIcon, ci);
-                    if (ci.enabled && ci.url) applyCustomIcon(ci.url);
+                    if (ci.enabled && ci.filename && githubSettings.repo) {
+                        applyCustomIcon(`https://raw.githubusercontent.com/${githubSettings.repo}/main/${ci.filename}`);
+                    }
                 }
             } catch(e) {}
         })();
@@ -4262,8 +4264,14 @@ const importAllData = (e) => {
 
         const saveCustomIcon = async () => {
             await localforage.setItem('jingyu_custom_icon', JSON.parse(JSON.stringify(customIcon)));
-            if (customIcon.enabled && customIcon.url) {
-                applyCustomIcon(customIcon.url);
+            if (customIcon.enabled && customIcon.filename) {
+                if (!githubSettings.repo) {
+                    githubStatus.value = '❌ 请先填写GitHub仓库地址';
+                    setTimeout(() => githubStatus.value = '', 3000);
+                    return;
+                }
+                const iconUrl = `https://raw.githubusercontent.com/${githubSettings.repo}/main/${customIcon.filename}`;
+                applyCustomIcon(iconUrl);
                 githubStatus.value = '✅ 封面已更新，重新添加到桌面即可生效';
             } else {
                 githubStatus.value = '✅ 封面设置已保存';

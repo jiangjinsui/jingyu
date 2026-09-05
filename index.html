@@ -1361,7 +1361,24 @@
                     </div>
                     <div class="flex gap-2">
                         <button @click="saveGithubSettings" class="flex-1 text-[11px] tracking-widest border border-border py-1.5 hover:bg-border transition-colors">保存设置</button>
-                        <button @click="triggerGithubBackup" class="flex-1 text-[11px] tracking-widest border border-text/30 text-text py-1.5 hover:bg-border transition-colors">立即备份</button>
+                        <button @click="triggerGithubBackupV2" class="flex-1 text-[11px] tracking-widest border border-text/30 text-text py-1.5 hover:bg-border transition-colors">立即备份</button>
+                    </div>
+                    <button @click="restoreFromGithub" class="w-full text-[11px] tracking-widest border border-border py-1.5 hover:bg-border transition-colors">📥 从GitHub导入备份</button>
+
+                    <!-- 自定义桌面封面 -->
+                    <div class="pt-3 mt-3 border-t border-border/30 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] text-muted/50 tracking-widest uppercase">🎨 自定义桌面封面</span>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" v-model="customIcon.enabled" class="accent-text w-3.5 h-3.5">
+                                <span class="text-[10px] tracking-widest text-muted">启用</span>
+                            </label>
+                        </div>
+                        <input v-model="customIcon.url" type="text"
+                               class="w-full bg-bg border border-border rounded px-3 py-1.5 text-[11px] outline-none font-mono"
+                               placeholder="图标URL (如: https://raw.githubusercontent.com/用户/仓库/main/icon.png)">
+                        <p class="text-[9px] text-muted/40 leading-relaxed">将图片(建议512×512 PNG)上传到GitHub仓库，填入raw链接。保存后重新添加到桌面生效。</p>
+                        <button @click="saveCustomIcon" class="w-full text-[11px] tracking-widest border border-border py-1.5 hover:bg-border transition-colors">保存封面设置</button>
                     </div>
                     <div v-if="githubStatus" class="text-[10px] tracking-wider py-1 text-center"
                          :class="githubStatus.startsWith('✅') ? 'text-green-700 dark:text-green-400' : githubStatus.startsWith('❌') ? 'text-red-700/70' : 'text-muted'">
@@ -4107,6 +4124,153 @@ const importAllData = (e) => {
             setTimeout(() => githubStatus.value = '', 2000);
         };
 
+        // ── GitHub 文件操作 helpers ──
+        const githubHeaders = () => ({
+            Authorization: `token ${githubSettings.token}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        });
+
+        const githubUploadFile = async (filename, content) => {
+            const base64 = btoa(unescape(encodeURIComponent(content)));
+            const apiUrl = `https://api.github.com/repos/${githubSettings.repo}/contents/${encodeURIComponent(filename)}`;
+            let sha = '';
+            try {
+                const res = await fetch(apiUrl, { headers: githubHeaders() });
+                if (res.ok) sha = (await res.json()).sha;
+            } catch(e) {}
+            const body = { message: `静语备份 ${new Date().toLocaleString('zh-CN')}`, content: base64 };
+            if (sha) body.sha = sha;
+            const res = await fetch(apiUrl, { method: 'PUT', headers: githubHeaders(), body: JSON.stringify(body) });
+            if (!res.ok) throw new Error(`上传 ${filename} 失败: ${res.status}`);
+        };
+
+        const githubDownloadFile = async (filename) => {
+            const apiUrl = `https://api.github.com/repos/${githubSettings.repo}/contents/${encodeURIComponent(filename)}`;
+            const res = await fetch(apiUrl, { headers: githubHeaders() });
+            if (!res.ok) throw new Error(`下载 ${filename} 失败: ${res.status}`);
+            const info = await res.json();
+            return decodeURIComponent(escape(atob(info.content)));
+        };
+
+        // ── 分片备份 ──
+        const triggerGithubBackupV2 = async () => {
+            if (!githubSettings.token || !githubSettings.repo) {
+                githubStatus.value = '❌ 请先填写 Token 和仓库名';
+                return;
+            }
+            githubStatus.value = '⏳ 备份中...';
+            try {
+                const data = await localforage.getItem('jingyu_data');
+                const jsonStr = JSON.stringify(data, null, 2);
+                const CHUNK_SIZE = 20 * 1024 * 1024;
+
+                if (jsonStr.length <= CHUNK_SIZE) {
+                    await githubUploadFile('静语备份.json', jsonStr);
+                } else {
+                    const chunks = [];
+                    for (let i = 0; i < jsonStr.length; i += CHUNK_SIZE) {
+                        chunks.push(jsonStr.slice(i, i + CHUNK_SIZE));
+                    }
+                    const indexData = {
+                        type: 'jingyu_chunked_backup',
+                        totalChunks: chunks.length,
+                        totalSize: jsonStr.length,
+                        timestamp: new Date().toISOString(),
+                        files: chunks.map((_, idx) => `静语备份_part${idx + 1}.json`)
+                    };
+                    await githubUploadFile('静语备份_index.json', JSON.stringify(indexData, null, 2));
+                    for (let i = 0; i < chunks.length; i++) {
+                        githubStatus.value = `⏳ 上传分片 ${i + 1}/${chunks.length}...`;
+                        await githubUploadFile(`静语备份_part${i + 1}.json`, chunks[i]);
+                    }
+                }
+                githubSettings.lastBackup = new Date().toLocaleString('zh-CN');
+                await localforage.setItem('jingyu_github', JSON.parse(JSON.stringify(githubSettings)));
+                githubStatus.value = `✅ 备份成功 (${githubSettings.lastBackup})`;
+            } catch(err) {
+                githubStatus.value = `❌ 备份失败: ${err.message}`;
+            }
+        };
+
+        // ── 从GitHub导入备份 ──
+        const restoreFromGithub = async () => {
+            if (!githubSettings.token || !githubSettings.repo) {
+                githubStatus.value = '❌ 请先填写 Token 和仓库名';
+                return;
+            }
+            if (!confirm('从GitHub导入将覆盖当前数据，确定继续？')) return;
+            githubStatus.value = '⏳ 导入中...';
+            try {
+                let jsonStr = '';
+                try {
+                    const indexContent = await githubDownloadFile('静语备份_index.json');
+                    const indexData = JSON.parse(indexContent);
+                    if (indexData.type === 'jingyu_chunked_backup' && indexData.files) {
+                        const parts = [];
+                        for (let i = 0; i < indexData.files.length; i++) {
+                            githubStatus.value = `⏳ 下载分片 ${i + 1}/${indexData.files.length}...`;
+                            parts.push(await githubDownloadFile(indexData.files[i]));
+                        }
+                        jsonStr = parts.join('');
+                    }
+                } catch(e) {
+                    jsonStr = await githubDownloadFile('静语备份.json');
+                }
+                if (!jsonStr) throw new Error('未找到备份文件');
+                const data = JSON.parse(jsonStr);
+                await localforage.setItem('jingyu_data', data);
+                githubStatus.value = '✅ 导入成功，即将刷新...';
+                setTimeout(() => location.reload(), 1500);
+            } catch(err) {
+                githubStatus.value = `❌ 导入失败: ${err.message}`;
+            }
+        };
+
+        // ── 自定义PWA封面 ──
+        const customIcon = reactive({ url: '', enabled: false });
+        (async () => {
+            try {
+                const ci = await localforage.getItem('jingyu_custom_icon');
+                if (ci) {
+                    Object.assign(customIcon, ci);
+                    if (ci.enabled && ci.url) applyCustomIcon(ci.url);
+                }
+            } catch(e) {}
+        })();
+
+        const applyCustomIcon = (url) => {
+            let link = document.querySelector('link[rel="apple-touch-icon"]');
+            if (link) link.href = url;
+            else {
+                link = document.createElement('link');
+                link.rel = 'apple-touch-icon';
+                link.href = url;
+                document.head.appendChild(link);
+            }
+            const manifestData = {
+                name: '静语', short_name: '静语', start_url: '.', display: 'standalone',
+                background_color: '#f9f9f9', theme_color: '#f9f9f9',
+                icons: [
+                    { src: url, sizes: '192x192', type: 'image/png' },
+                    { src: url, sizes: '512x512', type: 'image/png' }
+                ]
+            };
+            const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+            document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+        };
+
+        const saveCustomIcon = async () => {
+            await localforage.setItem('jingyu_custom_icon', JSON.parse(JSON.stringify(customIcon)));
+            if (customIcon.enabled && customIcon.url) {
+                applyCustomIcon(customIcon.url);
+                githubStatus.value = '✅ 封面已更新，重新添加到桌面即可生效';
+            } else {
+                githubStatus.value = '✅ 封面设置已保存';
+            }
+            setTimeout(() => githubStatus.value = '', 3000);
+        };
+
         const triggerGithubBackup = async () => {
             if (!githubSettings.token || !githubSettings.repo) {
                 githubStatus.value = '❌ 请先填写 Token 和仓库名';
@@ -5268,7 +5432,7 @@ letterText, letterTab, letterHistory, pendingLetters, sendLetter, showLetterToas
             toggleTheme, applyCSS, applyBg, editProfile, changeAvatar, changeName, uploadBg, pickBgImage, confirmBg, clearBgImage, clearChat, exportChat, exportAllData, importAllData,
             addGroup, deleteGroup, addReply, removeReply, exportReplies, importReplies, saveData,
             openGroupEdit, confirmGroupEdit, cancelGroupEdit, groupEditTarget,
-            githubSettings, saveGithubSettings, triggerGithubBackup, githubStatus,
+            githubSettings, saveGithubSettings, triggerGithubBackup, triggerGithubBackupV2, restoreFromGithub, customIcon, saveCustomIcon, githubStatus,
             selectedReplies, multiSelectMode, moveTargetGroupId, toggleSelect, moveSelected, deleteSelected,
             dedupReplies, editingReply, startEditReply, confirmEditReply, saveEditReply,
             addImageReplies, requestNotifPermission, popRandomEmoji,
